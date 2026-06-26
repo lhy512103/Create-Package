@@ -1,0 +1,24 @@
+package com.lhy.createpackage.registry;
+
+import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.content.linker.MachineLinkerItem;
+
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredRegister;
+
+/**
+ * Item registry for Create Package.
+ */
+public final class ModItems {
+    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(CreatePackage.MODID);
+
+    public static final DeferredItem<BlockItem> PACKAGE_DISTRIBUTOR = ITEMS.registerSimpleBlockItem(
+            "package_distributor", ModBlocks.PACKAGE_DISTRIBUTOR, new Item.Properties());
+
+    public static final DeferredItem<Item> MACHINE_LINKER = ITEMS.registerItem(
+            "machine_linker", properties -> new MachineLinkerItem(properties.stacksTo(1)));
+
+    private ModItems() {}
+}

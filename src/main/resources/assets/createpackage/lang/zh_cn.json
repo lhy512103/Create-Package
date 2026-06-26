@@ -1,0 +1,25 @@
+{
+  "itemGroup.createpackage": "机械动力封包",
+
+  "block.createpackage.package_distributor": "封包分发器",
+  "item.createpackage.machine_linker": "机器链接器",
+
+  "item.createpackage.machine_linker.selected": "已选中位于 [%s, %s, %s] 的分发器",
+  "item.createpackage.machine_linker.cleared": "已清除全部链接(共 %s 台机器)",
+  "item.createpackage.machine_linker.no_selection": "请先选中一个封包分发器",
+  "item.createpackage.machine_linker.wrong_dimension": "选中的分发器在其他维度",
+  "item.createpackage.machine_linker.selection_gone": "选中的分发器已不存在",
+  "item.createpackage.machine_linker.not_linkable": "该方块无法链接(没有物品或流体库存)",
+  "item.createpackage.machine_linker.linked": "已链接位于 [%s, %s, %s] 的机器(共 %s 台)",
+  "item.createpackage.machine_linker.already_linked": "该机器已经链接过了",
+  "item.createpackage.machine_linker.unlinked": "已取消链接位于 [%s, %s, %s] 的机器(剩余 %s 台)",
+  "item.createpackage.machine_linker.not_linked": "该机器未链接到选中的分发器",
+  "item.createpackage.machine_linker.tooltip.unbound": "未绑定。右键封包分发器以选中它。",
+  "item.createpackage.machine_linker.tooltip.bound": "已绑定分发器 [%s, %s, %s]",
+  "item.createpackage.machine_linker.tooltip.usage": "右键机器进行链接;潜行+右键取消链接。",
+
+  "createpackage.configuration.title": "机械动力封包配置",
+  "createpackage.configuration.section.createpackage.common.toml": "机械动力封包配置",
+  "createpackage.configuration.section.createpackage.common.toml.title": "机械动力封包配置",
+  "createpackage.configuration.enableDebugLogging": "启用调试日志"
+}

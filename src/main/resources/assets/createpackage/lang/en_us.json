@@ -1,0 +1,25 @@
+{
+  "itemGroup.createpackage": "Create Package",
+
+  "block.createpackage.package_distributor": "Package Distributor",
+  "item.createpackage.machine_linker": "Machine Linker",
+
+  "item.createpackage.machine_linker.selected": "Selected distributor at [%s, %s, %s]",
+  "item.createpackage.machine_linker.cleared": "Cleared all links (%s machine(s))",
+  "item.createpackage.machine_linker.no_selection": "Select a Package Distributor first",
+  "item.createpackage.machine_linker.wrong_dimension": "The selected distributor is in another dimension",
+  "item.createpackage.machine_linker.selection_gone": "The selected distributor no longer exists",
+  "item.createpackage.machine_linker.not_linkable": "This block cannot be linked (no item or fluid inventory)",
+  "item.createpackage.machine_linker.linked": "Linked machine at [%s, %s, %s] (total: %s)",
+  "item.createpackage.machine_linker.already_linked": "This machine is already linked",
+  "item.createpackage.machine_linker.unlinked": "Unlinked machine at [%s, %s, %s] (total: %s)",
+  "item.createpackage.machine_linker.not_linked": "This machine is not linked to the selected distributor",
+  "item.createpackage.machine_linker.tooltip.unbound": "Not bound. Right-click a Package Distributor to select it.",
+  "item.createpackage.machine_linker.tooltip.bound": "Bound to distributor [%s, %s, %s]",
+  "item.createpackage.machine_linker.tooltip.usage": "Right-click machines to link; sneak + right-click to unlink.",
+
+  "createpackage.configuration.title": "Create Package Configs",
+  "createpackage.configuration.section.createpackage.common.toml": "Create Package Configs",
+  "createpackage.configuration.section.createpackage.common.toml.title": "Create Package Configs",
+  "createpackage.configuration.enableDebugLogging": "Enable Debug Logging"
+}

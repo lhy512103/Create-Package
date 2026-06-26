@@ -1,0 +1,6 @@
+# Keep repository text files stable across Windows and Linux.
+* text=auto eol=lf
+
+# Generated files always use LF.
+src/generated/**/.cache/* text eol=lf
+src/generated/**/*.json text eol=lf
