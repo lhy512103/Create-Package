@@ -1,7 +1,7 @@
 package com.lhy.createpackage.registry;
 
 import com.lhy.createpackage.CreatePackage;
-import com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity;
+import com.lhy.createpackage.content.distributor.BasicPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlock;
 
 import net.minecraft.world.level.block.SoundType;
@@ -24,14 +24,14 @@ public final class ModBlocks {
                     .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops()));
 
-    public static final DeferredBlock<PackageDistributorBlock> ADVANCED_PACKAGE_DISTRIBUTOR = BLOCKS.register(
-            "advanced_package_distributor",
+    public static final DeferredBlock<PackageDistributorBlock> BASIC_PACKAGE_DISTRIBUTOR = BLOCKS.register(
+            "basic_package_distributor",
             () -> new PackageDistributorBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.METAL)
                     .strength(3.0f, 6.0f)
                     .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops(),
-                    AdvancedPackageDistributorBlockEntity::new));
+                    BasicPackageDistributorBlockEntity::new));
 
     private ModBlocks() {}
 }

@@ -23,7 +23,7 @@ public final class ModCreativeTabs {
                     .icon(() -> new ItemStack(ModItems.PACKAGE_DISTRIBUTOR.get()))
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.PACKAGE_DISTRIBUTOR.get());
-                        output.accept(ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
+                        output.accept(ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
                         output.accept(ModItems.MACHINE_LINKER.get());
                     })
                     .build());

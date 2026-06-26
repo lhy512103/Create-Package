@@ -2,7 +2,7 @@
   "itemGroup.createpackage": "机械动力封包",
 
   "block.createpackage.package_distributor": "封包分发器",
-  "block.createpackage.advanced_package_distributor": "基础封包分发器",
+  "block.createpackage.basic_package_distributor": "基础封包分发器",
   "item.createpackage.machine_linker": "机器链接器",
   "item.createpackage.incomplete_package_distributor": "未完成的封包分发器",
 

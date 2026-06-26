@@ -54,8 +54,8 @@ public class CreatePackage {
                     ModBlockEntities.PACKAGE_DISTRIBUTOR.get(),
                     ModItems.PACKAGE_DISTRIBUTOR.get());
             AEBaseBlockEntity.registerBlockEntityItem(
-                    ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
-                    ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
+                    ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get(),
+                    ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
         });
     }
 }

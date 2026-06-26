@@ -48,16 +48,16 @@ import appeng.util.SettingsFrom;
  * CPU pushes one of those patterns, it is routed directly into the distributor pipeline inherited
  * from {@link PackageDistributorBlockEntity}; no adjacent pattern provider is required.
  */
-public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlockEntity
+public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockEntity
         implements PatternProviderLogicHost {
 
     private final InternalPatternProviderLogic logic = new InternalPatternProviderLogic();
     private final CombinedTicker combinedTicker = new CombinedTicker();
 
-    public AdvancedPackageDistributorBlockEntity(BlockPos pos, BlockState blockState) {
-        super(ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
-                ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
-                "block." + CreatePackage.MODID + ".advanced_package_distributor",
+    public BasicPackageDistributorBlockEntity(BlockPos pos, BlockState blockState) {
+        super(ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get(),
+                ModItems.BASIC_PACKAGE_DISTRIBUTOR.get(),
+                "block." + CreatePackage.MODID + ".basic_package_distributor",
                 pos, blockState, false);
         getMainNode().addService(IGridTickable.class, combinedTicker)
                 .addService(ICraftingProvider.class, logic);
@@ -121,7 +121,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
 
     @Override
     public AEItemKey getTerminalIcon() {
-        return AEItemKey.of(ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
+        return AEItemKey.of(ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
     }
 
     @Override
@@ -138,13 +138,13 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     public PatternContainerGroup getTerminalGroup() {
         return new PatternContainerGroup(
                 getTerminalIcon(),
-                ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get().getDescription(),
+                ModItems.BASIC_PACKAGE_DISTRIBUTOR.get().getDescription(),
                 List.of());
     }
 
     @Override
     public ItemStack getMainMenuIcon() {
-        return ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.toStack();
+        return ModItems.BASIC_PACKAGE_DISTRIBUTOR.toStack();
     }
 
     @Override
@@ -177,7 +177,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
 
     private final class InternalPatternProviderLogic extends PatternProviderLogic {
         private InternalPatternProviderLogic() {
-            super(getMainNode(), AdvancedPackageDistributorBlockEntity.this);
+            super(getMainNode(), BasicPackageDistributorBlockEntity.this);
         }
 
         @Override
@@ -188,7 +188,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
             if (getCraftingLockedReason() != LockCraftingMode.NONE) {
                 return false;
             }
-            boolean accepted = AdvancedPackageDistributorBlockEntity.super.pushPattern(
+            boolean accepted = BasicPackageDistributorBlockEntity.super.pushPattern(
                     patternDetails, inputHolder, Direction.UP);
             if (accepted) {
                 resetCraftingLock();
@@ -198,7 +198,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
 
         @Override
         public boolean isBusy() {
-            return AdvancedPackageDistributorBlockEntity.this.hasActiveJob();
+            return BasicPackageDistributorBlockEntity.this.hasActiveJob();
         }
     }
 

@@ -6,7 +6,7 @@
   "loops": 1,
   "results": [
     {
-      "id": "createpackage:advanced_package_distributor"
+      "id": "createpackage:basic_package_distributor"
     }
   ],
   "sequence": [

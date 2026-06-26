@@ -6,7 +6,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "createpackage:advanced_package_distributor"
+          "name": "createpackage:basic_package_distributor"
         }
       ],
       "conditions": [

@@ -4,7 +4,7 @@
 
 - Relaxed the runtime NeoForge dependency range to 21.1.230 and newer while keeping the development compile version separate.
 - Fixed non-consuming deployer held items in sequenced assembly patterns: `keep_held_item` ingredients are now treated as reusable tools, optional extra pattern inputs are returned to the AE2 network, and the distributor can preload one from network storage when needed.
-- Renamed the embedded-pattern-provider distributor's display name from Advanced Package Distributor to Basic Package Distributor while keeping the existing registry id for world compatibility.
+- Renamed the embedded-pattern-provider distributor from `advanced_package_distributor` to `basic_package_distributor`, including its registry id, resources, recipes, and Java symbols.
 - Added a Basic Package Distributor sequenced-assembly test recipe using a Package Distributor base, reusable AE2 printed circuits in deployers, mechanical pressing, and lava filling.
 - Added automatic transitional-item reflow for multi-loop sequenced assembly: current-recipe intermediate items are moved from the output link back to the input link while preserving Create's sequenced-assembly data component.
 - Added a waiting status for blocked transitional reflow so goggles/Jade report when the input link cannot accept the intermediate item yet.
@@ -27,7 +27,7 @@
 
 - 放宽运行时 NeoForge 依赖范围为 21.1.230 及以上，并将其与开发编译版本分离。
 - 修复序列组装样板中的非消耗 Deployer 施加物处理：`keep_held_item` 原料现在会被视为可复用工具，样板中额外写入的同类输入会退回 AE2 网络，必要时分发器也能从网络库存预装 1 个到机械手。
-- 将内置样板供应器的分发器显示名从“高级封包分发器”改为“基础封包分发器”，保留既有注册名以兼容已有世界。
+- 将内置样板供应器的分发器从 `advanced_package_distributor` 改为 `basic_package_distributor`，同步更新注册名、资源、配方和 Java 符号，为后续真正的高级封包分发器预留 ID。
 - 增加基础封包分发器序列组装测试配方：以封包分发器为基础，机械手使用不消耗的 AE2 已压印电路板，并包含机械辊压和熔岩注液步骤。
 - 增加多循环序列组装的中间产物自动回流：当前配方的中间产物会从终点链接回到起点链接，并保留 Create 的序列组装数据组件。
 - 增加中间产物回流受阻状态，起点无法接收中间产物时护目镜/Jade 会直接显示等待原因。

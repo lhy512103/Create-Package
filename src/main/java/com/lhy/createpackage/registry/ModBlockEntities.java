@@ -1,7 +1,7 @@
 package com.lhy.createpackage.registry;
 
 import com.lhy.createpackage.CreatePackage;
-import com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity;
+import com.lhy.createpackage.content.distributor.BasicPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
 
 import net.minecraft.core.registries.Registries;
@@ -22,11 +22,11 @@ public final class ModBlockEntities {
                             PackageDistributorBlockEntity::new,
                             ModBlocks.PACKAGE_DISTRIBUTOR.get()).build(null));
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AdvancedPackageDistributorBlockEntity>> ADVANCED_PACKAGE_DISTRIBUTOR =
-            BLOCK_ENTITIES.register("advanced_package_distributor",
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BasicPackageDistributorBlockEntity>> BASIC_PACKAGE_DISTRIBUTOR =
+            BLOCK_ENTITIES.register("basic_package_distributor",
                     () -> BlockEntityType.Builder.of(
-                            AdvancedPackageDistributorBlockEntity::new,
-                            ModBlocks.ADVANCED_PACKAGE_DISTRIBUTOR.get()).build(null));
+                            BasicPackageDistributorBlockEntity::new,
+                            ModBlocks.BASIC_PACKAGE_DISTRIBUTOR.get()).build(null));
 
     private ModBlockEntities() {}
 }
