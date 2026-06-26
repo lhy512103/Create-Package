@@ -452,6 +452,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return null;
         }
 
+        var returnActions = new ArrayList<SupplyAction>();
         var actions = new ArrayList<SupplyAction>();
         var refillInputs = new ArrayList<GenericStack>();
         actions.add(new ItemSupplyAction(inputPos, inputStack));
@@ -471,18 +472,26 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                     BlockPos deployer = deployers.get(deployIdx).pos();
                     long existing = countMatchingItem(deployer, step.heldItem());
                     if (step.keepHeld()) {
-                        if (existing <= 0 && countMatchingInput(patternInputs, step.heldItem()) <= 0) {
-                            rememberStatus("missing_deployer_item");
-                            return null;
-                        }
                         if (existing <= 0) {
                             ItemStack held = takeMatchingItem(patternInputs, step.heldItem(), 1);
+                            boolean supplied = false;
                             if (held.isEmpty()) {
+                                NetworkItemStack networkHeld = findNetworkItem(step.heldItem(), 1);
+                                if (networkHeld != null) {
+                                    actions.add(new NetworkItemSupplyAction(deployer, networkHeld.key(),
+                                            networkHeld.stack()));
+                                    supplied = true;
+                                }
+                            } else {
+                                actions.add(new ItemSupplyAction(deployer, held));
+                                supplied = true;
+                            }
+                            if (!supplied) {
                                 rememberStatus("missing_deployer_item");
                                 return null;
                             }
-                            actions.add(new ItemSupplyAction(deployer, held));
                         }
+                        returnAllMatchingInputs(patternInputs, step.heldItem(), returnActions);
                     } else {
                         long amount = plan.loops();
                         long availableInput = countMatchingInput(patternInputs, step.heldItem());
@@ -550,8 +559,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return null;
         }
 
+        var allActions = new ArrayList<SupplyAction>(returnActions.size() + actions.size());
+        allActions.addAll(returnActions);
+        allActions.addAll(actions);
         return new PlanContext(match.id(), primaryOutputKey, primary.amount(), inputPos, outputPos,
-                transitionalItemKey, plan.steps().size(), plan.loops(), actions, refillInputs);
+                transitionalItemKey, plan.steps().size(), plan.loops(), allActions, refillInputs);
     }
 
     protected final boolean tickDistributorJob() {
@@ -749,6 +761,27 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return grid.getStorageService().getInventory().extract(what, amount, mode, actionSource);
     }
 
+    @Nullable
+    private NetworkItemStack findNetworkItem(net.minecraft.world.item.crafting.Ingredient ingredient, long amount) {
+        if (ingredient == null || amount <= 0 || amount > Integer.MAX_VALUE) {
+            return null;
+        }
+        var grid = getMainNode().getGrid();
+        if (grid == null) {
+            return null;
+        }
+        for (var entry : grid.getStorageService().getCachedInventory()) {
+            if (entry.getLongValue() < amount || !(entry.getKey() instanceof AEItemKey itemKey)) {
+                continue;
+            }
+            ItemStack stack = itemKey.toStack((int) amount);
+            if (ingredient.test(stack)) {
+                return new NetworkItemStack(itemKey, stack);
+            }
+        }
+        return null;
+    }
+
     private boolean startRefillRound(String reason) {
         if (currentJob == null) {
             return false;
@@ -863,8 +896,13 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                     BlockPos deployer = deployers.get(deployIdx).pos();
                     if (step.keepHeld()) {
                         if (countMatchingItem(deployer, step.heldItem()) <= 0) {
-                            rememberStatus("missing_deployer_item");
-                            return null;
+                            NetworkItemStack held = findNetworkItem(step.heldItem(), 1);
+                            if (held == null) {
+                                rememberStatus("missing_deployer_item");
+                                return null;
+                            }
+                            actions.add(new ItemSupplyAction(deployer, held.stack()));
+                            addRefillInput(inputs, held.stack());
                         }
                     } else {
                         long amount = plan.loops();
@@ -913,7 +951,17 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         if (level == null || !level.isLoaded(pos)) {
             return null;
         }
-        return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
+        IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
+        if (handler != null) {
+            return handler;
+        }
+        for (Direction direction : Direction.values()) {
+            handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, direction);
+            if (handler != null) {
+                return handler;
+            }
+        }
+        return null;
     }
 
     private boolean canInsertAll(BlockPos target, ItemStack stack) {
@@ -1235,7 +1283,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         for (KeyCounter counter : inputs) {
             for (var entry : counter) {
                 if (entry.getLongValue() > 0) {
-                    result.add(new GenericStack(entry.getKey(), entry.getLongValue()));
+                    addRefillInput(result, new GenericStack(entry.getKey(), entry.getLongValue()));
                 }
             }
         }
@@ -1299,6 +1347,20 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             }
         }
         return ItemStack.EMPTY;
+    }
+
+    private void returnAllMatchingInputs(List<GenericStack> inputs,
+            net.minecraft.world.item.crafting.Ingredient ingredient, List<SupplyAction> actions) {
+        if (ingredient == null) {
+            return;
+        }
+        for (int i = inputs.size() - 1; i >= 0; i--) {
+            GenericStack input = inputs.get(i);
+            if (input.what() instanceof AEItemKey itemKey && ingredient.test(itemKey.toStack(1))) {
+                actions.add(new NetworkReturnAction(input));
+                inputs.remove(i);
+            }
+        }
     }
 
     private static FluidStack takeMatchingFluid(List<GenericStack> inputs,
@@ -1373,6 +1435,9 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     private record AeStatus(boolean nodePresent, boolean powered, boolean channel, boolean active) {
     }
 
+    private record NetworkItemStack(AEItemKey key, ItemStack stack) {
+    }
+
     private final class ItemSupplyAction implements SupplyAction {
         private final BlockPos target;
         private final ItemStack stack;
@@ -1385,6 +1450,59 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         @Override
         public boolean perform(boolean simulate) {
             return insertItem(target, stack, simulate).isEmpty();
+        }
+    }
+
+    private final class NetworkItemSupplyAction implements SupplyAction {
+        private final BlockPos target;
+        private final AEItemKey key;
+        private final ItemStack stack;
+
+        private NetworkItemSupplyAction(BlockPos target, AEItemKey key, ItemStack stack) {
+            this.target = target;
+            this.key = key;
+            this.stack = stack.copy();
+        }
+
+        @Override
+        public boolean perform(boolean simulate) {
+            long amount = stack.getCount();
+            if (extractFromNetwork(key, amount, Actionable.SIMULATE) < amount) {
+                return false;
+            }
+            if (!canInsertAll(target, stack)) {
+                return false;
+            }
+            if (simulate) {
+                return true;
+            }
+            long extracted = extractFromNetwork(key, amount, Actionable.MODULATE);
+            if (extracted < amount) {
+                if (extracted > 0) {
+                    insertIntoNetwork(key, extracted, Actionable.MODULATE);
+                }
+                return false;
+            }
+            ItemStack remaining = insertItem(target, stack, false);
+            if (!remaining.isEmpty()) {
+                insertIntoNetwork(key, remaining.getCount(), Actionable.MODULATE);
+                return false;
+            }
+            return true;
+        }
+    }
+
+    private final class NetworkReturnAction implements SupplyAction {
+        private final GenericStack stack;
+
+        private NetworkReturnAction(GenericStack stack) {
+            this.stack = stack;
+        }
+
+        @Override
+        public boolean perform(boolean simulate) {
+            var mode = simulate ? Actionable.SIMULATE : Actionable.MODULATE;
+            return insertIntoNetwork(stack.what(), stack.amount(), mode) >= stack.amount();
         }
     }
 

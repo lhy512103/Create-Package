@@ -1,0 +1,99 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "createpackage:package_distributor"
+  },
+  "loops": 1,
+  "results": [
+    {
+      "id": "createpackage:advanced_package_distributor"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "keep_held_item": true,
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "ae2:printed_logic_processor"
+        }
+      ],
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ],
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "keep_held_item": true,
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "ae2:printed_calculation_processor"
+        }
+      ],
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "type": "fluid_stack",
+          "amount": 250,
+          "fluid": "minecraft:lava"
+        }
+      ],
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "keep_held_item": true,
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "ae2:printed_engineering_processor"
+        }
+      ],
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "createpackage:incomplete_package_distributor"
+  }
+}

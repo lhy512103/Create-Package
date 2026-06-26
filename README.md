@@ -13,7 +13,7 @@
 已实现:
 
 - 封包分发器接入 AE2 网格，并向相邻样板供应器暴露 AE2 crafting-machine capability。
-- 高级封包分发器内置 AE2 样板供应器逻辑，可直接放入样板并向 AE2 网络提供这些样板。
+- 基础封包分发器内置 AE2 样板供应器逻辑，可直接放入样板并向 AE2 网络提供这些样板。
 - 机器链接器可以保存一组有序链接的 Create 机器位置。
 - 可以把 Create 序列组装配方解析为供料计划。
 - 分发器会校验、模拟、执行投料，然后等待主产物出现在终点料盘或传送带并回收到 AE2。
@@ -42,7 +42,7 @@
 2. 把封包分发器接入 AE2 网络。
    分发器需要 AE2 频道。把 AE2 样板供应器放在分发器旁边，让供应器可以把加工样板推送给分发器。
 
-   如果使用高级封包分发器，则不需要额外放 AE2 样板供应器。把高级封包分发器接入 AE2 网络后，右键打开它自己的样板槽，把 AE2 加工样板直接放进去即可。AE2 下单时会把该高级分发器当作样板供应源，材料会直接进入它自己的分发管线。
+   如果使用基础封包分发器，则不需要额外放 AE2 样板供应器。把基础封包分发器接入 AE2 网络后，右键打开它自己的样板槽，把 AE2 加工样板直接放进去即可。AE2 下单时会把该基础分发器当作样板供应源，材料会直接进入它自己的分发管线。
 
 3. 用机器链接器按物品流动顺序链接机器。
    先右键封包分发器选中它，再按流水线顺序右键 Create 机器:
@@ -67,7 +67,7 @@
 5. 把样板放进 AE2 样板供应器并从 AE2 发起合成。
    AE2 推送样板后，分发器会先模拟所有目标能否接收材料。模拟成功后才会真正投料，并等待终点位置出现主产物。回收到的物品会注入 AE2 网络存储。
 
-   使用高级封包分发器时，把样板放进高级封包分发器本体，不要再额外贴一个样板供应器。
+   使用基础封包分发器时，把样板放进基础封包分发器本体，不要再额外贴一个样板供应器。
 
 ## 多循环自动回流
 
@@ -121,7 +121,7 @@ Pressing 和 cutting 步骤由真实 Create 流水线上的机器自然完成，
 ## 当前限制
 
 - 一个分发器同一时间只处理一个作业。
-- 高级封包分发器复用 AE2 原版样板供应器菜单和样板库存，但目前仍只按本模组支持的 Create 序列组装样板执行。
+- 基础封包分发器复用 AE2 原版样板供应器菜单和样板库存，但目前仍只按本模组支持的 Create 序列组装样板执行。
 - 自动回流只处理带有当前配方 `sequenced_assembly` 组件的中间产物；普通副产物不会被回流。
 - 起点和终点料盘或传送带必须是不同位置。
 - Create 流水线必须有效、有动力，并且能把产物送到终点位置。
@@ -145,7 +145,7 @@ player.
    deployers, spouts, presses, saws, power, and item movement.
 2. Place a Package Distributor on the AE2 network and put an AE2 Pattern
    Provider next to it.
-   With an Advanced Package Distributor, no adjacent Pattern Provider is needed:
+   With a Basic Package Distributor, no adjacent Pattern Provider is needed:
    place it on the AE2 network, right-click it, and put encoded AE2 processing
    patterns into its built-in pattern slots.
 3. Use the Machine Linker: right-click the distributor to select it, then link
@@ -165,7 +165,7 @@ player.
 Implemented: AE2 grid integration, ordered machine linking, sequenced-assembly
 supply-plan parsing, conservative validation, simulated insertion before real
 insertion, output recovery, probabilistic-output refills, Engineer's Goggles/Jade
-diagnostics, an Advanced Package Distributor with an embedded AE2 pattern-provider
+diagnostics, a Basic Package Distributor with an embedded AE2 pattern-provider
 inventory, automatic transitional-item reflow for multi-loop sequenced assembly,
 and low-overhead ticking with no mixins, reflection, or world scanning.
 
