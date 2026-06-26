@@ -44,6 +44,7 @@
   "tooltip.createpackage.package_distributor.status.waiting_refill_inputs": "Waiting for refill inputs",
   "tooltip.createpackage.package_distributor.status.refill_target_full": "Refill target cannot accept inputs",
   "tooltip.createpackage.package_distributor.status.refill_unavailable": "This job cannot be refilled",
+  "tooltip.createpackage.package_distributor.status.waiting_reflow_input": "Waiting for input to accept transitional item",
   "tooltip.createpackage.package_distributor.ae_node": "AE: power %s / channel %s / online %s",
   "tooltip.createpackage.package_distributor.ae_node_missing": "AE: node not created yet",
   "tooltip.createpackage.package_distributor.job": "Job: %s, primary remaining %s, round %s",

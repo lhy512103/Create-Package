@@ -17,6 +17,7 @@
 - 机器链接器可以保存一组有序链接的 Create 机器位置。
 - 可以把 Create 序列组装配方解析为供料计划。
 - 分发器会校验、模拟、执行投料，然后等待主产物出现在终点料盘或传送带并回收到 AE2。
+- 多循环序列组装支持自动回流：终点出现当前配方的 Create 中间产物时，分发器会把原始物品重新放回起点，保留序列组装进度组件。
 - 几率主产物没有产出时会自动补刷：终点收到副产物会立即再投一轮；一轮完全没有产物时会在配置的等待时间后再投一轮。
 - 工程师护目镜/Jade 可显示作业主产物名称、剩余主产物数量、当前补刷轮次、AE 状态和已链接机器。
 - 运行时不使用 mixin、不使用反射、不扫描世界；只访问玩家链接的位置，空闲时 AE2 tick 会睡眠。
@@ -68,6 +69,17 @@
 
    使用高级封包分发器时，把样板放进高级封包分发器本体，不要再额外贴一个样板供应器。
 
+## 多循环自动回流
+
+Create 的序列组装中间产物带有配方 id、步骤和进度组件。分发器会识别当前作业的中间产物:
+
+- 终点出现当前配方的中间产物时，分发器会把这个原始 ItemStack 重新插回起点料盘或传送带。
+- 回流时不会把物品拆成普通物品，也不会丢失 Create 的序列组装进度。
+- 起点暂时不能接收时，状态会显示“等待起点接收中间产物”，并在后续 tick 继续重试。
+- 只有最终主产物会减少 AE2 请求量；非中间产物的副产物/废料仍会回收到 AE2，并按几率产物逻辑补刷。
+
+因此玩家可以搭建线性流水线：起点 -> 各加工机器 -> 终点。多循环配方不再强制玩家用传送带额外绕回起点。
+
 ## 几率产物与补刷
 
 AE2 的一次样板推送只会交给分发器一轮材料。对精密构件这类几率主产物，分发器会按主产物计量:
@@ -110,6 +122,7 @@ Pressing 和 cutting 步骤由真实 Create 流水线上的机器自然完成，
 
 - 一个分发器同一时间只处理一个作业。
 - 高级封包分发器复用 AE2 原版样板供应器菜单和样板库存，但目前仍只按本模组支持的 Create 序列组装样板执行。
+- 自动回流只处理带有当前配方 `sequenced_assembly` 组件的中间产物；普通副产物不会被回流。
 - 起点和终点料盘或传送带必须是不同位置。
 - Create 流水线必须有效、有动力，并且能把产物送到终点位置。
 - 如果真实流水线卡住但没有达到空产出等待时间，分发器会继续等待。
@@ -153,7 +166,8 @@ Implemented: AE2 grid integration, ordered machine linking, sequenced-assembly
 supply-plan parsing, conservative validation, simulated insertion before real
 insertion, output recovery, probabilistic-output refills, Engineer's Goggles/Jade
 diagnostics, an Advanced Package Distributor with an embedded AE2 pattern-provider
-inventory, and low-overhead ticking with no mixins, reflection, or world scanning.
+inventory, automatic transitional-item reflow for multi-loop sequenced assembly,
+and low-overhead ticking with no mixins, reflection, or world scanning.
 
 Planned: dedicated sequenced-assembly pattern encoder and more detailed missing-input diagnostics.
 

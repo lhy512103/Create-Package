@@ -87,7 +87,7 @@ public final class PackageDistributorComponentProvider implements IBlockComponen
         return switch (status) {
             case "ready", "completed" -> ChatFormatting.GREEN;
             case "working" -> ChatFormatting.AQUA;
-            case "busy" -> ChatFormatting.YELLOW;
+            case "busy", "waiting_reflow_input" -> ChatFormatting.YELLOW;
             default -> ChatFormatting.RED;
         };
     }

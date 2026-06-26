@@ -7,7 +7,9 @@ import java.util.Objects;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.simibubi.create.AllDataComponents;
 import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
+import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 
 import com.lhy.createpackage.Config;
 import com.lhy.createpackage.CreatePackage;
@@ -251,11 +253,16 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             data.writeResourceLocation(currentJob.recipeId);
             currentJob.primaryOutput.writeToPacket(data);
             data.writeVarLong(currentJob.primaryRemaining);
+            data.writeBlockPos(currentJob.inputPos);
             data.writeBlockPos(currentJob.outputPos);
+            currentJob.transitionalItem.writeToPacket(data);
+            data.writeVarInt(currentJob.sequenceLength);
+            data.writeVarInt(currentJob.loops);
             data.writeVarInt(currentJob.ticks);
             data.writeVarInt(currentJob.roundTicks);
             data.writeVarLong(currentJob.roundsStarted);
             data.writeBoolean(currentJob.roundHasOutput);
+            data.writeBoolean(currentJob.awaitingFinalOutput);
         }
     }
 
@@ -298,12 +305,18 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             ResourceLocation recipeId = data.readResourceLocation();
             AEItemKey primaryOutput = AEItemKey.fromPacket(data);
             long primaryRemaining = data.readVarLong();
+            BlockPos inputPos = data.readBlockPos();
             BlockPos outputPos = data.readBlockPos();
-            streamedJob = new DistributionJob(recipeId, primaryOutput, primaryRemaining, outputPos, List.of());
+            AEItemKey transitionalItem = AEItemKey.fromPacket(data);
+            int sequenceLength = data.readVarInt();
+            int loops = data.readVarInt();
+            streamedJob = new DistributionJob(recipeId, primaryOutput, primaryRemaining, inputPos, outputPos,
+                    transitionalItem, sequenceLength, loops, List.of());
             streamedJob.ticks = data.readVarInt();
             streamedJob.roundTicks = data.readVarInt();
             streamedJob.roundsStarted = data.readVarLong();
             streamedJob.roundHasOutput = data.readBoolean();
+            streamedJob.awaitingFinalOutput = data.readBoolean();
         }
         if (!sameJob(currentJob, streamedJob)) {
             currentJob = streamedJob;
@@ -357,7 +370,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
 
         currentJob = new DistributionJob(context.recipeId(), context.primaryOutputKey(),
-                context.primaryOutputAmount(), context.outputPos(), context.refillInputs());
+                context.primaryOutputAmount(), context.inputPos(), context.outputPos(), context.transitionalItemKey(),
+                context.sequenceLength(), context.loops(), context.refillInputs());
         currentJob.roundsStarted = 1;
         consumeInputs(inputs);
         lastStatusKey = "working";
@@ -411,6 +425,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         var match = candidates.get(0);
         AssemblyPlan plan = AssemblyPlan.of(match.recipe());
+        AEItemKey transitionalItemKey = AEItemKey.of(match.recipe().getTransitionalItem());
+        if (transitionalItemKey == null) {
+            rememberStatus("no_matching_recipe");
+            return null;
+        }
         LinkedMachines machines = LinkedMachines.resolve(level, linkedMachines);
 
         var inputPos = machines.inputDepot();
@@ -531,7 +550,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return null;
         }
 
-        return new PlanContext(match.id(), primaryOutputKey, primary.amount(), outputPos, actions, refillInputs);
+        return new PlanContext(match.id(), primaryOutputKey, primary.amount(), inputPos, outputPos,
+                transitionalItemKey, plan.steps().size(), plan.loops(), actions, refillInputs);
     }
 
     protected final boolean tickDistributorJob() {
@@ -543,6 +563,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         currentJob.roundTicks++;
         boolean waitingForRefill = "waiting_refill_inputs".equals(lastStatusKey)
                 || "refill_target_full".equals(lastStatusKey);
+        boolean waitingForReflow = "waiting_reflow_input".equals(lastStatusKey);
         boolean didWork = collectOutput();
         if (currentJob.primaryRemaining <= 0) {
             CreatePackage.LOGGER.info("[Distributor @ {}] completed recipe {}", getBlockPos(), currentJob.recipeId);
@@ -553,7 +574,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
         if (waitingForRefill) {
             didWork = retryRefillRound() || didWork;
-        } else if (!currentJob.roundHasOutput && currentJob.roundTicks > emptyOutputRefillTimeoutTicks()) {
+        } else if (!waitingForReflow && currentJob.awaitingFinalOutput && !currentJob.roundHasOutput
+                && currentJob.roundTicks > emptyOutputRefillTimeoutTicks()) {
             CreatePackage.LOGGER.warn("[Distributor @ {}] no output appeared for recipe {} after {} ticks; treating "
                     + "this round as an empty probability result", getBlockPos(), currentJob.recipeId,
                     currentJob.roundTicks);
@@ -588,6 +610,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         for (int slot = 0; slot < handler.getSlots(); slot++) {
             ItemStack available = handler.extractItem(slot, 64, true);
             if (available.isEmpty()) {
+                continue;
+            }
+
+            if (isCurrentTransitional(available)) {
+                didWork = reflowTransitionalOutput(handler, slot, available) || didWork;
                 continue;
             }
 
@@ -636,6 +663,74 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             saveAndSync();
         }
         return didWork;
+    }
+
+    private boolean reflowTransitionalOutput(IItemHandler outputHandler, int slot, ItemStack available) {
+        if (currentJob == null) {
+            return false;
+        }
+        if (!canInsertAll(currentJob.inputPos, available)) {
+            rememberStatus("waiting_reflow_input");
+            return false;
+        }
+
+        ItemStack extracted = outputHandler.extractItem(slot, available.getCount(), false);
+        if (extracted.isEmpty()) {
+            return false;
+        }
+
+        if (!isCurrentTransitional(extracted)) {
+            CreatePackage.LOGGER.warn("[Distributor @ {}] output slot changed while reflowing sequenced item for {}",
+                    getBlockPos(), currentJob.recipeId);
+            return false;
+        }
+
+        boolean nextPassIsFinal = nextPassIsFinal(extracted);
+        ItemStack remaining = insertItem(currentJob.inputPos, extracted, false);
+        if (!remaining.isEmpty()) {
+            CreatePackage.LOGGER.warn("[Distributor @ {}] simulated transitional reflow but input accepted only {} "
+                    + "of {}; keeping remainder for retry", getBlockPos(),
+                    extracted.getCount() - remaining.getCount(), extracted.getCount());
+            ItemStack leftover = insertIntoHandler(outputHandler, remaining, false);
+            if (!leftover.isEmpty()) {
+                AEItemKey key = AEItemKey.of(leftover);
+                if (key != null) {
+                    insertIntoNetwork(key, leftover.getCount(), Actionable.MODULATE);
+                }
+            }
+            rememberStatus("waiting_reflow_input");
+            return true;
+        }
+
+        currentJob.awaitingFinalOutput = nextPassIsFinal;
+        currentJob.roundHasOutput = false;
+        currentJob.roundTicks = 0;
+        lastStatusKey = "working";
+        CreatePackage.LOGGER.debug("[Distributor @ {}] reflowed transitional item for recipe {} to {} (final pass: {})",
+                getBlockPos(), currentJob.recipeId, currentJob.inputPos, nextPassIsFinal);
+        return true;
+    }
+
+    private boolean isCurrentTransitional(ItemStack stack) {
+        if (currentJob == null || stack.isEmpty() || !stack.has(AllDataComponents.SEQUENCED_ASSEMBLY)) {
+            return false;
+        }
+        if (stack.getItem() != currentJob.transitionalItem.getReadOnlyStack().getItem()) {
+            return false;
+        }
+        SequencedAssemblyRecipe.SequencedAssembly assembly = stack.get(AllDataComponents.SEQUENCED_ASSEMBLY);
+        return assembly != null && assembly.id().equals(currentJob.recipeId);
+    }
+
+    private boolean nextPassIsFinal(ItemStack stack) {
+        if (currentJob == null || currentJob.sequenceLength <= 0 || currentJob.loops <= 1) {
+            return true;
+        }
+        SequencedAssemblyRecipe.SequencedAssembly assembly = stack.get(AllDataComponents.SEQUENCED_ASSEMBLY);
+        if (assembly == null) {
+            return false;
+        }
+        return assembly.step() >= currentJob.sequenceLength * (currentJob.loops - 1);
     }
 
     private long insertIntoNetwork(AEKey what, long amount, Actionable mode) {
@@ -715,6 +810,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         currentJob.roundsStarted++;
         currentJob.roundTicks = 0;
         currentJob.roundHasOutput = false;
+        currentJob.awaitingFinalOutput = currentJob.loops <= 1;
         lastStatusKey = "working";
         CreatePackage.LOGGER.info("[Distributor @ {}] refilled recipe {} after {} (round {})",
                 getBlockPos(), currentJob.recipeId, reason, currentJob.roundsStarted);
@@ -818,6 +914,26 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return null;
         }
         return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
+    }
+
+    private boolean canInsertAll(BlockPos target, ItemStack stack) {
+        return insertItem(target, stack, true).isEmpty();
+    }
+
+    private ItemStack insertItem(BlockPos target, ItemStack stack, boolean simulate) {
+        IItemHandler handler = itemHandler(target);
+        if (handler == null) {
+            return stack.copy();
+        }
+        return insertIntoHandler(handler, stack, simulate);
+    }
+
+    private ItemStack insertIntoHandler(IItemHandler handler, ItemStack stack, boolean simulate) {
+        ItemStack remaining = stack.copy();
+        for (int slot = 0; slot < handler.getSlots() && !remaining.isEmpty(); slot++) {
+            remaining = handler.insertItem(slot, remaining, simulate);
+        }
+        return remaining;
     }
 
     private long countMatchingItem(BlockPos pos, net.minecraft.world.item.crafting.Ingredient ingredient) {
@@ -972,7 +1088,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         ChatFormatting color = switch (status) {
             case "ready", "completed" -> ChatFormatting.GREEN;
             case "working" -> ChatFormatting.AQUA;
-            case "busy" -> ChatFormatting.YELLOW;
+            case "busy", "waiting_reflow_input" -> ChatFormatting.YELLOW;
             default -> ChatFormatting.RED;
         };
         return Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.status",
@@ -1048,11 +1164,16 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return Objects.equals(left.recipeId, right.recipeId)
                 && Objects.equals(left.primaryOutput, right.primaryOutput)
                 && left.primaryRemaining == right.primaryRemaining
+                && Objects.equals(left.inputPos, right.inputPos)
                 && Objects.equals(left.outputPos, right.outputPos)
+                && Objects.equals(left.transitionalItem, right.transitionalItem)
+                && left.sequenceLength == right.sequenceLength
+                && left.loops == right.loops
                 && left.ticks == right.ticks
                 && left.roundTicks == right.roundTicks
                 && left.roundsStarted == right.roundsStarted
-                && left.roundHasOutput == right.roundHasOutput;
+                && left.roundHasOutput == right.roundHasOutput
+                && left.awaitingFinalOutput == right.awaitingFinalOutput;
     }
 
     private static void addRefillInput(List<GenericStack> inputs, ItemStack stack) {
@@ -1218,7 +1339,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             ResourceLocation recipeId,
             AEItemKey primaryOutputKey,
             long primaryOutputAmount,
+            BlockPos inputPos,
             BlockPos outputPos,
+            AEItemKey transitionalItemKey,
+            int sequenceLength,
+            int loops,
             List<SupplyAction> actions,
             List<GenericStack> refillInputs) {
 
@@ -1259,15 +1384,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         @Override
         public boolean perform(boolean simulate) {
-            IItemHandler handler = itemHandler(target);
-            if (handler == null) {
-                return false;
-            }
-            ItemStack remaining = stack.copy();
-            for (int slot = 0; slot < handler.getSlots() && !remaining.isEmpty(); slot++) {
-                remaining = handler.insertItem(slot, remaining, simulate);
-            }
-            return remaining.isEmpty();
+            return insertItem(target, stack, simulate).isEmpty();
         }
     }
 
@@ -1295,11 +1412,16 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private static final String NBT_RECIPE = "recipe";
         private static final String NBT_OUTPUT = "output";
         private static final String NBT_REMAINING = "remaining";
+        private static final String NBT_INPUT_POS = "inputPos";
         private static final String NBT_OUTPUT_POS = "outputPos";
+        private static final String NBT_TRANSITIONAL = "transitional";
+        private static final String NBT_SEQUENCE_LENGTH = "sequenceLength";
+        private static final String NBT_LOOPS = "loops";
         private static final String NBT_TICKS = "ticks";
         private static final String NBT_ROUND_TICKS = "roundTicks";
         private static final String NBT_ROUNDS_STARTED = "roundsStarted";
         private static final String NBT_ROUND_HAS_OUTPUT = "roundHasOutput";
+        private static final String NBT_AWAITING_FINAL_OUTPUT = "awaitingFinalOutput";
         private static final String NBT_REFILL_INPUTS = "refillInputs";
         private static final String NBT_REFILL_KEY = "key";
         private static final String NBT_REFILL_AMOUNT = "amount";
@@ -1307,20 +1429,31 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private final ResourceLocation recipeId;
         private final AEItemKey primaryOutput;
         private long primaryRemaining;
+        private final BlockPos inputPos;
         private final BlockPos outputPos;
+        private final AEItemKey transitionalItem;
+        private final int sequenceLength;
+        private final int loops;
         private final List<GenericStack> refillInputs;
         private int ticks;
         private int roundTicks;
         private long roundsStarted;
         private boolean roundHasOutput;
+        private boolean awaitingFinalOutput;
 
         private DistributionJob(ResourceLocation recipeId, AEItemKey primaryOutput, long primaryRemaining,
-                BlockPos outputPos, List<GenericStack> refillInputs) {
+                BlockPos inputPos, BlockPos outputPos, AEItemKey transitionalItem, int sequenceLength, int loops,
+                List<GenericStack> refillInputs) {
             this.recipeId = Objects.requireNonNull(recipeId);
             this.primaryOutput = Objects.requireNonNull(primaryOutput);
             this.primaryRemaining = primaryRemaining;
+            this.inputPos = inputPos.immutable();
             this.outputPos = outputPos.immutable();
+            this.transitionalItem = Objects.requireNonNull(transitionalItem);
+            this.sequenceLength = sequenceLength;
+            this.loops = loops;
             this.refillInputs = List.copyOf(refillInputs);
+            this.awaitingFinalOutput = loops <= 1;
         }
 
         private CompoundTag write(HolderLookup.Provider registries) {
@@ -1328,11 +1461,16 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             tag.putString(NBT_RECIPE, recipeId.toString());
             tag.put(NBT_OUTPUT, primaryOutput.toTag(registries));
             tag.putLong(NBT_REMAINING, primaryRemaining);
+            tag.putLong(NBT_INPUT_POS, inputPos.asLong());
             tag.putLong(NBT_OUTPUT_POS, outputPos.asLong());
+            tag.put(NBT_TRANSITIONAL, transitionalItem.toTag(registries));
+            tag.putInt(NBT_SEQUENCE_LENGTH, sequenceLength);
+            tag.putInt(NBT_LOOPS, loops);
             tag.putInt(NBT_TICKS, ticks);
             tag.putInt(NBT_ROUND_TICKS, roundTicks);
             tag.putLong(NBT_ROUNDS_STARTED, roundsStarted);
             tag.putBoolean(NBT_ROUND_HAS_OUTPUT, roundHasOutput);
+            tag.putBoolean(NBT_AWAITING_FINAL_OUTPUT, awaitingFinalOutput);
             ListTag refillList = new ListTag();
             for (GenericStack input : refillInputs) {
                 CompoundTag inputTag = new CompoundTag();
@@ -1350,6 +1488,12 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             if (output == null) {
                 return null;
             }
+            AEItemKey transitional = tag.contains(NBT_TRANSITIONAL)
+                    ? AEItemKey.fromTag(registries, tag.getCompound(NBT_TRANSITIONAL))
+                    : output;
+            if (transitional == null) {
+                transitional = output;
+            }
             List<GenericStack> refillInputs = new ArrayList<>();
             ListTag refillList = tag.getList(NBT_REFILL_INPUTS, Tag.TAG_COMPOUND);
             for (int i = 0; i < refillList.size(); i++) {
@@ -1360,12 +1504,20 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                     refillInputs.add(new GenericStack(key, amount));
                 }
             }
-            var job = new DistributionJob(recipe, output, tag.getLong(NBT_REMAINING),
-                    BlockPos.of(tag.getLong(NBT_OUTPUT_POS)), refillInputs);
+            BlockPos outputPos = BlockPos.of(tag.getLong(NBT_OUTPUT_POS));
+            BlockPos inputPos = tag.contains(NBT_INPUT_POS) ? BlockPos.of(tag.getLong(NBT_INPUT_POS)) : outputPos;
+            var job = new DistributionJob(recipe, output, tag.getLong(NBT_REMAINING), inputPos, outputPos,
+                    transitional,
+                    tag.contains(NBT_SEQUENCE_LENGTH) ? tag.getInt(NBT_SEQUENCE_LENGTH) : 1,
+                    tag.contains(NBT_LOOPS) ? tag.getInt(NBT_LOOPS) : 1,
+                    refillInputs);
             job.ticks = tag.getInt(NBT_TICKS);
             job.roundTicks = tag.getInt(NBT_ROUND_TICKS);
             job.roundsStarted = tag.contains(NBT_ROUNDS_STARTED) ? tag.getLong(NBT_ROUNDS_STARTED) : 1;
             job.roundHasOutput = tag.getBoolean(NBT_ROUND_HAS_OUTPUT);
+            job.awaitingFinalOutput = tag.contains(NBT_AWAITING_FINAL_OUTPUT)
+                    ? tag.getBoolean(NBT_AWAITING_FINAL_OUTPUT)
+                    : job.loops <= 1;
             return job;
         }
     }

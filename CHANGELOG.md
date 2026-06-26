@@ -2,6 +2,8 @@
 
 ## 2026-06-26
 
+- Added automatic transitional-item reflow for multi-loop sequenced assembly: current-recipe intermediate items are moved from the output link back to the input link while preserving Create's sequenced-assembly data component.
+- Added a waiting status for blocked transitional reflow so goggles/Jade report when the input link cannot accept the intermediate item yet.
 - Added the Advanced Package Distributor, combining the existing distributor pipeline with an embedded AE2 pattern-provider inventory so patterns can be stored in the distributor itself.
 - Added registration, block/item models, loot table, language entries, creative-tab entry, network-tool representation, and a shaped recipe for the Advanced Package Distributor.
 - Fixed Machine Linker interaction with the Advanced Package Distributor: holding the linker now selects/clears links instead of opening the embedded pattern-provider GUI.
@@ -19,6 +21,8 @@
 
 ## 2026-06-26 中文
 
+- 增加多循环序列组装的中间产物自动回流：当前配方的中间产物会从终点链接回到起点链接，并保留 Create 的序列组装数据组件。
+- 增加中间产物回流受阻状态，起点无法接收中间产物时护目镜/Jade 会直接显示等待原因。
 - 增加高级封包分发器：把现有分发器投料管线和 AE2 样板供应器库存组合在同一个方块里，样板可以直接放入分发器本体。
 - 补齐高级封包分发器的注册、方块/物品模型、掉落表、语言、创造栏、AE 网络工具代表物品和有序合成配方。
 - 修复机器链接器与高级封包分发器的交互：手持链接器右键时会选中/清空链接，不再打开内置样板供应器界面。

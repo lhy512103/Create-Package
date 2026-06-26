@@ -44,6 +44,7 @@
   "tooltip.createpackage.package_distributor.status.waiting_refill_inputs": "等待补刷材料",
   "tooltip.createpackage.package_distributor.status.refill_target_full": "补刷目标无法接收",
   "tooltip.createpackage.package_distributor.status.refill_unavailable": "该作业无法补刷",
+  "tooltip.createpackage.package_distributor.status.waiting_reflow_input": "等待起点接收中间产物",
   "tooltip.createpackage.package_distributor.ae_node": "AE：供电 %s / 频道 %s / 在线 %s",
   "tooltip.createpackage.package_distributor.ae_node_missing": "AE：节点尚未创建",
   "tooltip.createpackage.package_distributor.job": "作业：%s，剩余主产物 %s，第 %s 轮",
