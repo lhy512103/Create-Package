@@ -49,8 +49,13 @@ public class CreatePackage {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> AEBaseBlockEntity.registerBlockEntityItem(
-                ModBlockEntities.PACKAGE_DISTRIBUTOR.get(),
-                ModItems.PACKAGE_DISTRIBUTOR.get()));
+        event.enqueueWork(() -> {
+            AEBaseBlockEntity.registerBlockEntityItem(
+                    ModBlockEntities.PACKAGE_DISTRIBUTOR.get(),
+                    ModItems.PACKAGE_DISTRIBUTOR.get());
+            AEBaseBlockEntity.registerBlockEntityItem(
+                    ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
+                    ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
+        });
     }
 }

@@ -2,6 +2,9 @@
 
 ## 2026-06-26
 
+- Added the Advanced Package Distributor, combining the existing distributor pipeline with an embedded AE2 pattern-provider inventory so patterns can be stored in the distributor itself.
+- Added registration, block/item models, loot table, language entries, creative-tab entry, network-tool representation, and a shaped recipe for the Advanced Package Distributor.
+- Fixed Machine Linker interaction with the Advanced Package Distributor: holding the linker now selects/clears links instead of opening the embedded pattern-provider GUI.
 - Changed the active job overlay/Jade line to show the primary output display name and refill round instead of the raw sequenced-assembly recipe id.
 - Added probabilistic-output refill handling: secondary outputs trigger an immediate refill round, empty-output rounds refill after a configurable timeout, and missing refill inputs are retried without world scanning.
 - Added Package Distributor sequenced-assembly test recipes covering spout fluid filling, mechanical cutting, mechanical pressing, and deployer held-item supply, plus an incomplete distributor transitional item.
@@ -16,6 +19,9 @@
 
 ## 2026-06-26 中文
 
+- 增加高级封包分发器：把现有分发器投料管线和 AE2 样板供应器库存组合在同一个方块里，样板可以直接放入分发器本体。
+- 补齐高级封包分发器的注册、方块/物品模型、掉落表、语言、创造栏、AE 网络工具代表物品和有序合成配方。
+- 修复机器链接器与高级封包分发器的交互：手持链接器右键时会选中/清空链接，不再打开内置样板供应器界面。
 - 将活动作业在护目镜/Jade 中显示为主产物名称和当前补刷轮次，不再直接显示序列组装配方 id。
 - 增加几率产物补刷处理：收到副产物会立即补刷，完全空产出会在可配置超时后补刷，缺少补刷材料时会低频重试且不扫描世界。
 - 增加封包分发器序列组装测试配方，覆盖 Spout 流体填充、机械切割、机械辊压和 Deployer 施加物供料，并新增未完成的封包分发器过渡物品。

@@ -17,6 +17,9 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> PACKAGE_DISTRIBUTOR = ITEMS.registerSimpleBlockItem(
             "package_distributor", ModBlocks.PACKAGE_DISTRIBUTOR, new Item.Properties());
 
+    public static final DeferredItem<BlockItem> ADVANCED_PACKAGE_DISTRIBUTOR = ITEMS.registerSimpleBlockItem(
+            "advanced_package_distributor", ModBlocks.ADVANCED_PACKAGE_DISTRIBUTOR, new Item.Properties());
+
     public static final DeferredItem<Item> MACHINE_LINKER = ITEMS.registerItem(
             "machine_linker", properties -> new MachineLinkerItem(properties.stacksTo(1)));
 

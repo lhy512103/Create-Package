@@ -29,6 +29,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -91,16 +92,28 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     private boolean aePowered;
     private boolean aeChannel;
     private boolean aeActive;
+    private final Item visualItem;
+    private final String descriptionId;
 
     public PackageDistributorBlockEntity(BlockPos pos, BlockState blockState) {
-        super(ModBlockEntities.PACKAGE_DISTRIBUTOR.get(), pos, blockState);
+        this(ModBlockEntities.PACKAGE_DISTRIBUTOR.get(), ModItems.PACKAGE_DISTRIBUTOR.get(),
+                "block." + CreatePackage.MODID + ".package_distributor", pos, blockState, true);
+    }
+
+    protected PackageDistributorBlockEntity(BlockEntityType<?> type, Item visualItem, String descriptionId,
+            BlockPos pos, BlockState blockState, boolean installTicker) {
+        super(type, pos, blockState);
+        this.visualItem = visualItem;
+        this.descriptionId = descriptionId;
 
         // Require a channel like most AE2 machines; small idle draw to mark it as an active device.
         this.getMainNode()
-                .setVisualRepresentation(ModItems.PACKAGE_DISTRIBUTOR.get())
+                .setVisualRepresentation(visualItem)
                 .setFlags(GridFlags.REQUIRE_CHANNEL)
-                .addService(IGridTickable.class, new Ticker())
                 .setIdlePowerUsage(1.0);
+        if (installTicker) {
+            this.getMainNode().addService(IGridTickable.class, new DistributorTicker());
+        }
     }
 
     // === Linked machine management ===
@@ -305,8 +318,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     @Override
     public PatternContainerGroup getCraftingMachineInfo() {
         return new PatternContainerGroup(
-                AEItemKey.of(getItemFromBlockEntity()),
-                Component.translatable("block." + CreatePackage.MODID + ".package_distributor"),
+                AEItemKey.of(visualItem),
+                Component.translatable(descriptionId),
                 java.util.List.of());
     }
 
@@ -521,7 +534,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return new PlanContext(match.id(), primaryOutputKey, primary.amount(), outputPos, actions, refillInputs);
     }
 
-    private boolean tickJob() {
+    protected final boolean tickDistributorJob() {
         if (currentJob == null || level == null || level.isClientSide()) {
             return false;
         }
@@ -851,7 +864,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null);
     }
 
-    private void wakeTicker() {
+    protected final boolean hasDistributorJob() {
+        return currentJob != null;
+    }
+
+    protected void wakeTicker() {
         getMainNode().ifPresent((grid, node) -> grid.getTickManager().wakeDevice(node));
     }
 
@@ -868,7 +885,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
     }
 
-    private void saveAndSync() {
+    protected void saveAndSync() {
         setChanged();
         if (level != null && !level.isClientSide()) {
             markForUpdate();
@@ -902,7 +919,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
     @Override
     public ItemStack getIcon(boolean isPlayerSneaking) {
-        return ModItems.PACKAGE_DISTRIBUTOR.toStack();
+        return new ItemStack(visualItem);
     }
 
     @Override
@@ -1353,7 +1370,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
     }
 
-    private final class Ticker implements IGridTickable {
+    protected class DistributorTicker implements IGridTickable {
         @Override
         public TickingRequest getTickingRequest(IGridNode node) {
             return new TickingRequest(5, 20, currentJob == null);
@@ -1364,7 +1381,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             if (currentJob == null) {
                 return TickRateModulation.SLEEP;
             }
-            return tickJob() ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
+            return tickDistributorJob() ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
         }
     }
 }
