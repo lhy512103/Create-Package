@@ -8,6 +8,7 @@ import com.lhy.createpackage.registry.ModCapabilities;
 import com.lhy.createpackage.registry.ModComponents;
 import com.lhy.createpackage.registry.ModCreativeTabs;
 import com.lhy.createpackage.registry.ModItems;
+import com.lhy.createpackage.registry.ModMenuTypes;
 import com.mojang.logging.LogUtils;
 
 import net.neoforged.bus.api.IEventBus;
@@ -39,6 +40,7 @@ public class CreatePackage {
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModComponents.DATA_COMPONENTS.register(modEventBus);
+        ModMenuTypes.MENUS.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
 
         // Register AE2 capabilities for our block entities.
@@ -56,6 +58,9 @@ public class CreatePackage {
             AEBaseBlockEntity.registerBlockEntityItem(
                     ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get(),
                     ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
+            AEBaseBlockEntity.registerBlockEntityItem(
+                    ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
+                    ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
         });
     }
 }

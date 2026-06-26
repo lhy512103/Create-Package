@@ -1,6 +1,7 @@
 package com.lhy.createpackage.registry;
 
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.BasicPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
 
@@ -27,6 +28,12 @@ public final class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(
                             BasicPackageDistributorBlockEntity::new,
                             ModBlocks.BASIC_PACKAGE_DISTRIBUTOR.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AdvancedPackageDistributorBlockEntity>> ADVANCED_PACKAGE_DISTRIBUTOR =
+            BLOCK_ENTITIES.register("advanced_package_distributor",
+                    () -> BlockEntityType.Builder.of(
+                            AdvancedPackageDistributorBlockEntity::new,
+                            ModBlocks.ADVANCED_PACKAGE_DISTRIBUTOR.get()).build(null));
 
     private ModBlockEntities() {}
 }

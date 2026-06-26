@@ -258,6 +258,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             currentJob.transitionalItem.writeToPacket(data);
             data.writeVarInt(currentJob.sequenceLength);
             data.writeVarInt(currentJob.loops);
+            data.writeVarInt(currentJob.route.size());
+            for (BlockPos pos : currentJob.route) {
+                data.writeBlockPos(pos);
+            }
             data.writeVarInt(currentJob.ticks);
             data.writeVarInt(currentJob.roundTicks);
             data.writeVarLong(currentJob.roundsStarted);
@@ -310,8 +314,13 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             AEItemKey transitionalItem = AEItemKey.fromPacket(data);
             int sequenceLength = data.readVarInt();
             int loops = data.readVarInt();
+            List<BlockPos> route = new ArrayList<>();
+            int routeSize = data.readVarInt();
+            for (int i = 0; i < routeSize; i++) {
+                route.add(data.readBlockPos());
+            }
             streamedJob = new DistributionJob(recipeId, primaryOutput, primaryRemaining, inputPos, outputPos,
-                    transitionalItem, sequenceLength, loops, List.of());
+                    transitionalItem, sequenceLength, loops, List.of(), route);
             streamedJob.ticks = data.readVarInt();
             streamedJob.roundTicks = data.readVarInt();
             streamedJob.roundsStarted = data.readVarLong();
@@ -338,6 +347,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
     @Override
     public boolean pushPattern(IPatternDetails patternDetails, KeyCounter[] inputs, Direction ejectionDirection) {
+        return pushPattern(patternDetails, inputs, ejectionDirection, linkedMachines);
+    }
+
+    protected boolean pushPattern(IPatternDetails patternDetails, KeyCounter[] inputs, Direction ejectionDirection,
+            List<BlockPos> route) {
         if (currentJob != null) {
             rememberStatus("busy");
             return false;
@@ -352,7 +366,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return false;
         }
 
-        PlanContext context = createPlan(patternDetails, inputs);
+        PlanContext context = createPlan(patternDetails, inputs, route);
         if (context == null) {
             return false;
         }
@@ -371,7 +385,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         currentJob = new DistributionJob(context.recipeId(), context.primaryOutputKey(),
                 context.primaryOutputAmount(), context.inputPos(), context.outputPos(), context.transitionalItemKey(),
-                context.sequenceLength(), context.loops(), context.refillInputs());
+                context.sequenceLength(), context.loops(), context.refillInputs(), route);
         currentJob.roundsStarted = 1;
         consumeInputs(inputs);
         lastStatusKey = "working";
@@ -401,7 +415,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
     }
 
-    private PlanContext createPlan(IPatternDetails patternDetails, KeyCounter[] inputs) {
+    private PlanContext createPlan(IPatternDetails patternDetails, KeyCounter[] inputs, List<BlockPos> route) {
         var patternInputs = flattenInputs(inputs);
         var primary = patternDetails.getPrimaryOutput();
         if (primary == null || !(primary.what() instanceof AEItemKey primaryOutputKey)) {
@@ -430,7 +444,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             rememberStatus("no_matching_recipe");
             return null;
         }
-        LinkedMachines machines = LinkedMachines.resolve(level, linkedMachines);
+        LinkedMachines machines = LinkedMachines.resolve(level, route);
 
         var inputPos = machines.inputDepot();
         var outputPos = machines.outputDepot();
@@ -791,7 +805,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return false;
         }
 
-        RefillContext context = createRefillContext(currentJob.refillInputs);
+        RefillContext context = createRefillContext(currentJob.refillInputs, currentJob.route);
         if (context == null) {
             return false;
         }
@@ -853,7 +867,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     @Nullable
-    private RefillContext createRefillContext(List<GenericStack> refillInputs) {
+    private RefillContext createRefillContext(List<GenericStack> refillInputs, List<BlockPos> route) {
         if (level == null) {
             return null;
         }
@@ -864,7 +878,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
 
         AssemblyPlan plan = AssemblyPlan.of(sequenced);
-        LinkedMachines machines = LinkedMachines.resolve(level, linkedMachines);
+        LinkedMachines machines = LinkedMachines.resolve(level, route);
         BlockPos inputPos = machines.inputDepot();
         if (inputPos == null) {
             rememberStatus("missing_io");
@@ -1042,7 +1056,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
     }
 
-    private void rememberStatus(String statusKey) {
+    protected void rememberStatus(String statusKey) {
         if (!Objects.equals(lastStatusKey, statusKey)) {
             lastStatusKey = statusKey;
             saveAndSync();
@@ -1217,6 +1231,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 && Objects.equals(left.transitionalItem, right.transitionalItem)
                 && left.sequenceLength == right.sequenceLength
                 && left.loops == right.loops
+                && Objects.equals(left.route, right.route)
                 && left.ticks == right.ticks
                 && left.roundTicks == right.roundTicks
                 && left.roundsStarted == right.roundsStarted
@@ -1543,6 +1558,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private static final String NBT_REFILL_INPUTS = "refillInputs";
         private static final String NBT_REFILL_KEY = "key";
         private static final String NBT_REFILL_AMOUNT = "amount";
+        private static final String NBT_ROUTE = "route";
 
         private final ResourceLocation recipeId;
         private final AEItemKey primaryOutput;
@@ -1553,6 +1569,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private final int sequenceLength;
         private final int loops;
         private final List<GenericStack> refillInputs;
+        private final List<BlockPos> route;
         private int ticks;
         private int roundTicks;
         private long roundsStarted;
@@ -1561,7 +1578,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         private DistributionJob(ResourceLocation recipeId, AEItemKey primaryOutput, long primaryRemaining,
                 BlockPos inputPos, BlockPos outputPos, AEItemKey transitionalItem, int sequenceLength, int loops,
-                List<GenericStack> refillInputs) {
+                List<GenericStack> refillInputs, List<BlockPos> route) {
             this.recipeId = Objects.requireNonNull(recipeId);
             this.primaryOutput = Objects.requireNonNull(primaryOutput);
             this.primaryRemaining = primaryRemaining;
@@ -1571,6 +1588,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             this.sequenceLength = sequenceLength;
             this.loops = loops;
             this.refillInputs = List.copyOf(refillInputs);
+            this.route = route.stream().map(BlockPos::immutable).toList();
             this.awaitingFinalOutput = loops <= 1;
         }
 
@@ -1597,6 +1615,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 refillList.add(inputTag);
             }
             tag.put(NBT_REFILL_INPUTS, refillList);
+            long[] packedRoute = new long[route.size()];
+            for (int i = 0; i < packedRoute.length; i++) {
+                packedRoute[i] = route.get(i).asLong();
+            }
+            tag.putLongArray(NBT_ROUTE, packedRoute);
             return tag;
         }
 
@@ -1624,11 +1647,16 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             }
             BlockPos outputPos = BlockPos.of(tag.getLong(NBT_OUTPUT_POS));
             BlockPos inputPos = tag.contains(NBT_INPUT_POS) ? BlockPos.of(tag.getLong(NBT_INPUT_POS)) : outputPos;
+            List<BlockPos> route = new ArrayList<>();
+            for (long packed : tag.getLongArray(NBT_ROUTE)) {
+                route.add(BlockPos.of(packed));
+            }
             var job = new DistributionJob(recipe, output, tag.getLong(NBT_REMAINING), inputPos, outputPos,
                     transitional,
                     tag.contains(NBT_SEQUENCE_LENGTH) ? tag.getInt(NBT_SEQUENCE_LENGTH) : 1,
                     tag.contains(NBT_LOOPS) ? tag.getInt(NBT_LOOPS) : 1,
-                    refillInputs);
+                    refillInputs,
+                    route);
             job.ticks = tag.getInt(NBT_TICKS);
             job.roundTicks = tag.getInt(NBT_ROUND_TICKS);
             job.roundsStarted = tag.contains(NBT_ROUNDS_STARTED) ? tag.getLong(NBT_ROUNDS_STARTED) : 1;

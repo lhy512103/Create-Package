@@ -1,6 +1,7 @@
 package com.lhy.createpackage.registry;
 
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.BasicPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlock;
 
@@ -32,6 +33,15 @@ public final class ModBlocks {
                     .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops(),
                     BasicPackageDistributorBlockEntity::new));
+
+    public static final DeferredBlock<PackageDistributorBlock> ADVANCED_PACKAGE_DISTRIBUTOR = BLOCKS.register(
+            "advanced_package_distributor",
+            () -> new PackageDistributorBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(4.0f, 8.0f)
+                    .sound(SoundType.METAL)
+                    .requiresCorrectToolForDrops(),
+                    AdvancedPackageDistributorBlockEntity::new));
 
     private ModBlocks() {}
 }

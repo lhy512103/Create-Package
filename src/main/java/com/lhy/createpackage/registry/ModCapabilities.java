@@ -18,6 +18,7 @@ public final class ModCapabilities {
     public static void register(RegisterCapabilitiesEvent event) {
         registerDistributor(event, ModBlockEntities.PACKAGE_DISTRIBUTOR.get());
         registerDistributor(event, ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get());
+        registerDistributor(event, ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get());
     }
 
     private static <T extends com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity> void registerDistributor(

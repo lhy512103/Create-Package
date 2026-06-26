@@ -1,7 +1,11 @@
 package com.lhy.createpackage.registry;
 
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.content.converter.MechanicalPatternConverterItem;
 import com.lhy.createpackage.content.linker.MachineLinkerItem;
+import com.lhy.createpackage.content.pattern.MechanicalPackagePatternDetails;
+
+import appeng.api.crafting.PatternDetailsHelper;
 
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -20,8 +24,20 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> BASIC_PACKAGE_DISTRIBUTOR = ITEMS.registerSimpleBlockItem(
             "basic_package_distributor", ModBlocks.BASIC_PACKAGE_DISTRIBUTOR, new Item.Properties());
 
+    public static final DeferredItem<BlockItem> ADVANCED_PACKAGE_DISTRIBUTOR = ITEMS.registerSimpleBlockItem(
+            "advanced_package_distributor", ModBlocks.ADVANCED_PACKAGE_DISTRIBUTOR, new Item.Properties());
+
     public static final DeferredItem<Item> MACHINE_LINKER = ITEMS.registerItem(
             "machine_linker", properties -> new MachineLinkerItem(properties.stacksTo(1)));
+
+    public static final DeferredItem<Item> MECHANICAL_PATTERN_CONVERTER = ITEMS.registerItem(
+            "mechanical_pattern_converter", properties -> new MechanicalPatternConverterItem(properties.stacksTo(1)));
+
+    public static final DeferredItem<Item> MECHANICAL_PACKAGE_PATTERN = ITEMS.register(
+            "mechanical_package_pattern",
+            () -> PatternDetailsHelper.encodedPatternItemBuilder(MechanicalPackagePatternDetails::decode)
+                    .itemProperties(new Item.Properties().stacksTo(1))
+                    .build());
 
     public static final DeferredItem<Item> INCOMPLETE_PACKAGE_DISTRIBUTOR = ITEMS.registerSimpleItem(
             "incomplete_package_distributor", new Item.Properties());

@@ -71,7 +71,8 @@ public class PackageDistributorBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack heldItem, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hit) {
-        if (heldItem.is(ModItems.MACHINE_LINKER.get())) {
+        if (heldItem.is(ModItems.MACHINE_LINKER.get())
+                || heldItem.is(ModItems.MECHANICAL_PATTERN_CONVERTER.get())) {
             return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
         return super.useItemOn(heldItem, state, level, pos, player, hand, hit);

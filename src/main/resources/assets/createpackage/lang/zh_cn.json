@@ -3,7 +3,10 @@
 
   "block.createpackage.package_distributor": "封包分发器",
   "block.createpackage.basic_package_distributor": "基础封包分发器",
+  "block.createpackage.advanced_package_distributor": "高级封包分发器",
   "item.createpackage.machine_linker": "机器链接器",
+  "item.createpackage.mechanical_pattern_converter": "机械样板转换器",
+  "item.createpackage.mechanical_package_pattern": "机械封包样板",
   "item.createpackage.incomplete_package_distributor": "未完成的封包分发器",
 
   "item.createpackage.machine_linker.selected": "已选中位于 [%s, %s, %s] 的分发器",
@@ -19,6 +22,19 @@
   "item.createpackage.machine_linker.tooltip.unbound": "未绑定。右键封包分发器以选中它。",
   "item.createpackage.machine_linker.tooltip.bound": "已绑定分发器 [%s, %s, %s]",
   "item.createpackage.machine_linker.tooltip.usage": "右键机器进行链接;潜行+右键取消链接。",
+
+  "item.createpackage.mechanical_pattern_converter.selected": "已选中位于 [%s, %s, %s] 的分发器(当前 %s 个链接)",
+  "item.createpackage.mechanical_pattern_converter.cleared": "已清除转换器绑定",
+  "item.createpackage.mechanical_pattern_converter.tooltip.unbound": "未绑定。右键已配置链接的分发器以选择路线来源。",
+  "item.createpackage.mechanical_pattern_converter.tooltip.bound": "已绑定路线来源 [%s, %s, %s]",
+  "item.createpackage.mechanical_pattern_converter.tooltip.usage": "空中右键打开转换界面;潜行+右键分发器清除绑定。",
+
+  "gui.createpackage.mechanical_pattern_converter": "机械样板转换器",
+  "gui.createpackage.mechanical_pattern_converter.convert": "转换",
+  "gui.createpackage.mechanical_pattern_converter.route_hint": "转换时写入绑定分发器的当前机器链接。",
+  "gui.createpackage.mechanical_pattern_converter.no_route": "没有可写入的机器链接路线",
+
+  "tooltip.createpackage.mechanical_package_pattern.route": "机器链接数",
 
   "tooltip.createpackage.package_distributor.header": "封包分发器信息",
   "tooltip.createpackage.package_distributor.status": "状态：%s",
@@ -45,6 +61,7 @@
   "tooltip.createpackage.package_distributor.status.refill_target_full": "补刷目标无法接收",
   "tooltip.createpackage.package_distributor.status.refill_unavailable": "该作业无法补刷",
   "tooltip.createpackage.package_distributor.status.waiting_reflow_input": "等待起点接收中间产物",
+  "tooltip.createpackage.package_distributor.status.invalid_mechanical_pattern": "需要机械封包样板",
   "tooltip.createpackage.package_distributor.ae_node": "AE：供电 %s / 频道 %s / 在线 %s",
   "tooltip.createpackage.package_distributor.ae_node_missing": "AE：节点尚未创建",
   "tooltip.createpackage.package_distributor.job": "作业：%s，剩余主产物 %s，第 %s 轮",

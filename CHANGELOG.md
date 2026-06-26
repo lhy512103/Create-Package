@@ -2,7 +2,12 @@
 
 ## 2026-06-26
 
+- Added the Advanced Package Distributor as a real `advanced_package_distributor` block again: it embeds AE2 pattern-provider logic but routes each job from the saved machine links inside a Mechanical Package Pattern, allowing one distributor to store patterns for multiple assembly lines. Parallel line execution is still deferred.
+- Added Mechanical Package Patterns backed by AE2's custom encoded-pattern API. They preserve the original AE2 encoded pattern's inputs/outputs while carrying a Create machine-link route snapshot for the Advanced Package Distributor.
+- Added the handheld Mechanical Pattern Converter with a small conversion GUI: right-click a linked distributor to bind the route source, right-click air to open the converter, insert a normal encoded AE2 pattern, and convert it into a Mechanical Package Pattern.
+- Made active distributor jobs persist and refill against the route captured at job start, so probability refills and transitional-item reflow keep using the same per-pattern route even if the block's current links later change.
 - Relaxed the runtime NeoForge dependency range to 21.1.230 and newer while keeping the development compile version separate.
+- Changed the Machine Linker item model to inherit Create's wrench model so it renders with the same 3D geometry and item transforms instead of a flat generated texture.
 - Fixed non-consuming deployer held items in sequenced assembly patterns: `keep_held_item` ingredients are now treated as reusable tools, optional extra pattern inputs are returned to the AE2 network, and the distributor can preload one from network storage when needed.
 - Renamed the embedded-pattern-provider distributor from `advanced_package_distributor` to `basic_package_distributor`, including its registry id, resources, recipes, and Java symbols.
 - Added a Basic Package Distributor sequenced-assembly test recipe using a Package Distributor base, reusable AE2 printed circuits in deployers, mechanical pressing, and lava filling.
@@ -25,7 +30,12 @@
 
 ## 2026-06-26 中文
 
+- 重新加入真正的高级封包分发器 `advanced_package_distributor`：它内置 AE2 样板供应器逻辑，但每个作业按机械封包样板里保存的机器链接路线执行，使一个分发器可以存放多条装配线的样板；多装配线并行运行后续再实现。
+- 增加机械封包样板，基于 AE2 自定义 encoded-pattern API 实现：保留原 AE2 已编码样板的输入/输出，同时携带转换时的 Create 机器链接路线快照，供高级封包分发器路由。
+- 增加手持机械样板转换器和简易转换 GUI：右键已配置链接的分发器绑定路线来源，空中右键打开界面，放入普通 AE2 已编码样板后可转换为机械封包样板。
+- 活动作业现在会保存接单时捕获的路线，几率补刷和中间产物回流都会继续使用同一条样板路线，不会因方块当前链接后续变化而跑错装配线。
 - 放宽运行时 NeoForge 依赖范围为 21.1.230 及以上，并将其与开发编译版本分离。
+- 将机器链接器物品模型改为继承 Create 扳手模型，使其使用相同的 3D 几何和物品显示变换，不再只是平面贴图。
 - 修复序列组装样板中的非消耗 Deployer 施加物处理：`keep_held_item` 原料现在会被视为可复用工具，样板中额外写入的同类输入会退回 AE2 网络，必要时分发器也能从网络库存预装 1 个到机械手。
 - 将内置样板供应器的分发器从 `advanced_package_distributor` 改为 `basic_package_distributor`，同步更新注册名、资源、配方和 Java 符号，为后续真正的高级封包分发器预留 ID。
 - 增加基础封包分发器序列组装测试配方：以封包分发器为基础，机械手使用不消耗的 AE2 已压印电路板，并包含机械辊压和熔岩注液步骤。

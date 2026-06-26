@@ -14,6 +14,8 @@
 
 - 封包分发器接入 AE2 网格，并向相邻样板供应器暴露 AE2 crafting-machine capability。
 - 基础封包分发器内置 AE2 样板供应器逻辑，可直接放入样板并向 AE2 网络提供这些样板。
+- 高级封包分发器内置 AE2 样板供应器逻辑，并按每张机械封包样板保存的机器链接路线执行，可在一个方块里存放多条装配线样板。
+- 机械样板转换器可以把普通 AE2 已编码样板转换为机械封包样板，转换时会写入绑定分发器的当前机器链接路线。
 - 机器链接器可以保存一组有序链接的 Create 机器位置。
 - 可以把 Create 序列组装配方解析为供料计划。
 - 分发器会校验、模拟、执行投料，然后等待主产物出现在终点料盘或传送带并回收到 AE2。
@@ -21,6 +23,10 @@
 - 几率主产物没有产出时会自动补刷：终点收到副产物会立即再投一轮；一轮完全没有产物时会在配置的等待时间后再投一轮。
 - 工程师护目镜/Jade 可显示作业主产物名称、剩余主产物数量、当前补刷轮次、AE 状态和已链接机器。
 - 运行时不使用 mixin、不使用反射、不扫描世界；只访问玩家链接的位置，空闲时 AE2 tick 会睡眠。
+- 不消耗的 Deployer 持有物：机械手已预装对应物品：样板里可以不写这个物品。
+机械手没预装，但 AE 网络里有：分发器会从 AE 网络取 1 个放进机械手。
+样板里写了 1 个：会拿这 1 个放进机械手。
+样板里写了 3 个或多写了同类物品：只需要的部分用于预装，多余的会立即退回 AE 网络，不再报“样板存在未使用输入”。
 
 计划中:
 
@@ -43,6 +49,8 @@
    分发器需要 AE2 频道。把 AE2 样板供应器放在分发器旁边，让供应器可以把加工样板推送给分发器。
 
    如果使用基础封包分发器，则不需要额外放 AE2 样板供应器。把基础封包分发器接入 AE2 网络后，右键打开它自己的样板槽，把 AE2 加工样板直接放进去即可。AE2 下单时会把该基础分发器当作样板供应源，材料会直接进入它自己的分发管线。
+
+   如果使用高级封包分发器，也不需要额外放 AE2 样板供应器。高级封包分发器只执行机械封包样板；每张机械封包样板都带有自己的机器链接路线，所以一个高级分发器可以存放多条装配线的样板。当前版本仍然一次只运行一个作业，并行装配线调度后续再做。
 
 3. 用机器链接器按物品流动顺序链接机器。
    先右键封包分发器选中它，再按流水线顺序右键 Create 机器:
@@ -68,6 +76,25 @@
    AE2 推送样板后，分发器会先模拟所有目标能否接收材料。模拟成功后才会真正投料，并等待终点位置出现主产物。回收到的物品会注入 AE2 网络存储。
 
    使用基础封包分发器时，把样板放进基础封包分发器本体，不要再额外贴一个样板供应器。
+
+## 高级封包分发器与机械封包样板
+
+高级封包分发器用于“一个分发器管理多条装配线”。它不读取方块当前链接列表来执行样板，而是读取机械封包样板里保存的路线。
+
+使用流程:
+
+1. 先用普通封包分发器或基础封包分发器配置某一条装配线的机器链接。
+2. 手持机械样板转换器右键这个已配置链接的分发器，转换器会绑定它作为路线来源。
+3. 空中右键机械样板转换器打开转换 GUI。
+4. 把普通 AE2 已编码加工样板放入左侧输入槽，点击“转换”，右侧会生成机械封包样板。
+5. 取出机械封包样板，放入高级封包分发器的样板槽。
+6. 对每条装配线重复以上流程。每张机械封包样板都会保存转换当时绑定分发器的机器链接快照。
+
+注意:
+
+- 转换后再修改原分发器的链接，不会自动改写已经转换好的机械封包样板。
+- 当前高级封包分发器只执行机械封包样板；普通 AE2 加工样板应放在基础封包分发器或相邻样板供应器 + 普通封包分发器方案中。
+- 高级封包分发器当前仍然一次只处理一个作业，只是可以存放并识别多条路线的样板。
 
 ## 多循环自动回流
 
@@ -122,6 +149,7 @@ Pressing 和 cutting 步骤由真实 Create 流水线上的机器自然完成，
 
 - 一个分发器同一时间只处理一个作业。
 - 基础封包分发器复用 AE2 原版样板供应器菜单和样板库存，但目前仍只按本模组支持的 Create 序列组装样板执行。
+- 高级封包分发器当前只支持机械封包样板，并且同一时间仍只处理一个作业；多装配线并行调度尚未实现。
 - 自动回流只处理带有当前配方 `sequenced_assembly` 组件的中间产物；普通副产物不会被回流。
 - 起点和终点料盘或传送带必须是不同位置。
 - Create 流水线必须有效、有动力，并且能把产物送到终点位置。
@@ -166,8 +194,10 @@ Implemented: AE2 grid integration, ordered machine linking, sequenced-assembly
 supply-plan parsing, conservative validation, simulated insertion before real
 insertion, output recovery, probabilistic-output refills, Engineer's Goggles/Jade
 diagnostics, a Basic Package Distributor with an embedded AE2 pattern-provider
-inventory, automatic transitional-item reflow for multi-loop sequenced assembly,
-and low-overhead ticking with no mixins, reflection, or world scanning.
+inventory, an Advanced Package Distributor that routes mechanical package
+patterns by their saved machine-link snapshots, automatic transitional-item
+reflow for multi-loop sequenced assembly, and low-overhead ticking with no
+mixins, reflection, or world scanning.
 
 Planned: dedicated sequenced-assembly pattern encoder and more detailed missing-input diagnostics.
 

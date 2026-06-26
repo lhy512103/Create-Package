@@ -3,6 +3,7 @@ package com.lhy.createpackage.registry;
 import java.util.function.Consumer;
 
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.content.pattern.MechanicalPackagePatternData;
 
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.component.DataComponentType;
@@ -25,6 +26,11 @@ public final class ModComponents {
             register("linked_distributor", builder -> builder
                     .persistent(GlobalPos.CODEC)
                     .networkSynchronized(GlobalPos.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<MechanicalPackagePatternData>> MECHANICAL_PACKAGE_PATTERN =
+            register("mechanical_package_pattern", builder -> builder
+                    .persistent(MechanicalPackagePatternData.CODEC)
+                    .networkSynchronized(MechanicalPackagePatternData.STREAM_CODEC));
 
     private static <T> DeferredHolder<DataComponentType<?>, DataComponentType<T>> register(
             String name, Consumer<DataComponentType.Builder<T>> customizer) {
