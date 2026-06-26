@@ -20,5 +20,8 @@ public final class ModItems {
     public static final DeferredItem<Item> MACHINE_LINKER = ITEMS.registerItem(
             "machine_linker", properties -> new MachineLinkerItem(properties.stacksTo(1)));
 
+    public static final DeferredItem<Item> INCOMPLETE_PACKAGE_DISTRIBUTOR = ITEMS.registerSimpleItem(
+            "incomplete_package_distributor", new Item.Properties());
+
     private ModItems() {}
 }

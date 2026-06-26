@@ -16,13 +16,14 @@
 - 机器链接器可以保存一组有序链接的 Create 机器位置。
 - 可以把 Create 序列组装配方解析为供料计划。
 - 分发器会校验、模拟、执行投料，然后等待主产物出现在终点料盘或传送带并回收到 AE2。
+- 几率主产物没有产出时会自动补刷：终点收到副产物会立即再投一轮；一轮完全没有产物时会在配置的等待时间后再投一轮。
+- 工程师护目镜/Jade 可显示作业主产物名称、剩余主产物数量、当前补刷轮次、AE 状态和已链接机器。
 - 运行时不使用 mixin、不使用反射、不扫描世界；只访问玩家链接的位置，空闲时 AE2 tick 会睡眠。
 
 计划中:
 
 - 专用的 Create 序列组装样板编码器。
-- 更完整的几率产物处理和自动补刷。
-- 更直观的游戏内错误诊断。
+- 更细的缺料诊断。
 
 ## 依赖
 
@@ -62,6 +63,33 @@
 5. 把样板放进 AE2 样板供应器并从 AE2 发起合成。
    AE2 推送样板后，分发器会先模拟所有目标能否接收材料。模拟成功后才会真正投料，并等待终点位置出现主产物。回收到的物品会注入 AE2 网络存储。
 
+## 几率产物与补刷
+
+AE2 的一次样板推送只会交给分发器一轮材料。对精密构件这类几率主产物，分发器会按主产物计量:
+
+- 如果终点回收到主产物，剩余主产物数量减少。
+- 如果终点回收到副产物或废料，但主产物仍不足，分发器会从 AE 网络再抽一轮基础原料、Deployer 消耗物和 Spout 流体并继续投料。
+- 如果一轮加工后终点完全没有任何产物，分发器会等待 `emptyOutputRefillTimeoutTicks` tick，默认 1200 tick/60 秒，然后按空产出处理并补刷。
+- 如果 AE 网络缺少补刷材料，会显示“等待补刷材料”，并每 5 秒轻量重试一次。
+
+精密构件样板示例:
+
+- 输入: `1 x 金板 + 5 x 齿轮 + 5 x 大齿轮 + 5 x 铁粒`
+- 输出: `1 x 精密构件`
+
+不要把金板写成 5 个。循环 5 次的是同一个半成品，基础原料只消耗 1 个。
+
+## 测试配方
+
+模组内置了几条用于测试分发器的封包分发器序列组装配方:
+
+- `createpackage:sequenced_assembly/package_distributor`: 黄铜外壳 -> 注水 -> 切割 -> 辊压 -> Deployer 应用 AE2 逻辑处理器 -> 封包分发器。
+- `createpackage:sequenced_assembly/package_distributor_fluid_test`: 铜锭 -> 注水 -> Deployer 应用红石 -> 封包分发器。
+- `createpackage:sequenced_assembly/package_distributor_cutting_test`: 石头 -> 切割 -> Deployer 应用铁粒 -> 封包分发器。
+- `createpackage:sequenced_assembly/package_distributor_pressing_test`: 铁锭 -> 辊压 -> Deployer 应用红石 -> 封包分发器。
+
+这些配方主输出相同，但基础输入不同。AE2 加工样板里放入对应基础输入即可让分发器消歧。
+
 ## 链接顺序规则
 
 第一个被识别为料盘或传送带的链接位置是起点。
@@ -78,7 +106,7 @@ Pressing 和 cutting 步骤由真实 Create 流水线上的机器自然完成，
 - 一个分发器同一时间只处理一个作业。
 - 起点和终点料盘或传送带必须是不同位置。
 - Create 流水线必须有效、有动力，并且能把产物送到终点位置。
-- 如果产物没有到达终点，分发器会继续等待并在超时后写入日志警告。
+- 如果真实流水线卡住但没有达到空产出等待时间，分发器会继续等待。
 - 当前实现会严格拒绝不确定的样板匹配，优先避免丢物品。
 
 ## English
@@ -114,11 +142,10 @@ player.
 
 Implemented: AE2 grid integration, ordered machine linking, sequenced-assembly
 supply-plan parsing, conservative validation, simulated insertion before real
-insertion, output recovery, and low-overhead ticking with no mixins, reflection,
-or world scanning.
+insertion, output recovery, probabilistic-output refills, Engineer's Goggles/Jade
+diagnostics, and low-overhead ticking with no mixins, reflection, or world scanning.
 
-Planned: dedicated sequenced-assembly pattern encoder, fuller probabilistic
-output handling, automatic retry, and better in-game diagnostics.
+Planned: dedicated sequenced-assembly pattern encoder and more detailed missing-input diagnostics.
 
 ## License
 

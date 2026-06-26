@@ -46,7 +46,7 @@ public final class LinkedMachines {
     private static final ResourceLocation ID_DEPOT = ResourceLocation.fromNamespaceAndPath("create", "depot");
     private static final ResourceLocation ID_BELT = ResourceLocation.fromNamespaceAndPath("create", "belt");
 
-    private static Role roleOf(Level level, BlockPos pos) {
+    public static Role roleOf(Level level, BlockPos pos) {
         if (!level.isLoaded(pos)) {
             return Role.UNKNOWN;
         }

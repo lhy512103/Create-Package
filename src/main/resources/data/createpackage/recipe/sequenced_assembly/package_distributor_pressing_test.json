@@ -1,0 +1,46 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "minecraft:iron_ingot"
+  },
+  "loops": 1,
+  "results": [
+    {
+      "id": "createpackage:package_distributor"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ],
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "minecraft:redstone"
+        }
+      ],
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "createpackage:incomplete_package_distributor"
+  }
+}

@@ -16,6 +16,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 
+import appeng.blockentity.AEBaseBlockEntity;
+
 /**
  * Create Package — adds AE2 autocrafting support for Create's sequenced assembly.
  *
@@ -47,6 +49,8 @@ public class CreatePackage {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        // Capability registration and AE2/Create wiring will happen here.
+        event.enqueueWork(() -> AEBaseBlockEntity.registerBlockEntityItem(
+                ModBlockEntities.PACKAGE_DISTRIBUTOR.get(),
+                ModItems.PACKAGE_DISTRIBUTOR.get()));
     }
 }

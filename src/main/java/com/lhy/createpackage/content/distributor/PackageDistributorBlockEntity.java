@@ -5,19 +5,32 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import org.jetbrains.annotations.Nullable;
+
+import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
+
+import com.lhy.createpackage.Config;
 import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.recipe.AssemblyPlan;
 import com.lhy.createpackage.content.recipe.AssemblyRecipeMatcher;
 import com.lhy.createpackage.registry.ModBlockEntities;
+import com.lhy.createpackage.registry.ModItems;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
@@ -29,6 +42,7 @@ import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.networking.GridFlags;
 import appeng.api.networking.IGridNode;
+import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.security.IActionHost;
 import appeng.api.networking.ticking.IGridTickable;
 import appeng.api.networking.ticking.TickRateModulation;
@@ -52,11 +66,16 @@ import appeng.me.helpers.MachineSource;
  * <p>This is the minimal connectivity milestone: it joins the grid and accepts pushes, logging
  * what it receives. Distribution and result recovery are added in later milestones.
  */
-public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implements ICraftingMachine, IActionHost {
+public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
+        implements ICraftingMachine, IActionHost, IHaveGoggleInformation {
 
     private static final String NBT_LINKED_MACHINES = "linkedMachines";
     private static final String NBT_JOB = "job";
+    private static final String NBT_LAST_STATUS = "lastStatus";
     private static final int MAX_JOB_TICKS = 20 * 60 * 10;
+    private static final int ROUND_OUTPUT_TIMEOUT_TICKS = 20 * 60;
+    private static final int REFILL_RETRY_TICKS = 20 * 5;
+    private static final int MAX_TOOLTIP_LINKS = 12;
 
     /**
      * Ordered list of linked Create machines (depot / deployers / spouts), in the physical sequence
@@ -67,12 +86,18 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
     private final MachineSource actionSource = new MachineSource(this);
 
     private DistributionJob currentJob;
+    private String lastStatusKey = "ready";
+    private boolean aeNodePresent;
+    private boolean aePowered;
+    private boolean aeChannel;
+    private boolean aeActive;
 
     public PackageDistributorBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.PACKAGE_DISTRIBUTOR.get(), pos, blockState);
 
         // Require a channel like most AE2 machines; small idle draw to mark it as an active device.
         this.getMainNode()
+                .setVisualRepresentation(ModItems.PACKAGE_DISTRIBUTOR.get())
                 .setFlags(GridFlags.REQUIRE_CHANNEL)
                 .addService(IGridTickable.class, new Ticker())
                 .setIdlePowerUsage(1.0);
@@ -89,6 +114,47 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         return linkedMachines.contains(pos);
     }
 
+    public boolean hasActiveJob() {
+        return currentJob != null;
+    }
+
+    public String getStatusKey() {
+        return lastStatusKey;
+    }
+
+    public long getPrimaryRemaining() {
+        return currentJob == null ? 0 : currentJob.primaryRemaining;
+    }
+
+    @Nullable
+    public ResourceLocation getCurrentRecipeId() {
+        return currentJob == null ? null : currentJob.recipeId;
+    }
+
+    public Component getCurrentJobName() {
+        return currentJob == null ? CommonComponents.EMPTY : currentJob.primaryOutput.getDisplayName();
+    }
+
+    public long getRoundsStarted() {
+        return currentJob == null ? 0 : currentJob.roundsStarted;
+    }
+
+    public Component getLinkedBlockName(BlockPos pos) {
+        return linkedBlockName(pos);
+    }
+
+    public ItemStack getLinkedBlockIcon(BlockPos pos) {
+        if (level == null || !level.isLoaded(pos)) {
+            return ItemStack.EMPTY;
+        }
+        Item item = level.getBlockState(pos).getBlock().asItem();
+        return item == net.minecraft.world.item.Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+    }
+
+    public String getLinkedRoleKey(BlockPos pos) {
+        return roleKey(pos);
+    }
+
     /**
      * Links a machine. Re-linking an already linked machine is a no-op.
      *
@@ -99,7 +165,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
             return false;
         }
         linkedMachines.add(pos.immutable());
-        setChanged();
+        clearLastStatus();
+        saveAndSync();
         return true;
     }
 
@@ -111,7 +178,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
     public boolean unlinkMachine(BlockPos pos) {
         boolean removed = linkedMachines.remove(pos);
         if (removed) {
-            setChanged();
+            clearLastStatus();
+            saveAndSync();
         }
         return removed;
     }
@@ -121,7 +189,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         int count = linkedMachines.size();
         if (count > 0) {
             linkedMachines.clear();
-            setChanged();
+            clearLastStatus();
+            saveAndSync();
         }
         return count;
     }
@@ -137,6 +206,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         if (currentJob != null) {
             data.put(NBT_JOB, currentJob.write(registries));
         }
+        data.putString(NBT_LAST_STATUS, lastStatusKey);
     }
 
     @Override
@@ -147,6 +217,87 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
             linkedMachines.add(BlockPos.of(packed));
         }
         currentJob = data.contains(NBT_JOB) ? DistributionJob.read(data.getCompound(NBT_JOB), registries) : null;
+        lastStatusKey = data.contains(NBT_LAST_STATUS) ? data.getString(NBT_LAST_STATUS) : "ready";
+    }
+
+    @Override
+    protected void writeToStream(RegistryFriendlyByteBuf data) {
+        super.writeToStream(data);
+        AeStatus aeStatus = currentAeStatus();
+        data.writeBoolean(aeStatus.nodePresent());
+        data.writeBoolean(aeStatus.powered());
+        data.writeBoolean(aeStatus.channel());
+        data.writeBoolean(aeStatus.active());
+        data.writeVarInt(linkedMachines.size());
+        for (BlockPos pos : linkedMachines) {
+            data.writeBlockPos(pos);
+        }
+        data.writeUtf(lastStatusKey);
+        data.writeBoolean(currentJob != null);
+        if (currentJob != null) {
+            data.writeResourceLocation(currentJob.recipeId);
+            currentJob.primaryOutput.writeToPacket(data);
+            data.writeVarLong(currentJob.primaryRemaining);
+            data.writeBlockPos(currentJob.outputPos);
+            data.writeVarInt(currentJob.ticks);
+            data.writeVarInt(currentJob.roundTicks);
+            data.writeVarLong(currentJob.roundsStarted);
+            data.writeBoolean(currentJob.roundHasOutput);
+        }
+    }
+
+    @Override
+    protected boolean readFromStream(RegistryFriendlyByteBuf data) {
+        boolean changed = super.readFromStream(data);
+
+        boolean streamedAeNodePresent = data.readBoolean();
+        boolean streamedAePowered = data.readBoolean();
+        boolean streamedAeChannel = data.readBoolean();
+        boolean streamedAeActive = data.readBoolean();
+        if (aeNodePresent != streamedAeNodePresent || aePowered != streamedAePowered
+                || aeChannel != streamedAeChannel || aeActive != streamedAeActive) {
+            aeNodePresent = streamedAeNodePresent;
+            aePowered = streamedAePowered;
+            aeChannel = streamedAeChannel;
+            aeActive = streamedAeActive;
+            changed = true;
+        }
+
+        List<BlockPos> streamedLinks = new ArrayList<>();
+        int linkCount = data.readVarInt();
+        for (int i = 0; i < linkCount; i++) {
+            streamedLinks.add(data.readBlockPos());
+        }
+        if (!linkedMachines.equals(streamedLinks)) {
+            linkedMachines.clear();
+            linkedMachines.addAll(streamedLinks);
+            changed = true;
+        }
+
+        String streamedStatus = data.readUtf();
+        if (!Objects.equals(lastStatusKey, streamedStatus)) {
+            lastStatusKey = streamedStatus;
+            changed = true;
+        }
+
+        DistributionJob streamedJob = null;
+        if (data.readBoolean()) {
+            ResourceLocation recipeId = data.readResourceLocation();
+            AEItemKey primaryOutput = AEItemKey.fromPacket(data);
+            long primaryRemaining = data.readVarLong();
+            BlockPos outputPos = data.readBlockPos();
+            streamedJob = new DistributionJob(recipeId, primaryOutput, primaryRemaining, outputPos, List.of());
+            streamedJob.ticks = data.readVarInt();
+            streamedJob.roundTicks = data.readVarInt();
+            streamedJob.roundsStarted = data.readVarLong();
+            streamedJob.roundHasOutput = data.readBoolean();
+        }
+        if (!sameJob(currentJob, streamedJob)) {
+            currentJob = streamedJob;
+            changed = true;
+        }
+
+        return changed;
     }
 
     // === ICraftingMachine ===
@@ -161,11 +312,17 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
 
     @Override
     public boolean pushPattern(IPatternDetails patternDetails, KeyCounter[] inputs, Direction ejectionDirection) {
-        if (!acceptsPlans()) {
+        if (currentJob != null) {
+            rememberStatus("busy");
             return false;
         }
 
         if (level == null || level.isClientSide()) {
+            return false;
+        }
+
+        if (!getMainNode().isActive()) {
+            rememberStatus("ae_inactive");
             return false;
         }
 
@@ -175,19 +332,23 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         }
 
         if (!context.simulate()) {
+            rememberStatus("simulate_failed");
             return false;
         }
 
         if (!context.execute()) {
             CreatePackage.LOGGER.warn("[Distributor @ {}] simulated plan but execution failed; refusing pattern",
                     getBlockPos());
+            rememberStatus("execute_failed");
             return false;
         }
 
         currentJob = new DistributionJob(context.recipeId(), context.primaryOutputKey(),
-                context.primaryOutputAmount(), context.outputPos());
+                context.primaryOutputAmount(), context.outputPos(), context.refillInputs());
+        currentJob.roundsStarted = 1;
         consumeInputs(inputs);
-        setChanged();
+        lastStatusKey = "working";
+        saveAndSync();
         wakeTicker();
 
         CreatePackage.LOGGER.info("[Distributor @ {}] accepted recipe {} waiting for {} x{} at {}",
@@ -198,7 +359,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
 
     @Override
     public boolean acceptsPlans() {
-        return currentJob == null && getMainNode().isActive();
+        return currentJob == null;
     }
 
     @Override
@@ -206,10 +367,18 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         return getMainNode().getNode();
     }
 
+    @Override
+    public void onMainNodeStateChanged(IGridNodeListener.State reason) {
+        if (level != null && !level.isClientSide()) {
+            markForUpdate();
+        }
+    }
+
     private PlanContext createPlan(IPatternDetails patternDetails, KeyCounter[] inputs) {
         var patternInputs = flattenInputs(inputs);
         var primary = patternDetails.getPrimaryOutput();
         if (primary == null || !(primary.what() instanceof AEItemKey primaryOutputKey)) {
+            rememberStatus("no_primary_output");
             return null;
         }
 
@@ -220,6 +389,9 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
                 CreatePackage.LOGGER.warn("[Distributor @ {}] ambiguous sequenced assembly recipes for {}: {}",
                         getBlockPos(), primaryOutput,
                         candidates.stream().map(AssemblyRecipeMatcher.Match::id).toList());
+                rememberStatus("ambiguous_recipe");
+            } else {
+                rememberStatus("no_matching_recipe");
             }
             return null;
         }
@@ -232,21 +404,26 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         var outputPos = machines.outputDepot();
         if (inputPos == null || outputPos == null) {
             CreatePackage.LOGGER.warn("[Distributor @ {}] needs linked input and output depot/belt", getBlockPos());
+            rememberStatus("missing_io");
             return null;
         }
         if (inputPos.equals(outputPos)) {
             CreatePackage.LOGGER.warn("[Distributor @ {}] input and output depot/belt must be different", getBlockPos());
+            rememberStatus("same_io");
             return null;
         }
 
         var inputStack = takeMatchingItem(patternInputs, plan.baseInput(), 1);
         if (inputStack.isEmpty()) {
             CreatePackage.LOGGER.warn("[Distributor @ {}] missing base input for {}", getBlockPos(), match.id());
+            rememberStatus("missing_base");
             return null;
         }
 
         var actions = new ArrayList<SupplyAction>();
+        var refillInputs = new ArrayList<GenericStack>();
         actions.add(new ItemSupplyAction(inputPos, inputStack));
+        addRefillInput(refillInputs, inputStack);
 
         var deployers = machines.withRole(LinkedMachines.Role.DEPLOYER);
         var spouts = machines.withRole(LinkedMachines.Role.SPOUT);
@@ -256,29 +433,77 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
             switch (step.type()) {
                 case DEPLOY -> {
                     if (deployIdx >= deployers.size()) {
+                        rememberStatus("missing_deployer");
                         return null;
                     }
                     BlockPos deployer = deployers.get(deployIdx).pos();
-                    if (!step.keepHeld() || !hasMatchingItem(deployer, step.heldItem())) {
-                        long amount = step.keepHeld() ? 1L : plan.loops();
-                        ItemStack held = takeMatchingItem(patternInputs, step.heldItem(), amount);
-                        if (held.isEmpty()) {
+                    long existing = countMatchingItem(deployer, step.heldItem());
+                    if (step.keepHeld()) {
+                        if (existing <= 0 && countMatchingInput(patternInputs, step.heldItem()) <= 0) {
+                            rememberStatus("missing_deployer_item");
                             return null;
                         }
-                        actions.add(new ItemSupplyAction(deployer, held));
+                        if (existing <= 0) {
+                            ItemStack held = takeMatchingItem(patternInputs, step.heldItem(), 1);
+                            if (held.isEmpty()) {
+                                rememberStatus("missing_deployer_item");
+                                return null;
+                            }
+                            actions.add(new ItemSupplyAction(deployer, held));
+                        }
+                    } else {
+                        long amount = plan.loops();
+                        long availableInput = countMatchingInput(patternInputs, step.heldItem());
+                        if (availableInput + existing < amount) {
+                            rememberStatus("missing_deployer_item");
+                            return null;
+                        }
+                        long supplyAmount = availableInput > 0 ? Math.min(availableInput, amount) : 0;
+                        if (supplyAmount > 0) {
+                            ItemStack held = takeMatchingItem(patternInputs, step.heldItem(), supplyAmount);
+                            if (held.isEmpty()) {
+                                rememberStatus("missing_deployer_item");
+                                return null;
+                            }
+                            actions.add(new ItemSupplyAction(deployer, held));
+                        }
+                        ItemStack refill = exampleItemStack(step.heldItem(), amount);
+                        if (refill.isEmpty()) {
+                            rememberStatus("missing_deployer_item");
+                            return null;
+                        }
+                        addRefillInput(refillInputs, refill);
                     }
                     deployIdx++;
                 }
                 case FILL -> {
                     if (fillIdx >= spouts.size()) {
+                        rememberStatus("missing_spout");
                         return null;
                     }
                     long amount = (long) plan.loops() * step.fluid().amount();
-                    FluidStack fluid = takeMatchingFluid(patternInputs, step.fluid(), amount);
-                    if (fluid.isEmpty()) {
+                    BlockPos spout = spouts.get(fillIdx).pos();
+                    long availableInput = countMatchingInput(patternInputs, step.fluid());
+                    long existing = countMatchingFluid(spout, step.fluid());
+                    if (availableInput + existing < amount) {
+                        rememberStatus("missing_spout_fluid");
                         return null;
                     }
-                    actions.add(new FluidSupplyAction(spouts.get(fillIdx).pos(), fluid));
+                    long supplyAmount = availableInput > 0 ? Math.min(availableInput, amount) : 0;
+                    if (supplyAmount > 0) {
+                        FluidStack fluid = takeMatchingFluid(patternInputs, step.fluid(), supplyAmount);
+                        if (fluid.isEmpty()) {
+                            rememberStatus("missing_spout_fluid");
+                            return null;
+                        }
+                        actions.add(new FluidSupplyAction(spout, fluid));
+                    }
+                    FluidStack refill = exampleFluidStack(step.fluid(), amount);
+                    if (refill.isEmpty()) {
+                        rememberStatus("missing_spout_fluid");
+                        return null;
+                    }
+                    addRefillInput(refillInputs, refill);
                     fillIdx++;
                 }
                 default -> {
@@ -289,10 +514,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         if (!patternInputs.isEmpty()) {
             CreatePackage.LOGGER.warn("[Distributor @ {}] pattern has unused input(s): {}", getBlockPos(),
                     patternInputs);
+            rememberStatus("unused_inputs");
             return null;
         }
 
-        return new PlanContext(match.id(), primaryOutputKey, primary.amount(), outputPos, actions);
+        return new PlanContext(match.id(), primaryOutputKey, primary.amount(), outputPos, actions, refillInputs);
     }
 
     private boolean tickJob() {
@@ -301,20 +527,40 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         }
 
         currentJob.ticks++;
+        currentJob.roundTicks++;
+        boolean waitingForRefill = "waiting_refill_inputs".equals(lastStatusKey)
+                || "refill_target_full".equals(lastStatusKey);
         boolean didWork = collectOutput();
         if (currentJob.primaryRemaining <= 0) {
             CreatePackage.LOGGER.info("[Distributor @ {}] completed recipe {}", getBlockPos(), currentJob.recipeId);
             currentJob = null;
-            setChanged();
+            lastStatusKey = "completed";
+            saveAndSync();
             return true;
+        }
+        if (waitingForRefill) {
+            didWork = retryRefillRound() || didWork;
+        } else if (!currentJob.roundHasOutput && currentJob.roundTicks > emptyOutputRefillTimeoutTicks()) {
+            CreatePackage.LOGGER.warn("[Distributor @ {}] no output appeared for recipe {} after {} ticks; treating "
+                    + "this round as an empty probability result", getBlockPos(), currentJob.recipeId,
+                    currentJob.roundTicks);
+            didWork = startRefillRound("empty_output") || didWork;
         }
         if (currentJob.ticks > MAX_JOB_TICKS) {
             CreatePackage.LOGGER.warn("[Distributor @ {}] timed out waiting for {} x{} from recipe {}",
                     getBlockPos(), currentJob.primaryOutput, currentJob.primaryRemaining, currentJob.recipeId);
             currentJob.ticks = 0;
-            setChanged();
+            lastStatusKey = "timeout";
+            saveAndSync();
         }
         return didWork;
+    }
+
+    private boolean retryRefillRound() {
+        if (currentJob.roundTicks % REFILL_RETRY_TICKS != 0) {
+            return false;
+        }
+        return startRefillRound(lastStatusKey);
     }
 
     private boolean collectOutput() {
@@ -324,6 +570,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         }
 
         boolean didWork = false;
+        long primaryCollected = 0;
+        long otherCollected = 0;
         for (int slot = 0; slot < handler.getSlots(); slot++) {
             ItemStack available = handler.extractItem(slot, 64, true);
             if (available.isEmpty()) {
@@ -356,16 +604,23 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
                         getBlockPos(), inserted, extracted.getCount());
             }
 
+            currentJob.roundHasOutput = true;
             if (extractedKey.equals(currentJob.primaryOutput)) {
                 currentJob.primaryRemaining -= inserted;
+                primaryCollected += inserted;
                 if (currentJob.primaryRemaining < 0) {
                     currentJob.primaryRemaining = 0;
                 }
+            } else {
+                otherCollected += inserted;
             }
             didWork = inserted > 0 || didWork;
         }
+        if (otherCollected > 0 && primaryCollected == 0 && currentJob.primaryRemaining > 0) {
+            didWork = startRefillRound("secondary_output") || didWork;
+        }
         if (didWork) {
-            setChanged();
+            saveAndSync();
         }
         return didWork;
     }
@@ -378,6 +633,173 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         return grid.getStorageService().getInventory().insert(what, amount, mode, actionSource);
     }
 
+    private long extractFromNetwork(AEKey what, long amount, Actionable mode) {
+        var grid = getMainNode().getGrid();
+        if (grid == null) {
+            return 0;
+        }
+        return grid.getStorageService().getInventory().extract(what, amount, mode, actionSource);
+    }
+
+    private boolean startRefillRound(String reason) {
+        if (currentJob == null) {
+            return false;
+        }
+        if (currentJob.refillInputs.isEmpty()) {
+            rememberStatus("refill_unavailable");
+            return false;
+        }
+
+        RefillContext context = createRefillContext(currentJob.refillInputs);
+        if (context == null) {
+            return false;
+        }
+
+        for (GenericStack input : context.inputs()) {
+            long available = extractFromNetwork(input.what(), input.amount(), Actionable.SIMULATE);
+            if (available < input.amount()) {
+                if (!"waiting_refill_inputs".equals(lastStatusKey)) {
+                    CreatePackage.LOGGER.warn("[Distributor @ {}] cannot refill recipe {} after {}; missing {} x{}",
+                            getBlockPos(), currentJob.recipeId, reason, input.what(), input.amount() - available);
+                }
+                rememberStatus("waiting_refill_inputs");
+                return false;
+            }
+        }
+
+        if (!context.simulate()) {
+            if (!"refill_target_full".equals(lastStatusKey)) {
+                CreatePackage.LOGGER.warn("[Distributor @ {}] cannot refill recipe {} after {}; target cannot accept "
+                        + "inputs yet", getBlockPos(), currentJob.recipeId, reason);
+            }
+            rememberStatus("refill_target_full");
+            return false;
+        }
+
+        for (GenericStack input : context.inputs()) {
+            long extracted = extractFromNetwork(input.what(), input.amount(), Actionable.MODULATE);
+            if (extracted < input.amount()) {
+                CreatePackage.LOGGER.warn("[Distributor @ {}] refill extraction changed during execution for {} "
+                        + "({} < {})", getBlockPos(), input.what(), extracted, input.amount());
+                if (extracted > 0) {
+                    insertIntoNetwork(input.what(), extracted, Actionable.MODULATE);
+                }
+                rememberStatus("waiting_refill_inputs");
+                return false;
+            }
+        }
+
+        if (!context.execute()) {
+            CreatePackage.LOGGER.warn("[Distributor @ {}] refill insertion failed after extraction for recipe {}",
+                    getBlockPos(), currentJob.recipeId);
+            for (GenericStack input : context.inputs()) {
+                insertIntoNetwork(input.what(), input.amount(), Actionable.MODULATE);
+            }
+            rememberStatus("refill_target_full");
+            return false;
+        }
+
+        currentJob.roundsStarted++;
+        currentJob.roundTicks = 0;
+        currentJob.roundHasOutput = false;
+        lastStatusKey = "working";
+        CreatePackage.LOGGER.info("[Distributor @ {}] refilled recipe {} after {} (round {})",
+                getBlockPos(), currentJob.recipeId, reason, currentJob.roundsStarted);
+        saveAndSync();
+        wakeTicker();
+        return true;
+    }
+
+    @Nullable
+    private RefillContext createRefillContext(List<GenericStack> refillInputs) {
+        if (level == null) {
+            return null;
+        }
+        var recipe = level.getRecipeManager().byKey(currentJob.recipeId);
+        if (recipe.isEmpty() || !(recipe.get().value() instanceof com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe sequenced)) {
+            rememberStatus("no_matching_recipe");
+            return null;
+        }
+
+        AssemblyPlan plan = AssemblyPlan.of(sequenced);
+        LinkedMachines machines = LinkedMachines.resolve(level, linkedMachines);
+        BlockPos inputPos = machines.inputDepot();
+        if (inputPos == null) {
+            rememberStatus("missing_io");
+            return null;
+        }
+
+        List<GenericStack> remaining = copyStacks(refillInputs);
+        List<SupplyAction> actions = new ArrayList<>();
+        List<GenericStack> inputs = new ArrayList<>();
+        ItemStack inputStack = takeMatchingItem(remaining, plan.baseInput(), 1);
+        if (inputStack.isEmpty()) {
+            rememberStatus("missing_base");
+            return null;
+        }
+        actions.add(new ItemSupplyAction(inputPos, inputStack));
+        addRefillInput(inputs, inputStack);
+
+        var deployers = machines.withRole(LinkedMachines.Role.DEPLOYER);
+        var spouts = machines.withRole(LinkedMachines.Role.SPOUT);
+        int deployIdx = 0;
+        int fillIdx = 0;
+        for (AssemblyPlan.Step step : plan.consumingSteps()) {
+            switch (step.type()) {
+                case DEPLOY -> {
+                    if (deployIdx >= deployers.size()) {
+                        rememberStatus("missing_deployer");
+                        return null;
+                    }
+                    BlockPos deployer = deployers.get(deployIdx).pos();
+                    if (step.keepHeld()) {
+                        if (countMatchingItem(deployer, step.heldItem()) <= 0) {
+                            rememberStatus("missing_deployer_item");
+                            return null;
+                        }
+                    } else {
+                        long amount = plan.loops();
+                        long existing = countMatchingItem(deployer, step.heldItem());
+                        long supplyAmount = Math.max(0, amount - existing);
+                        if (supplyAmount > 0) {
+                            ItemStack held = takeMatchingItem(remaining, step.heldItem(), supplyAmount);
+                            if (held.isEmpty()) {
+                                rememberStatus("missing_deployer_item");
+                                return null;
+                            }
+                            actions.add(new ItemSupplyAction(deployer, held));
+                            addRefillInput(inputs, held);
+                        }
+                    }
+                    deployIdx++;
+                }
+                case FILL -> {
+                    if (fillIdx >= spouts.size()) {
+                        rememberStatus("missing_spout");
+                        return null;
+                    }
+                    long amount = (long) plan.loops() * step.fluid().amount();
+                    long existing = countMatchingFluid(spouts.get(fillIdx).pos(), step.fluid());
+                    long supplyAmount = Math.max(0, amount - existing);
+                    if (supplyAmount > 0) {
+                        FluidStack fluid = takeMatchingFluid(remaining, step.fluid(), supplyAmount);
+                        if (fluid.isEmpty()) {
+                            rememberStatus("missing_spout_fluid");
+                            return null;
+                        }
+                        actions.add(new FluidSupplyAction(spouts.get(fillIdx).pos(), fluid));
+                        addRefillInput(inputs, fluid);
+                    }
+                    fillIdx++;
+                }
+                default -> {
+                }
+            }
+        }
+
+        return new RefillContext(actions, inputs);
+    }
+
     private IItemHandler itemHandler(BlockPos pos) {
         if (level == null || !level.isLoaded(pos)) {
             return null;
@@ -385,17 +807,35 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
     }
 
-    private boolean hasMatchingItem(BlockPos pos, net.minecraft.world.item.crafting.Ingredient ingredient) {
+    private long countMatchingItem(BlockPos pos, net.minecraft.world.item.crafting.Ingredient ingredient) {
         IItemHandler handler = itemHandler(pos);
-        if (handler == null) {
-            return false;
+        if (handler == null || ingredient == null) {
+            return 0;
         }
+        long amount = 0;
         for (int slot = 0; slot < handler.getSlots(); slot++) {
-            if (ingredient.test(handler.getStackInSlot(slot))) {
-                return true;
+            ItemStack stack = handler.getStackInSlot(slot);
+            if (ingredient.test(stack)) {
+                amount += stack.getCount();
             }
         }
-        return false;
+        return amount;
+    }
+
+    private long countMatchingFluid(BlockPos pos,
+            net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient) {
+        IFluidHandler handler = fluidHandler(pos);
+        if (handler == null || ingredient == null) {
+            return 0;
+        }
+        long amount = 0;
+        for (int tank = 0; tank < handler.getTanks(); tank++) {
+            FluidStack stack = handler.getFluidInTank(tank);
+            if (ingredient.ingredient().test(stack)) {
+                amount += stack.getAmount();
+            }
+        }
+        return amount;
     }
 
     private IFluidHandler fluidHandler(BlockPos pos) {
@@ -413,6 +853,243 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
 
     private void wakeTicker() {
         getMainNode().ifPresent((grid, node) -> grid.getTickManager().wakeDevice(node));
+    }
+
+    private void clearLastStatus() {
+        if (currentJob == null) {
+            lastStatusKey = "ready";
+        }
+    }
+
+    private void rememberStatus(String statusKey) {
+        if (!Objects.equals(lastStatusKey, statusKey)) {
+            lastStatusKey = statusKey;
+            saveAndSync();
+        }
+    }
+
+    private void saveAndSync() {
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            markForUpdate();
+        }
+    }
+
+    private AeStatus currentAeStatus() {
+        IGridNode node = getMainNode().getNode();
+        return new AeStatus(node != null,
+                node != null && getMainNode().isPowered(),
+                node != null && node.meetsChannelRequirements(),
+                node != null && getMainNode().isActive());
+    }
+
+    private AeStatus visibleAeStatus() {
+        if (level != null && !level.isClientSide()) {
+            return currentAeStatus();
+        }
+        return new AeStatus(aeNodePresent, aePowered, aeChannel, aeActive);
+    }
+
+    private static int emptyOutputRefillTimeoutTicks() {
+        try {
+            return Config.EMPTY_OUTPUT_REFILL_TIMEOUT_TICKS.get();
+        } catch (IllegalStateException ignored) {
+            return ROUND_OUTPUT_TIMEOUT_TICKS;
+        }
+    }
+
+    // === Create goggles ===
+
+    @Override
+    public ItemStack getIcon(boolean isPlayerSneaking) {
+        return ModItems.PACKAGE_DISTRIBUTOR.toStack();
+    }
+
+    @Override
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
+        tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.header")
+                .withStyle(ChatFormatting.GOLD));
+        tooltip.add(statusLine());
+
+        AeStatus aeStatus = visibleAeStatus();
+        if (aeStatus.nodePresent()) {
+            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.ae_node",
+                    boolText(aeStatus.powered()),
+                    boolText(aeStatus.channel()),
+                    boolText(aeStatus.active())).withStyle(ChatFormatting.GRAY));
+        } else {
+            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.ae_node_missing")
+                    .withStyle(ChatFormatting.RED));
+        }
+
+        if (currentJob != null) {
+            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.job",
+                    currentJob.primaryOutput.getDisplayName(),
+                    currentJob.primaryRemaining,
+                    currentJob.roundsStarted).withStyle(ChatFormatting.AQUA));
+        }
+
+        tooltip.add(CommonComponents.EMPTY);
+        tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.links",
+                linkedMachines.size()).withStyle(ChatFormatting.WHITE));
+
+        if (linkedMachines.isEmpty()) {
+            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.no_links")
+                    .withStyle(ChatFormatting.DARK_GRAY));
+            return true;
+        }
+
+        int shown = Math.min(linkedMachines.size(), MAX_TOOLTIP_LINKS);
+        for (int i = 0; i < shown; i++) {
+            tooltip.add(linkLine(i, linkedMachines.get(i)));
+        }
+        if (linkedMachines.size() > shown) {
+            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.more_links",
+                    linkedMachines.size() - shown).withStyle(ChatFormatting.DARK_GRAY));
+        }
+        return true;
+    }
+
+    private Component statusLine() {
+        String status = lastStatusKey;
+        ChatFormatting color = switch (status) {
+            case "ready", "completed" -> ChatFormatting.GREEN;
+            case "working" -> ChatFormatting.AQUA;
+            case "busy" -> ChatFormatting.YELLOW;
+            default -> ChatFormatting.RED;
+        };
+        return Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.status",
+                Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.status." + status)
+                        .withStyle(color)).withStyle(ChatFormatting.GRAY);
+    }
+
+    private Component linkLine(int index, BlockPos pos) {
+        String roleKey = roleKey(pos);
+        Component name = linkedBlockName(pos);
+        return Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.link_entry",
+                index + 1,
+                Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.role." + roleKey),
+                name,
+                pos.getX(), pos.getY(), pos.getZ()).withStyle(ChatFormatting.GRAY);
+    }
+
+    private String roleKey(BlockPos pos) {
+        if (level == null) {
+            return "unknown";
+        }
+        return switch (LinkedMachines.roleOf(level, pos)) {
+            case DEPOT -> {
+                BlockPos input = null;
+                BlockPos output = null;
+                for (BlockPos linked : linkedMachines) {
+                    if (LinkedMachines.roleOf(level, linked) == LinkedMachines.Role.DEPOT) {
+                        if (input == null) {
+                            input = linked;
+                        }
+                        output = linked;
+                    }
+                }
+                if (pos.equals(input)) {
+                    yield "input";
+                }
+                if (pos.equals(output)) {
+                    yield "output";
+                }
+                yield "depot";
+            }
+            case DEPLOYER -> "deployer";
+            case SPOUT -> "spout";
+            case UNKNOWN -> "unknown";
+        };
+    }
+
+    private Component linkedBlockName(BlockPos pos) {
+        if (level == null || !level.isLoaded(pos)) {
+            return Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.unloaded");
+        }
+        BlockState state = level.getBlockState(pos);
+        Item item = state.getBlock().asItem();
+        if (item != net.minecraft.world.item.Items.AIR) {
+            return item.getDescription();
+        }
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        return id == null ? Component.literal("unknown") : Component.literal(id.toString());
+    }
+
+    private static Component boolText(boolean value) {
+        return Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor." + (value ? "yes" : "no"))
+                .withStyle(value ? ChatFormatting.GREEN : ChatFormatting.RED);
+    }
+
+    private static boolean sameJob(DistributionJob left, DistributionJob right) {
+        if (left == right) {
+            return true;
+        }
+        if (left == null || right == null) {
+            return false;
+        }
+        return Objects.equals(left.recipeId, right.recipeId)
+                && Objects.equals(left.primaryOutput, right.primaryOutput)
+                && left.primaryRemaining == right.primaryRemaining
+                && Objects.equals(left.outputPos, right.outputPos)
+                && left.ticks == right.ticks
+                && left.roundTicks == right.roundTicks
+                && left.roundsStarted == right.roundsStarted
+                && left.roundHasOutput == right.roundHasOutput;
+    }
+
+    private static void addRefillInput(List<GenericStack> inputs, ItemStack stack) {
+        AEItemKey key = AEItemKey.of(stack);
+        if (key != null) {
+            addRefillInput(inputs, new GenericStack(key, stack.getCount()));
+        }
+    }
+
+    private static void addRefillInput(List<GenericStack> inputs, FluidStack stack) {
+        AEFluidKey key = AEFluidKey.of(stack);
+        if (key != null) {
+            addRefillInput(inputs, new GenericStack(key, stack.getAmount()));
+        }
+    }
+
+    private static void addRefillInput(List<GenericStack> inputs, GenericStack stack) {
+        for (int i = 0; i < inputs.size(); i++) {
+            GenericStack existing = inputs.get(i);
+            if (existing.what().equals(stack.what())) {
+                inputs.set(i, new GenericStack(existing.what(), existing.amount() + stack.amount()));
+                return;
+            }
+        }
+        inputs.add(stack);
+    }
+
+    private static List<GenericStack> copyStacks(List<GenericStack> inputs) {
+        return new ArrayList<>(inputs);
+    }
+
+    private static ItemStack exampleItemStack(net.minecraft.world.item.crafting.Ingredient ingredient, long amount) {
+        if (ingredient == null || amount <= 0 || amount > Integer.MAX_VALUE) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack[] items = ingredient.getItems();
+        if (items.length == 0) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack stack = items[0].copy();
+        stack.setCount((int) amount);
+        return stack;
+    }
+
+    private static FluidStack exampleFluidStack(
+            net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient, long amount) {
+        if (ingredient == null || amount <= 0 || amount > Integer.MAX_VALUE) {
+            return FluidStack.EMPTY;
+        }
+        FluidStack[] fluids = ingredient.getFluids();
+        if (fluids.length == 0) {
+            return FluidStack.EMPTY;
+        }
+        return fluids[0].copyWithAmount((int) amount);
     }
 
     private static List<GenericStack> flattenInputs(KeyCounter[] inputs) {
@@ -435,6 +1112,37 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
             }
         }
         return result;
+    }
+
+    private static long countMatchingInput(List<GenericStack> inputs,
+            net.minecraft.world.item.crafting.Ingredient ingredient) {
+        if (ingredient == null) {
+            return 0;
+        }
+        long amount = 0;
+        for (GenericStack input : inputs) {
+            if (input.what() instanceof AEItemKey itemKey && ingredient.test(itemKey.toStack(1))) {
+                amount += input.amount();
+            }
+        }
+        return amount;
+    }
+
+    private static long countMatchingInput(List<GenericStack> inputs,
+            net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient) {
+        if (ingredient == null) {
+            return 0;
+        }
+        long amount = 0;
+        for (GenericStack input : inputs) {
+            if (input.what() instanceof AEFluidKey fluidKey) {
+                FluidStack stack = fluidKey.toStack((int) Math.min(input.amount(), Integer.MAX_VALUE));
+                if (ingredient.ingredient().test(stack)) {
+                    amount += input.amount();
+                }
+            }
+        }
+        return amount;
     }
 
     private static ItemStack takeMatchingItem(List<GenericStack> inputs,
@@ -494,8 +1202,19 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
             AEItemKey primaryOutputKey,
             long primaryOutputAmount,
             BlockPos outputPos,
-            List<SupplyAction> actions) {
+            List<SupplyAction> actions,
+            List<GenericStack> refillInputs) {
 
+        boolean simulate() {
+            return actions.stream().allMatch(action -> action.perform(true));
+        }
+
+        boolean execute() {
+            return actions.stream().allMatch(action -> action.perform(false));
+        }
+    }
+
+    private record RefillContext(List<SupplyAction> actions, List<GenericStack> inputs) {
         boolean simulate() {
             return actions.stream().allMatch(action -> action.perform(true));
         }
@@ -507,6 +1226,9 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
 
     private interface SupplyAction {
         boolean perform(boolean simulate);
+    }
+
+    private record AeStatus(boolean nodePresent, boolean powered, boolean channel, boolean active) {
     }
 
     private final class ItemSupplyAction implements SupplyAction {
@@ -558,19 +1280,30 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
         private static final String NBT_REMAINING = "remaining";
         private static final String NBT_OUTPUT_POS = "outputPos";
         private static final String NBT_TICKS = "ticks";
+        private static final String NBT_ROUND_TICKS = "roundTicks";
+        private static final String NBT_ROUNDS_STARTED = "roundsStarted";
+        private static final String NBT_ROUND_HAS_OUTPUT = "roundHasOutput";
+        private static final String NBT_REFILL_INPUTS = "refillInputs";
+        private static final String NBT_REFILL_KEY = "key";
+        private static final String NBT_REFILL_AMOUNT = "amount";
 
         private final ResourceLocation recipeId;
         private final AEItemKey primaryOutput;
         private long primaryRemaining;
         private final BlockPos outputPos;
+        private final List<GenericStack> refillInputs;
         private int ticks;
+        private int roundTicks;
+        private long roundsStarted;
+        private boolean roundHasOutput;
 
         private DistributionJob(ResourceLocation recipeId, AEItemKey primaryOutput, long primaryRemaining,
-                BlockPos outputPos) {
+                BlockPos outputPos, List<GenericStack> refillInputs) {
             this.recipeId = Objects.requireNonNull(recipeId);
             this.primaryOutput = Objects.requireNonNull(primaryOutput);
             this.primaryRemaining = primaryRemaining;
             this.outputPos = outputPos.immutable();
+            this.refillInputs = List.copyOf(refillInputs);
         }
 
         private CompoundTag write(HolderLookup.Provider registries) {
@@ -580,6 +1313,17 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
             tag.putLong(NBT_REMAINING, primaryRemaining);
             tag.putLong(NBT_OUTPUT_POS, outputPos.asLong());
             tag.putInt(NBT_TICKS, ticks);
+            tag.putInt(NBT_ROUND_TICKS, roundTicks);
+            tag.putLong(NBT_ROUNDS_STARTED, roundsStarted);
+            tag.putBoolean(NBT_ROUND_HAS_OUTPUT, roundHasOutput);
+            ListTag refillList = new ListTag();
+            for (GenericStack input : refillInputs) {
+                CompoundTag inputTag = new CompoundTag();
+                inputTag.put(NBT_REFILL_KEY, input.what().toTagGeneric(registries));
+                inputTag.putLong(NBT_REFILL_AMOUNT, input.amount());
+                refillList.add(inputTag);
+            }
+            tag.put(NBT_REFILL_INPUTS, refillList);
             return tag;
         }
 
@@ -589,9 +1333,22 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity implem
             if (output == null) {
                 return null;
             }
+            List<GenericStack> refillInputs = new ArrayList<>();
+            ListTag refillList = tag.getList(NBT_REFILL_INPUTS, Tag.TAG_COMPOUND);
+            for (int i = 0; i < refillList.size(); i++) {
+                CompoundTag inputTag = refillList.getCompound(i);
+                AEKey key = AEKey.fromTagGeneric(registries, inputTag.getCompound(NBT_REFILL_KEY));
+                long amount = inputTag.getLong(NBT_REFILL_AMOUNT);
+                if (key != null && amount > 0) {
+                    refillInputs.add(new GenericStack(key, amount));
+                }
+            }
             var job = new DistributionJob(recipe, output, tag.getLong(NBT_REMAINING),
-                    BlockPos.of(tag.getLong(NBT_OUTPUT_POS)));
+                    BlockPos.of(tag.getLong(NBT_OUTPUT_POS)), refillInputs);
             job.ticks = tag.getInt(NBT_TICKS);
+            job.roundTicks = tag.getInt(NBT_ROUND_TICKS);
+            job.roundsStarted = tag.contains(NBT_ROUNDS_STARTED) ? tag.getLong(NBT_ROUNDS_STARTED) : 1;
+            job.roundHasOutput = tag.getBoolean(NBT_ROUND_HAS_OUTPUT);
             return job;
         }
     }

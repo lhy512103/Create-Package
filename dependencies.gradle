@@ -9,6 +9,7 @@ dependencies {
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
     compileOnly "dev.emi:emi-neoforge:${emi_version}:api"
+    compileOnly "maven.modrinth:jade:${jade_version}"
 
     // === Local runtime: core mods this mod depends on at runtime ===
     localRuntime "org.appliedenergistics:appliedenergistics2:${ae2_version}"

@@ -1,0 +1,78 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "create:brass_casing"
+  },
+  "loops": 1,
+  "results": [
+    {
+      "id": "createpackage:package_distributor"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "type": "fluid_stack",
+          "amount": 250,
+          "fluid": "minecraft:water"
+        }
+      ],
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ],
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "ae2:logic_processor"
+        }
+      ],
+      "results": [
+        {
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "createpackage:incomplete_package_distributor"
+  }
+}
