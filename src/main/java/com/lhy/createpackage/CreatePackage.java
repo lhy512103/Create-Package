@@ -17,6 +17,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 
+import appeng.api.upgrades.Upgrades;
 import appeng.blockentity.AEBaseBlockEntity;
 
 /**
@@ -61,6 +62,7 @@ public class CreatePackage {
             AEBaseBlockEntity.registerBlockEntityItem(
                     ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
                     ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
+            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(), 2);
         });
     }
 }

@@ -198,7 +198,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
 
         @Override
         public boolean isBusy() {
-            return BasicPackageDistributorBlockEntity.this.hasActiveJob();
+            return !BasicPackageDistributorBlockEntity.this.canAcceptMoreJobs();
         }
     }
 

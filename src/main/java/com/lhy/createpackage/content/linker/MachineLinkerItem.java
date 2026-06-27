@@ -60,6 +60,10 @@ public class MachineLinkerItem extends Item {
 
         // Case 1: clicked a distributor -> select it, or clear its links when sneaking.
         if (be instanceof PackageDistributorBlockEntity distributor) {
+            if (!distributor.usesStoredMachineLinks()) {
+                msg(player, "pattern_routed_distributor");
+                return InteractionResult.SUCCESS;
+            }
             if (player.isShiftKeyDown()) {
                 int cleared = distributor.clearLinks();
                 stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
@@ -87,6 +91,11 @@ public class MachineLinkerItem extends Item {
         if (distributor == null) {
             stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
             msg(player, "selection_gone");
+            return InteractionResult.SUCCESS;
+        }
+        if (!distributor.usesStoredMachineLinks()) {
+            stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
+            msg(player, "pattern_routed_distributor");
             return InteractionResult.SUCCESS;
         }
 

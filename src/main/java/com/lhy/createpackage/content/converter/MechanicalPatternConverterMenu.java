@@ -3,7 +3,7 @@ package com.lhy.createpackage.content.converter;
 import java.util.List;
 
 import com.lhy.createpackage.CreatePackage;
-import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
+import com.lhy.createpackage.content.pattern.MachineRouteData;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternData;
 import com.lhy.createpackage.registry.ModComponents;
 import com.lhy.createpackage.registry.ModItems;
@@ -11,7 +11,6 @@ import com.lhy.createpackage.registry.ModMenuTypes;
 
 import appeng.api.crafting.PatternDetailsHelper;
 
-import net.minecraft.core.GlobalPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -80,14 +79,17 @@ public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
             return;
         }
 
-        List<net.minecraft.core.BlockPos> route = routeFromBoundDistributor(player);
+        List<net.minecraft.core.BlockPos> route = routeFromConverter(player);
         if (route.isEmpty()) {
             player.displayClientMessage(Component.translatable(
                     "gui." + CreatePackage.MODID + ".mechanical_pattern_converter.no_route"), true);
             return;
         }
 
-        ItemStack originalPattern = input.copyWithCount(1);
+        ItemStack originalPattern = originalPattern(input);
+        if (originalPattern.isEmpty()) {
+            return;
+        }
         ItemStack result = new ItemStack(ModItems.MECHANICAL_PACKAGE_PATTERN.get());
         result.set(ModComponents.MECHANICAL_PACKAGE_PATTERN.get(),
                 new MechanicalPackagePatternData(originalPattern, route));
@@ -100,23 +102,25 @@ public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
         broadcastChanges();
     }
 
-    private List<net.minecraft.core.BlockPos> routeFromBoundDistributor(Player player) {
-        GlobalPos selected = player.getItemInHand(hand).get(ModComponents.LINKED_DISTRIBUTOR.get());
-        if (selected == null || !selected.dimension().equals(player.level().dimension())) {
-            return List.of();
-        }
-        if (!player.level().isLoaded(selected.pos())) {
-            return List.of();
-        }
-        if (player.level().getBlockEntity(selected.pos()) instanceof PackageDistributorBlockEntity distributor) {
-            return List.copyOf(distributor.getLinkedMachines());
-        }
-        return List.of();
+    private List<net.minecraft.core.BlockPos> routeFromConverter(Player player) {
+        MachineRouteData route = player.getItemInHand(hand).get(ModComponents.MECHANICAL_ROUTE.get());
+        return route == null ? List.of() : route.positions();
     }
 
     private static boolean isConvertiblePattern(ItemStack stack) {
-        return PatternDetailsHelper.isEncodedPattern(stack)
-                && !stack.is(ModItems.MECHANICAL_PACKAGE_PATTERN.get());
+        if (stack.is(ModItems.MECHANICAL_PACKAGE_PATTERN.get())) {
+            MechanicalPackagePatternData data = MechanicalPackagePatternData.from(stack);
+            return data != null && PatternDetailsHelper.isEncodedPattern(data.encodedPattern());
+        }
+        return PatternDetailsHelper.isEncodedPattern(stack);
+    }
+
+    private static ItemStack originalPattern(ItemStack stack) {
+        if (stack.is(ModItems.MECHANICAL_PACKAGE_PATTERN.get())) {
+            MechanicalPackagePatternData data = MechanicalPackagePatternData.from(stack);
+            return data == null ? ItemStack.EMPTY : data.encodedPattern().copyWithCount(1);
+        }
+        return stack.copyWithCount(1);
     }
 
     @Override

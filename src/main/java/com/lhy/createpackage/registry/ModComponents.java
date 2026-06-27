@@ -3,6 +3,7 @@ package com.lhy.createpackage.registry;
 import java.util.function.Consumer;
 
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.content.pattern.MachineRouteData;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternData;
 
 import net.minecraft.core.GlobalPos;
@@ -31,6 +32,11 @@ public final class ModComponents {
             register("mechanical_package_pattern", builder -> builder
                     .persistent(MechanicalPackagePatternData.CODEC)
                     .networkSynchronized(MechanicalPackagePatternData.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<MachineRouteData>> MECHANICAL_ROUTE =
+            register("mechanical_route", builder -> builder
+                    .persistent(MachineRouteData.CODEC)
+                    .networkSynchronized(MachineRouteData.STREAM_CODEC));
 
     private static <T> DeferredHolder<DataComponentType<?>, DataComponentType<T>> register(
             String name, Consumer<DataComponentType.Builder<T>> customizer) {

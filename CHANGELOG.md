@@ -2,7 +2,25 @@
 
 ## 2026-06-26
 
-- Added the Advanced Package Distributor as a real `advanced_package_distributor` block again: it embeds AE2 pattern-provider logic but routes each job from the saved machine links inside a Mechanical Package Pattern, allowing one distributor to store patterns for multiple assembly lines. Parallel line execution is still deferred.
+- Prevented Mechanical Package Patterns from clearing into blank patterns when sneak-right-clicking a block; clearing still uses AE2's sneak-right-click-air behavior.
+- Improved Advanced Package Distributor diagnostics: goggles/Jade now list every active line, show the last failed route for insertion simulation/execution failures, and avoid showing a stale busy state while capacity is still available.
+- Restricted mechanical route marking to the blocks the distributor actually routes through: depots, belts, deployers, and spouts. Passive Create processing machines such as mechanical presses are no longer markable.
+- Allowed converted Mechanical Package Patterns to be reinserted into the Mechanical Pattern Converter to rewrite their saved route while preserving the original AE2 encoded pattern.
+- Added direct route editing on held Mechanical Package Patterns: right-click markable route blocks to append them, and sneak + right-click to remove them.
+- Added Machine Linker in-world route highlighting using the currently selected distributor's synchronized link list.
+- Added the Parallel Card upgrade for Advanced Package Distributors. Each non-stackable card doubles active disjoint assembly-line capacity: 0 cards = 1 line, 1 card = 2 lines, 2 cards = 4 lines.
+- Added native AE2 upgrade slots to the Advanced Package Distributor menu, persisted/dropped installed Parallel Cards, and reused AE2's upgrade-card model style.
+- Changed Advanced Package Distributor busy checks to report busy only when capacity is full, while refusing new jobs whose saved machine route overlaps an active route.
+- Added in-world route highlighting while holding the Mechanical Pattern Converter, and changed saved-route end points to render in orange.
+- Updated Engineer's Goggles/Jade diagnostics so Basic/Advanced/normal distributor titles and route sections match the actual block type. Advanced distributors now show Mechanical Package Pattern route sources instead of an empty machine-link list.
+- Prevented the Machine Linker from selecting Advanced Package Distributors, since their routes are stored per Mechanical Package Pattern.
+- Fixed Mechanical Pattern Converter route marking on Create belts and other known sequenced-assembly blocks, and prevented right-clicking an unmarkable block from opening the converter GUI by accident.
+- Removed the duplicate machine-link count from Mechanical Package Pattern tooltips; route information is now shown in one consistent tooltip section.
+- Changed the Mechanical Pattern Converter item model to inherit AE2's 256k fluid storage cell model.
+- Added in-world route highlighting while holding a converted Mechanical Package Pattern.
+- Changed the Mechanical Pattern Converter to mark machine routes directly: right-click machines in order to add them, sneak + right-click machines to remove them, and sneak + right-click air to clear the route. Converting no longer requires binding to a pre-linked distributor.
+- Added route tooltips to the Mechanical Pattern Converter and converted Mechanical Package Patterns. The tooltip shows the marked route count by default and expands to machine names and coordinates while holding Shift.
+- Added the Advanced Package Distributor as a real `advanced_package_distributor` block again: it embeds AE2 pattern-provider logic but routes each job from the saved machine links inside a Mechanical Package Pattern, allowing one distributor to store patterns for multiple assembly lines. Parallel Cards now allow multiple disjoint lines to run at once.
 - Added Mechanical Package Patterns backed by AE2's custom encoded-pattern API. They preserve the original AE2 encoded pattern's inputs/outputs while carrying a Create machine-link route snapshot for the Advanced Package Distributor.
 - Added the handheld Mechanical Pattern Converter with a small conversion GUI: right-click a linked distributor to bind the route source, right-click air to open the converter, insert a normal encoded AE2 pattern, and convert it into a Mechanical Package Pattern.
 - Made active distributor jobs persist and refill against the route captured at job start, so probability refills and transitional-item reflow keep using the same per-pattern route even if the block's current links later change.
@@ -30,7 +48,25 @@
 
 ## 2026-06-26 中文
 
-- 重新加入真正的高级封包分发器 `advanced_package_distributor`：它内置 AE2 样板供应器逻辑，但每个作业按机械封包样板里保存的机器链接路线执行，使一个分发器可以存放多条装配线的样板；多装配线并行运行后续再实现。
+- 禁止机械封包样板在潜行右键方块时被清空成空白样板；清空仍保留 AE2 原本的潜行右键空气行为。
+- 改进高级封包分发器诊断：护目镜/Jade 现在会列出每条活动装配线，目标库存模拟/实际插入失败时显示最近失败路线，并避免仍有空余容量时显示过期的忙碌状态。
+- 将机械路线标记限制为分发器实际会路由的方块：料盘、传送带、Deployer 和 Spout。动力冲压机等自然加工机器不再允许标记。
+- 允许已转换机械封包样板重新放入机械样板转换器，在保留原 AE2 已编码样板的同时重写保存路线。
+- 增加手持机械封包样板直接编辑路线：右键可标记路线方块追加位置，潜行 + 右键移除位置。
+- 增加手持机器链接器时在主世界高亮已选中分发器同步链接路线的功能。
+- 增加高级封包分发器并行卡升级：并行卡不可堆叠，每张卡将活动装配线容量翻倍，0 张 = 1 条，1 张 = 2 条，2 张 = 4 条。
+- 为高级封包分发器菜单加入 AE2 原生升级槽，安装的并行卡会保存、掉落，并沿用 AE2 升级卡模型风格。
+- 调整高级封包分发器忙碌判断：只有容量满时才向 AE2 报忙；同时拒绝与活动作业机器路线重叠的新作业，避免同一条物理流水线被并发抢占。
+- 增加手持机械样板转换器时在主世界高亮当前标记路线的功能，并将保存路线的终点高亮颜色改为橙色。
+- 更新工程师护目镜/Jade 诊断显示：普通/基础/高级分发器标题和路线区域会匹配实际方块类型；高级分发器现在显示机械封包样板路线来源，不再显示空的机器链接列表。
+- 禁止机器链接器选中高级封包分发器，因为高级分发器的路线由每张机械封包样板保存。
+- 修复机械样板转换器无法标记 Create 传送带等已知序列组装方块的问题，并避免右键不可标记方块时误打开转换器 GUI。
+- 移除机械封包样板 tooltip 中重复的机器链接数量显示，路线信息现在只在统一的路线 tooltip 区域显示。
+- 将机械样板转换器物品模型改为继承 AE2 的 256k 流体存储元件模型。
+- 增加手持已转换机械封包样板时在主世界高亮其保存机器路线的功能。
+- 将机械样板转换器改为直接标记机器路线：按顺序右键机器加入路线，潜行+右键机器移除，潜行+空中右键清空路线；转换时不再需要先绑定一个已配置链接的分发器。
+- 为机械样板转换器和转换后的机械封包样板增加路线 tooltip：默认显示已标记机器数量，按住 Shift 时展开机器名称和坐标。
+- 重新加入真正的高级封包分发器 `advanced_package_distributor`：它内置 AE2 样板供应器逻辑，但每个作业按机械封包样板里保存的机器链接路线执行，使一个分发器可以存放多条装配线的样板；并行卡现在可让多条不重叠装配线同时运行。
 - 增加机械封包样板，基于 AE2 自定义 encoded-pattern API 实现：保留原 AE2 已编码样板的输入/输出，同时携带转换时的 Create 机器链接路线快照，供高级封包分发器路由。
 - 增加手持机械样板转换器和简易转换 GUI：右键已配置链接的分发器绑定路线来源，空中右键打开界面，放入普通 AE2 已编码样板后可转换为机械封包样板。
 - 活动作业现在会保存接单时捕获的路线，几率补刷和中间产物回流都会继续使用同一条样板路线，不会因方块当前链接后续变化而跑错装配线。

@@ -3,13 +3,14 @@ package com.lhy.createpackage.content.converter;
 import java.util.List;
 
 import com.lhy.createpackage.CreatePackage;
-import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
+import com.lhy.createpackage.content.distributor.LinkedMachines;
+import com.lhy.createpackage.content.pattern.MachineRouteData;
+import com.lhy.createpackage.content.pattern.MachineRouteTooltip;
 import com.lhy.createpackage.registry.ModComponents;
 import com.lhy.createpackage.registry.ModMenuTypes;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -41,22 +42,36 @@ public class MechanicalPatternConverterItem extends Item {
             return InteractionResult.PASS;
         }
 
-        if (level.getBlockEntity(clicked) instanceof PackageDistributorBlockEntity distributor) {
+        if (!isMarkableMachine(level, clicked)) {
             if (!level.isClientSide()) {
-                if (player.isShiftKeyDown()) {
-                    stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
-                    msg(player, "cleared");
-                } else {
-                    stack.set(ModComponents.LINKED_DISTRIBUTOR.get(),
-                            GlobalPos.of(level.dimension(), clicked.immutable()));
-                    msg(player, "selected", clicked.getX(), clicked.getY(), clicked.getZ(),
-                            distributor.getLinkedMachines().size());
-                }
+                msg(player, "not_markable");
             }
             return InteractionResult.sidedSuccess(level.isClientSide());
         }
 
-        return InteractionResult.PASS;
+        if (!level.isClientSide()) {
+            MachineRouteData route = route(stack);
+            if (player.isShiftKeyDown()) {
+                MachineRouteData updated = route.withRemoved(clicked);
+                if (updated.positions().size() == route.positions().size()) {
+                    msg(player, "not_marked");
+                } else {
+                    setRoute(stack, updated);
+                    msg(player, "unmarked", clicked.getX(), clicked.getY(), clicked.getZ(),
+                            updated.positions().size());
+                }
+            } else {
+                MachineRouteData updated = route.withAdded(clicked);
+                if (updated.positions().size() == route.positions().size()) {
+                    msg(player, "already_marked");
+                } else {
+                    setRoute(stack, updated);
+                    msg(player, "marked", clicked.getX(), clicked.getY(), clicked.getZ(),
+                            updated.positions().size());
+                }
+            }
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
     @Override
@@ -64,6 +79,13 @@ public class MechanicalPatternConverterItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
         if (stack.getItem() != this) {
             return InteractionResultHolder.pass(stack);
+        }
+        if (player.isShiftKeyDown()) {
+            if (!level.isClientSide()) {
+                stack.remove(ModComponents.MECHANICAL_ROUTE.get());
+                msg(player, "cleared");
+            }
+            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
         }
         if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
             MenuProvider provider = new SimpleMenuProvider(
@@ -79,16 +101,29 @@ public class MechanicalPatternConverterItem extends Item {
         player.displayClientMessage(Component.translatable(KEY_PREFIX + key, args), true);
     }
 
+    private static MachineRouteData route(ItemStack stack) {
+        MachineRouteData route = stack.get(ModComponents.MECHANICAL_ROUTE.get());
+        return route == null ? new MachineRouteData(List.of()) : route;
+    }
+
+    private static void setRoute(ItemStack stack, MachineRouteData route) {
+        if (route.isEmpty()) {
+            stack.remove(ModComponents.MECHANICAL_ROUTE.get());
+        } else {
+            stack.set(ModComponents.MECHANICAL_ROUTE.get(), route);
+        }
+    }
+
+    public static boolean isMarkableMachine(Level level, BlockPos pos) {
+        return LinkedMachines.roleOf(level, pos) != LinkedMachines.Role.UNKNOWN;
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        GlobalPos selected = stack.get(ModComponents.LINKED_DISTRIBUTOR.get());
-        if (selected == null) {
-            tooltip.add(Component.translatable(KEY_PREFIX + "tooltip.unbound").withStyle(ChatFormatting.GRAY));
-        } else {
-            BlockPos pos = selected.pos();
-            tooltip.add(Component.translatable(KEY_PREFIX + "tooltip.bound", pos.getX(), pos.getY(), pos.getZ())
-                    .withStyle(ChatFormatting.GREEN));
-        }
+        MachineRouteData route = route(stack);
+        MachineRouteTooltip.addRouteLines(tooltip, context.level(), route.positions(), flag.hasShiftDown());
+        tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.held_highlight_marked")
+                .withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.translatable(KEY_PREFIX + "tooltip.usage").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

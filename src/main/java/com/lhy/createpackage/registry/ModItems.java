@@ -4,13 +4,14 @@ import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.converter.MechanicalPatternConverterItem;
 import com.lhy.createpackage.content.linker.MachineLinkerItem;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternDetails;
-
-import appeng.api.crafting.PatternDetailsHelper;
+import com.lhy.createpackage.content.pattern.MechanicalPackagePatternItem;
 
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+
+import appeng.api.upgrades.Upgrades;
 
 /**
  * Item registry for Create Package.
@@ -35,9 +36,12 @@ public final class ModItems {
 
     public static final DeferredItem<Item> MECHANICAL_PACKAGE_PATTERN = ITEMS.register(
             "mechanical_package_pattern",
-            () -> PatternDetailsHelper.encodedPatternItemBuilder(MechanicalPackagePatternDetails::decode)
-                    .itemProperties(new Item.Properties().stacksTo(1))
-                    .build());
+            () -> new MechanicalPackagePatternItem(new Item.Properties().stacksTo(1),
+                    MechanicalPackagePatternDetails::decode, null));
+
+    public static final DeferredItem<Item> PARALLEL_CARD = ITEMS.register(
+            "parallel_card",
+            () -> Upgrades.createUpgradeCardItem(new Item.Properties().stacksTo(1)));
 
     public static final DeferredItem<Item> INCOMPLETE_PACKAGE_DISTRIBUTOR = ITEMS.registerSimpleItem(
             "incomplete_package_distributor", new Item.Properties());

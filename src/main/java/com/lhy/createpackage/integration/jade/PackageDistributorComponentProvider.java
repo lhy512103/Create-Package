@@ -39,10 +39,39 @@ public final class PackageDistributorComponentProvider implements IBlockComponen
                 Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.status."
                         + distributor.getStatusKey()).withStyle(statusColor(distributor.getStatusKey()))));
 
-        if (distributor.hasActiveJob()) {
-            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.job",
-                    distributor.getCurrentJobName(), distributor.getPrimaryRemaining(), distributor.getRoundsStarted())
-                    .withStyle(ChatFormatting.AQUA));
+        for (Component line : distributor.getVisibleJobLines()) {
+            tooltip.add(line.copy().withStyle(ChatFormatting.AQUA));
+        }
+
+        if (distributor instanceof com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity advanced) {
+            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.parallel_cards",
+                    advanced.getParallelCardCount(), 2, advanced.getMaxActiveJobs())
+                    .withStyle(ChatFormatting.WHITE));
+            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.parallel_jobs",
+                    advanced.getActiveJobCount(), advanced.getMaxActiveJobs())
+                    .withStyle(advanced.getActiveJobCount() > 0 ? ChatFormatting.AQUA : ChatFormatting.GRAY));
+            if (!advanced.getLastFailureRoute().isEmpty()
+                    && ("simulate_failed".equals(advanced.getStatusKey())
+                            || "execute_failed".equals(advanced.getStatusKey()))) {
+                List<BlockPos> route = advanced.getLastFailureRoute();
+                BlockPos input = route.get(0);
+                BlockPos output = route.get(route.size() - 1);
+                tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID
+                        + ".package_distributor.failure_route",
+                        advanced.getLastFailureSlot() >= 0 ? advanced.getLastFailureSlot() + 1 : 0,
+                        input.getX(), input.getY(), input.getZ(),
+                        output.getX(), output.getY(), output.getZ())
+                        .withStyle(ChatFormatting.YELLOW));
+            }
+        }
+
+        if (!distributor.usesStoredMachineLinks()) {
+            int patterns = distributor.getMechanicalPackagePatternCount();
+            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.pattern_routes",
+                    patterns).withStyle(patterns > 0 ? ChatFormatting.WHITE : ChatFormatting.GRAY));
+            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.pattern_route_hint")
+                    .withStyle(ChatFormatting.DARK_GRAY));
+            return;
         }
 
         List<BlockPos> links = distributor.getLinkedMachines();

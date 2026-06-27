@@ -6,16 +6,12 @@ import java.util.Objects;
 import org.jetbrains.annotations.Nullable;
 
 import appeng.api.crafting.IPatternDetails;
-import appeng.api.crafting.PatternDetailsTooltip;
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 
 /**
@@ -81,15 +77,6 @@ public final class MechanicalPackagePatternDetails implements IPatternDetails {
     @Override
     public void pushInputsToExternalInventory(KeyCounter[] inputHolder, PatternInputSink inputSink) {
         delegate.pushInputsToExternalInventory(inputHolder, inputSink);
-    }
-
-    @Override
-    public PatternDetailsTooltip getTooltip(Level level, TooltipFlag flags) {
-        var tooltip = delegate.getTooltip(level, flags);
-        tooltip.addProperty(
-                Component.translatable("tooltip.createpackage.mechanical_package_pattern.route"),
-                Component.literal(String.valueOf(route.size())).withStyle(ChatFormatting.AQUA));
-        return tooltip;
     }
 
     @Override
