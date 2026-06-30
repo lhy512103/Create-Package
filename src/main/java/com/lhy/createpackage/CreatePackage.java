@@ -62,6 +62,9 @@ public class CreatePackage {
             AEBaseBlockEntity.registerBlockEntityItem(
                     ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
                     ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
+            AEBaseBlockEntity.registerBlockEntityItem(
+                    ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(),
+                    ModItems.KINETIC_PATTERN_PROVIDER.get());
             Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(), 2);
         });
     }

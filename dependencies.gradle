@@ -4,6 +4,7 @@ dependencies {
     compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     // Create — sequenced assembly recipe types + machine block entities / capabilities
     compileOnly "com.simibubi.create:create-1.21.1:${create_version}"
+    compileOnly "net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}"
 
     // Recipe viewer APIs for optional JEI/EMI integration code
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"

@@ -6,6 +6,7 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.compat.ExtendedAePlusCompat;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternDetails;
 import com.lhy.createpackage.registry.ModBlockEntities;
 import com.lhy.createpackage.registry.ModItems;
@@ -89,6 +90,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     @Override
     public void onReady() {
         super.onReady();
+        ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
         logic.updatePatterns();
     }
 
@@ -96,6 +98,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
         super.saveAdditional(data, registries);
         logic.writeToNBT(data, registries);
+        ExtendedAePlusCompat.removeProviderSmartSettings(data);
         upgrades.writeToNBT(data, NBT_UPGRADES, registries);
         if (!lastFailureRoute.isEmpty()) {
             long[] route = new long[lastFailureRoute.size()];
@@ -110,7 +113,9 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     @Override
     public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
         super.loadTag(data, registries);
+        ExtendedAePlusCompat.removeProviderSmartSettings(data);
         logic.readFromNBT(data, registries);
+        ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
         upgrades.readFromNBT(data, NBT_UPGRADES, registries);
         var route = new java.util.ArrayList<BlockPos>();
         for (long packed : data.getLongArray(NBT_LAST_FAILURE_ROUTE)) {
@@ -360,6 +365,13 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     private final class InternalPatternProviderLogic extends PatternProviderLogic {
         private InternalPatternProviderLogic() {
             super(getMainNode(), AdvancedPackageDistributorBlockEntity.this);
+        }
+
+        @Override
+        public void updatePatterns() {
+            ExtendedAePlusCompat.disableProviderSmartSettings(getConfigManager());
+            super.updatePatterns();
+            ExtendedAePlusCompat.disableProviderSmartSettings(getConfigManager());
         }
 
         @Override

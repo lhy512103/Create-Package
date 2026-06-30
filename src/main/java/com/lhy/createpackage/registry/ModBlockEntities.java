@@ -4,6 +4,7 @@ import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.BasicPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
+import com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -34,6 +35,12 @@ public final class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(
                             AdvancedPackageDistributorBlockEntity::new,
                             ModBlocks.ADVANCED_PACKAGE_DISTRIBUTOR.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<KineticPatternProviderBlockEntity>> KINETIC_PATTERN_PROVIDER =
+            BLOCK_ENTITIES.register("kinetic_pattern_provider",
+                    () -> BlockEntityType.Builder.of(
+                            KineticPatternProviderBlockEntity::new,
+                            ModBlocks.KINETIC_PATTERN_PROVIDER.get()).build(null));
 
     private ModBlockEntities() {}
 }

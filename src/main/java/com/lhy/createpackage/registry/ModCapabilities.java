@@ -19,6 +19,8 @@ public final class ModCapabilities {
         registerDistributor(event, ModBlockEntities.PACKAGE_DISTRIBUTOR.get());
         registerDistributor(event, ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get());
         registerDistributor(event, ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get());
+        event.registerBlockEntity(AECapabilities.IN_WORLD_GRID_NODE_HOST,
+                ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(), (be, context) -> be);
     }
 
     private static <T extends com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity> void registerDistributor(

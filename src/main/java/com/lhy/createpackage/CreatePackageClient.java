@@ -13,8 +13,11 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 import com.lhy.createpackage.client.render.MechanicalPackagePatternHighlighter;
 import com.lhy.createpackage.client.screen.AdvancedPackageDistributorScreen;
+import com.lhy.createpackage.client.screen.CreatePackagePatternProviderScreen;
 import com.lhy.createpackage.client.screen.MechanicalPatternConverterScreen;
 import com.lhy.createpackage.content.distributor.AdvancedPackageDistributorMenu;
+import com.lhy.createpackage.content.distributor.BasicPackageDistributorMenu;
+import com.lhy.createpackage.content.kinetic.KineticPatternProviderMenu;
 import com.lhy.createpackage.registry.ModMenuTypes;
 
 import appeng.client.gui.style.StyleManager;
@@ -41,9 +44,17 @@ public class CreatePackageClient {
 
     static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenuTypes.MECHANICAL_PATTERN_CONVERTER.get(), MechanicalPatternConverterScreen::new);
+        event.<BasicPackageDistributorMenu, CreatePackagePatternProviderScreen<BasicPackageDistributorMenu>>register(
+                ModMenuTypes.BASIC_PACKAGE_DISTRIBUTOR.get(), (menu, playerInv, title) ->
+                new CreatePackagePatternProviderScreen<>(menu, playerInv, title,
+                        StyleManager.loadStyleDoc("/screens/pattern_provider.json")));
         event.<AdvancedPackageDistributorMenu, AdvancedPackageDistributorScreen>register(
                 ModMenuTypes.ADVANCED_PACKAGE_DISTRIBUTOR.get(), (menu, playerInv, title) ->
                 new AdvancedPackageDistributorScreen(menu, playerInv, title,
+                        StyleManager.loadStyleDoc("/screens/pattern_provider.json")));
+        event.<KineticPatternProviderMenu, CreatePackagePatternProviderScreen<KineticPatternProviderMenu>>register(
+                ModMenuTypes.KINETIC_PATTERN_PROVIDER.get(), (menu, playerInv, title) ->
+                new CreatePackagePatternProviderScreen<>(menu, playerInv, title,
                         StyleManager.loadStyleDoc("/screens/pattern_provider.json")));
     }
 }

@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " B ",
+    "PAP",
+    " M "
+  ],
+  "key": {
+    "A": {
+      "item": "ae2:pattern_provider"
+    },
+    "B": {
+      "item": "create:brass_casing"
+    },
+    "P": {
+      "item": "create:precision_mechanism"
+    },
+    "M": {
+      "item": "create:mechanical_crafter"
+    }
+  },
+  "result": {
+    "id": "createpackage:kinetic_pattern_provider"
+  }
+}

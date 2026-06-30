@@ -25,6 +25,7 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.PACKAGE_DISTRIBUTOR.get());
                         output.accept(ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
                         output.accept(ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
+                        output.accept(ModItems.KINETIC_PATTERN_PROVIDER.get());
                         output.accept(ModItems.MACHINE_LINKER.get());
                         output.accept(ModItems.MECHANICAL_PATTERN_CONVERTER.get());
                         output.accept(ModItems.MECHANICAL_PACKAGE_PATTERN.get());

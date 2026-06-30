@@ -2,6 +2,7 @@ package com.lhy.createpackage.integration.jade;
 
 import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlock;
+import com.lhy.createpackage.content.kinetic.KineticPatternProviderBlock;
 
 import snownee.jade.api.IWailaClientRegistration;
 import snownee.jade.api.IWailaPlugin;
@@ -13,5 +14,7 @@ public class CreatePackageJadePlugin implements IWailaPlugin {
     @Override
     public void registerClient(IWailaClientRegistration registration) {
         registration.registerBlockComponent(PackageDistributorComponentProvider.INSTANCE, PackageDistributorBlock.class);
+        registration.registerBlockComponent(KineticPatternProviderComponentProvider.INSTANCE,
+                KineticPatternProviderBlock.class);
     }
 }

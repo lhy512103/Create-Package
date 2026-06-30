@@ -4,6 +4,7 @@ import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.BasicPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlock;
+import com.lhy.createpackage.content.kinetic.KineticPatternProviderBlock;
 
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -42,6 +43,14 @@ public final class ModBlocks {
                     .sound(SoundType.METAL)
                     .requiresCorrectToolForDrops(),
                     AdvancedPackageDistributorBlockEntity::new));
+
+    public static final DeferredBlock<KineticPatternProviderBlock> KINETIC_PATTERN_PROVIDER = BLOCKS.register(
+            "kinetic_pattern_provider",
+            () -> new KineticPatternProviderBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.METAL)
+                    .strength(3.0f, 6.0f)
+                    .sound(SoundType.METAL)
+                    .requiresCorrectToolForDrops()));
 
     private ModBlocks() {}
 }

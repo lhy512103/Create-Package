@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "ae2:item/processing_pattern"
+    "layer0": "createpackage:item/mechanical_package_pattern"
   }
 }

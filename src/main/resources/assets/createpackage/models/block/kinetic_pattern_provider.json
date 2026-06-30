@@ -1,0 +1,6 @@
+{
+  "parent": "ae2:block/pattern_provider",
+  "textures": {
+    "all": "createpackage:block/kinetic_pattern_provider"
+  }
+}

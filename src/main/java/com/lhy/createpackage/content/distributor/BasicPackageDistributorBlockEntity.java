@@ -6,8 +6,10 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.compat.ExtendedAePlusCompat;
 import com.lhy.createpackage.registry.ModBlockEntities;
 import com.lhy.createpackage.registry.ModItems;
+import com.lhy.createpackage.registry.ModMenuTypes;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -37,7 +39,6 @@ import appeng.helpers.patternprovider.PatternProviderLogic;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import appeng.menu.ISubMenu;
 import appeng.menu.MenuOpener;
-import appeng.menu.implementations.PatternProviderMenu;
 import appeng.menu.locator.MenuHostLocator;
 import appeng.util.SettingsFrom;
 
@@ -72,6 +73,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     @Override
     public void onReady() {
         super.onReady();
+        ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
         logic.updatePatterns();
     }
 
@@ -79,12 +81,15 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
         super.saveAdditional(data, registries);
         logic.writeToNBT(data, registries);
+        ExtendedAePlusCompat.removeProviderSmartSettings(data);
     }
 
     @Override
     public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
         super.loadTag(data, registries);
+        ExtendedAePlusCompat.removeProviderSmartSettings(data);
         logic.readFromNBT(data, registries);
+        ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
     }
 
     @Override
@@ -149,12 +154,12 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
 
     @Override
     public void openMenu(Player player, MenuHostLocator locator) {
-        MenuOpener.open(PatternProviderMenu.TYPE, player, locator);
+        MenuOpener.open(ModMenuTypes.BASIC_PACKAGE_DISTRIBUTOR.get(), player, locator);
     }
 
     @Override
     public void returnToMainMenu(Player player, ISubMenu subMenu) {
-        MenuOpener.returnTo(PatternProviderMenu.TYPE, player, subMenu.getLocator());
+        MenuOpener.returnTo(ModMenuTypes.BASIC_PACKAGE_DISTRIBUTOR.get(), player, subMenu.getLocator());
     }
 
     @Override
@@ -178,6 +183,13 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     private final class InternalPatternProviderLogic extends PatternProviderLogic {
         private InternalPatternProviderLogic() {
             super(getMainNode(), BasicPackageDistributorBlockEntity.this);
+        }
+
+        @Override
+        public void updatePatterns() {
+            ExtendedAePlusCompat.disableProviderSmartSettings(getConfigManager());
+            super.updatePatterns();
+            ExtendedAePlusCompat.disableProviderSmartSettings(getConfigManager());
         }
 
         @Override

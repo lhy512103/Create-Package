@@ -15,6 +15,7 @@
 - 封包分发器接入 AE2 网格，并向相邻样板供应器暴露 AE2 crafting-machine capability。
 - 基础封包分发器内置 AE2 样板供应器逻辑，可直接放入样板并向 AE2 网络提供这些样板。
 - 高级封包分发器内置 AE2 样板供应器逻辑，并按每张机械封包样板保存的机器链接路线执行，可在一个方块里存放多条装配线样板；安装并行卡后可同时运行多条不重叠装配线。
+- 动力样板供应器内置 AE2 样板供应器逻辑，用于单台 Create 机器或单个工作单元；它不使用机器连接器，而是直接识别正面朝向的机器。
 - 机械样板转换器可以直接按顺序标记机器路线，并把普通 AE2 已编码样板转换为带路线的机械封包样板。
 - 机器链接器可以保存一组有序链接的 Create 机器位置。
 - 可以把 Create 序列组装配方解析为供料计划。
@@ -104,6 +105,43 @@
 - 当前高级封包分发器只执行机械封包样板；普通 AE2 加工样板应放在基础封包分发器或相邻样板供应器 + 普通封包分发器方案中。
 - 高级封包分发器的并行卡不可堆叠，最多安装 2 张。并行调度只会同时启动机器路线不重叠的作业，避免两张样板抢同一条物理装配线。
 - 手持机器链接器、机械样板转换器或机械封包样板时，主世界会高亮对应的机器路线；终点使用橙色高亮。
+
+## 动力样板供应器
+
+动力样板供应器用于单个 Create 机器，不处理多机器序列组装路线，因此不需要机器连接器。
+
+使用方式:
+
+1. 把动力样板供应器贴着目标机器放置。刚放下时它和 AE2 样板供应器一样是未定向状态，不会自动选中某一侧机器。
+2. 手持 AE2/Create 扳手右键供应器的某个侧面，设置它要对准的目标侧。目标机器必须在这个侧面的相邻方块。
+3. 接入 AE2 网络，右键打开原版样板供应器界面，把普通 AE2 加工样板放入其中。
+4. 从 AE2 下单。供应器只访问已设置目标侧的机器和固定相邻位置，不扫描世界。
+
+目标侧规则:
+
+- 未设置目标侧时，护目镜/Jade 会显示“目标机器：未设置”，AE2 下单会被拒绝并提示需要用扳手设置目标面。
+- 设置目标侧后，该侧留给 Create 机器，其余侧仍可连接 AE2 网络。
+- 再次用扳手调整目标侧时，会使用 AE2 样板供应器同款方向循环规则。
+
+当前固定规则:
+
+- Deployer: 供应器正面对准 Deployer；样板第一个物品输入投到 Deployer 朝向 2 格处的加工位置，第二个物品输入投到 Deployer 手持物库存；输出从加工位置回收。常见向下 Deployer 的加工位置是机械手下方第二格的料盘/传送带/置物台。
+- Spout: 供应器正面对准 Spout；物品输入投到 Spout 下方第二格的料盘/传送带/置物台，流体输入投到 Spout 流体库存；输出从该工作位置回收。
+- 动力冲压机: 供应器正面对准动力冲压机；如果冲压机下方第二格是工作盆，会把样板里的全部物品/流体输入投进工作盆并从工作盆回收输出；否则按单物品模式投到下方第二格的料盘/传送带并回收。不会扫描掉落物实体。
+- 动力搅拌器: 供应器正面对准动力搅拌器；动力搅拌器必须使用下方第二格的工作盆。样板里的全部物品/流体输入会投进工作盆，输出也从工作盆回收。
+- 动力锯等带物品 capability 的单机处理器: 物品输入直接投到正面机器自身物品库存，并从该库存回收样板输出。
+- 石磨: 物品输入投到石磨输入槽，输出从石磨输出槽回收；石磨实际产出的概率副产物也会一并注入 AE 网络。
+- 粉碎轮: 供应器必须对准 `create:crushing_wheel_controller`，不要直接对准普通粉碎轮方块。粉碎轮控制器必须能把产物推到 Create 固定输出位置的传送带/料盘/库存，供应器从该位置回收；不会扫描掉落物实体。
+- GUI 里的物品返回栏会随供应器的低频 AE tick 自动尝试退回网络；没有作业、返回栏为空时 tick 会睡眠。
+
+这个方块适合单机处理，不适合精密构件这类多步骤序列组装。多步骤仍使用封包分发器/基础封包分发器/高级封包分发器。
+
+动力样板供应器处理概率产物时遵循 AE2 普通加工样板的限制:
+
+- AE2 普通加工样板没有“概率输出”语义。写在样板输出里的物品会被 AE2 当成必定产物等待。
+- 石磨/粉碎轮的概率副产物不要写进 AE 样板输出；只写需要完成订单的主产物。副产物实际出现时仍会被供应器回收到 AE 网络。
+- 如果主产物本身是概率产物，供应器会在一轮没有凑齐主产物时，从 AE 网络再抽同一轮输入补刷，直到主产物回收到位、AE 取消等待、缺材料，或达到硬超时。
+- 如果取消 AE 合成后供应器仍在等待，供应器会通过 AE 等待量检测或硬超时释放内部作业，不需要拆掉重放。
 
 ## 多循环自动回流
 
@@ -206,8 +244,59 @@ diagnostics, a Basic Package Distributor with an embedded AE2 pattern-provider
 inventory, an Advanced Package Distributor that routes mechanical package
 patterns by their saved machine-link snapshots, automatic transitional-item
 reflow for multi-loop sequenced assembly, Parallel Cards for running up to four
-disjoint Advanced Package Distributor lines at once, and low-overhead ticking
-with no mixins, reflection, or world scanning.
+disjoint Advanced Package Distributor lines at once, a Kinetic Pattern Provider
+for single Create machines facing the provider, and low-overhead ticking with no
+mixins, reflection, or world scanning.
+
+### Kinetic Pattern Provider
+
+The Kinetic Pattern Provider is for one Create machine or one small machine unit.
+It does not use the Machine Linker. Place it so its front face points at the
+machine, put normal AE2 processing patterns into its built-in pattern-provider
+slots, and request the craft from AE2.
+
+Current fixed routing:
+
+- Deployer: first item input goes to the working position two blocks along the
+  deployer's facing direction, second item input goes into the deployer's
+  held-item inventory, and output is recovered from that working position.
+- Spout: item input goes to the depot/belt/table two blocks below the spout,
+  fluid input goes into the spout, and output is recovered from that working
+  position.
+- Mechanical Press: with a basin two blocks below the press, all item/fluid
+  pattern inputs are inserted into that basin and outputs are recovered from the
+  basin. Without a basin, it stays in single-item depot/belt mode. Dropped item
+  entities are not scanned.
+- Mechanical Mixer: requires a basin two blocks below the mixer. All item/fluid
+  pattern inputs are inserted into that basin and outputs are recovered from it.
+- Mechanical Saw: face an upward-facing running saw. When a pattern is pushed,
+  the provider sets the saw's recipe filter to the pattern's primary output,
+  inserts the item into the saw, and recovers results from the adjacent
+  belt/depot/inventory position selected by the saw's current rotation
+  direction. Dropped item entities are not scanned, so that output position must
+  be recoverable.
+- Other single-machine item handlers: item input goes into the front machine's
+  item handler and expected outputs are recovered from the same handler.
+- Millstone: item input goes into the millstone input slot. Outputs are
+  recovered from the millstone output slots, including probabilistic byproducts
+  that actually appeared.
+- Crushing Wheel: face the `create:crushing_wheel_controller`. The controller
+  must push results into Create's fixed downstream belt/depot/inventory output
+  position; the provider recovers from that position and does not scan dropped
+  item entities.
+- Pattern Access/Management terminals group Kinetic Pattern Providers by the
+  machine they face when possible, falling back to the provider itself only when
+  no target machine name can be resolved.
+- Return slots are merged into the provider's own AE ticker, so they return
+  items to the network without adding a separate world scan or always-on tick.
+
+AE2 processing patterns do not encode probabilistic outputs. Do not put
+probabilistic byproducts in the AE pattern output list unless you want AE2 to
+wait for them as required outputs. The provider still recovers probabilistic
+byproducts from millstone/crushing outputs when they appear. If the primary
+output itself is probabilistic, the provider refills one more input round from
+AE storage until the primary output arrives, AE stops waiting, inputs run out,
+or the job reaches its timeout.
 
 Planned: dedicated sequenced-assembly pattern encoder and more detailed missing-input diagnostics.
 

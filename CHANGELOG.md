@@ -2,6 +2,31 @@
 
 ## 2026-06-26
 
+- Changed Kinetic Pattern Provider Smart Doubling to be an explicit per-provider setting that defaults off for newly placed providers, with goggles/Jade showing that provider's current state.
+- Restored Kinetic Pattern Provider Smart Doubling to the immediate capacity-simulation behavior: matching active-job requests are accepted only while the target can currently simulate the next input set, without keeping an internal pending dispatch queue.
+- Changed Parallel Cards to stack in normal inventories while AE2 upgrade slots still hold one card per slot.
+- Added a native Smart Doubling toolbar button to the Kinetic Pattern Provider GUI. It reuses AE2's blocking-mode button visuals while toggling Create Package's own capacity-aware batching logic.
+- Fixed Kinetic Pattern Provider Smart Doubling dispatch: matching processing-pattern pushes now immediately dispatch another input set while the target machine can still accept it, instead of waiting for the previous craft to fully finish. The button tooltip now clearly shows enabled/disabled state.
+- Replaced the Basic/Advanced Package Distributor and Kinetic Pattern Provider screens with Create Package-owned AE2 pattern-provider screens. They keep AE2's native controls and upgrade panel support, but avoid ExtendedAE Plus injecting Smart Blocking / Smart Doubling buttons into these GUIs.
+- Forced ExtendedAE Plus pattern-provider smart settings off for Create Package-owned providers and strips old `smart_doubling` / `advanced_blocking` NBT keys from these blocks, preventing stale EAP settings from affecting them.
+- Changed Kinetic Pattern Provider dispatching to support capacity-aware consecutive batching: AE2 may keep pushing the same processing pattern into an active job while the target machine inventories can still simulate accepting the next inputs; the provider reports busy only when that batch limit/capacity is reached.
+- Changed the Basic Package Distributor, Advanced Package Distributor, and Kinetic Pattern Provider GUI titles to use their own Create Package block names instead of AE2's generic pattern-provider title.
+- Replaced Create Package block/item models and textures with the bundled 0.0.1 resource assets, including distributor block models, Kinetic Pattern Provider directed variants, Machine Linker, Mechanical Pattern Converter, Mechanical Package Pattern, and Parallel Card visuals.
+- Added dedicated Kinetic Pattern Provider support for Mechanical Saws: the provider now sets the saw recipe filter from the pattern primary output, inserts the input into the saw, and recovers results from the saw's fixed rotation-direction output belt/depot/inventory instead of scanning dropped item entities.
+- Changed Kinetic Pattern Provider grouping in AE2 pattern terminals to show the targeted machine's name/icon when possible instead of always grouping as "Kinetic Pattern Provider".
+- Added Kinetic Pattern Provider handling for probabilistic millstone/crushing outputs: actual byproducts recovered from supported output inventories are inserted into AE storage, while probabilistic primary outputs can trigger refill rounds from AE storage.
+- Changed Crushing Wheel support to recover from the controller's fixed downstream belt/depot/inventory output position instead of the controller inventory or dropped item entities; missing recoverable output now reports a dedicated status.
+- Fixed cancelled or abandoned Kinetic Pattern Provider jobs staying busy forever by releasing the internal job when AE is no longer waiting for the primary output, with a hard timeout fallback.
+- Fixed Kinetic Pattern Provider basin-mode recipes: Mechanical Press now sends all item/fluid pattern inputs to a basin two blocks below the press when present, and Mechanical Mixer now supports basin recipes instead of rejecting extra inputs as unused.
+- Fixed Kinetic Pattern Provider Spout routing to use Create's actual below-two-block working position for item input and output recovery.
+- Added Kinetic Pattern Provider support for Mechanical Press recipes by inserting and recovering items at the press working position two blocks below the press, without scanning dropped item entities.
+- Fixed Kinetic Pattern Provider return slots by merging AE2 return-inventory injection into the provider's own grid ticker, so returned items are sent back to the AE network while the ticker still sleeps when idle.
+- Fixed Kinetic Pattern Provider Deployer routing to use Create's actual working position two blocks along the Deployer facing direction, so vertical Deployers insert the processed item into the depot/belt/table below the hand instead of the empty gap directly under the Deployer block.
+- Changed the Kinetic Pattern Provider to use AE2-style `push_direction`: newly placed blocks start unconfigured, wrench clicks set or cycle the target side, and wrench disassembly suppresses the extra break particles like AE2 blocks.
+- Kinetic Pattern Provider routing, AE grid connection sides, goggles/Jade diagnostics, README usage notes, and memory-card direction export/import now all respect the configured target side instead of an implicit placement-facing direction.
+- Added the Kinetic Pattern Provider for single Create-machine autocrafting. It embeds AE2 pattern-provider logic, faces one machine directly, and does not require the Machine Linker.
+- The Kinetic Pattern Provider now routes Deployer item/held-item inputs, Spout item/fluid inputs, and generic single-machine item-handler inputs using only the front machine and fixed adjacent positions, avoiding world scanning.
+- Added block/item registration, AE2 grid capability, model, loot table, recipe, Engineer's Goggles/Jade diagnostics, and bilingual documentation for the Kinetic Pattern Provider.
 - Prevented Mechanical Package Patterns from clearing into blank patterns when sneak-right-clicking a block; clearing still uses AE2's sneak-right-click-air behavior.
 - Improved Advanced Package Distributor diagnostics: goggles/Jade now list every active line, show the last failed route for insertion simulation/execution failures, and avoid showing a stale busy state while capacity is still available.
 - Restricted mechanical route marking to the blocks the distributor actually routes through: depots, belts, deployers, and spouts. Passive Create processing machines such as mechanical presses are no longer markable.
@@ -48,6 +73,31 @@
 
 ## 2026-06-26 中文
 
+- 将动力样板供应器“智能翻倍”改为每个供应器独立保存的设置，新放置供应器默认关闭，护目镜/Jade 会显示当前供应器自己的开关状态。
+- 将动力样板供应器“智能翻倍”恢复为立即容量模拟模式：同一活动作业只有在目标当前能模拟接收下一份输入时才继续接单，不再保留内部待投料队列。
+- 将并行卡改为普通库存中可堆叠，同时 AE2 升级槽仍保持一槽只能放一张卡。
+- 为动力样板供应器 GUI 增加本模组原生的“智能翻倍”工具栏按钮：外观复用 AE2 阻挡模式按钮图标，实际切换的是机械动力封包自己的容量感知连续批量接单逻辑。
+- 修复动力样板供应器“智能翻倍”的实际发配行为：现在目标机器仍能接收下一份输入时会立即继续发配同一处理样板，不再等待上一份合成完全完成；按钮 tooltip 也会明确显示已开启/已关闭。
+- 将基础/高级封包分发器和动力样板供应器界面改成本模组自己的 AE2 样板供应器界面：保留 AE2 原生按钮和升级面板支持，但不再让 ExtendedAE Plus 往这些 GUI 注入智能阻挡/智能翻倍按钮。
+- 对本模组自己的样板供应器强制关闭 ExtendedAE Plus 的样板供应器智能设置，并清理这些方块 NBT 中旧的 `smart_doubling` / `advanced_blocking` 键，避免旧存档残留 EAP 开关继续生效。
+- 调整动力样板供应器发配逻辑为容量感知的连续批量接单：AE2 可以在同一个活动作业期间继续推送相同处理样板，只要目标机器库存还能模拟接收下一轮输入；达到批量上限或容量不足时才向 AE2 报忙。
+- 将基础封包分发器、高级封包分发器和动力样板供应器的 GUI 标题改为本模组对应方块名称，不再显示 AE2 通用样板供应器标题。
+- 替换机械动力封包方块/物品模型与贴图为 0.0.1 资源包素材，包括各类分发器方块模型、动力样板供应器方向变体、机器连接器、机械样板转换器、机械封包样板和并行卡外观。
+- 增加动力样板供应器对动力锯的专用支持：下单时会按样板主产物自动设置动力锯配方过滤器，把输入投进动力锯，并从动力锯按当前旋转方向推出的固定相邻传送带/料盘/库存回收，不扫描掉落物实体。
+- 调整 AE2 样板终端中的动力样板供应器分组：现在会尽量显示供应器对准机器的名称和图标，不再统一显示为“动力样板供应器”。
+- 增加动力样板供应器对石磨/粉碎轮概率产物的处理：支持从固定输出库存回收实际出现的概率副产物并注入 AE，主产物不足时可从 AE 网络抽取同一轮输入补刷。
+- 调整粉碎轮支持方式：现在从粉碎轮控制器的固定下游传送带/料盘/库存输出点回收，不从控制器库存或掉落物实体回收；缺少可回收输出点时会显示专用状态。
+- 修复动力样板供应器取消或遗留作业后一直忙碌的问题：当 AE 不再等待主产物时会释放内部作业，并保留硬超时兜底。
+- 修复动力样板供应器的工作盆配方处理：动力冲压机下方第二格存在工作盆时会把样板里的全部物品/流体输入投进工作盆；动力搅拌器现在也支持工作盆配方，不再把多余输入误判为“样板存在未使用输入”。
+- 修复动力样板供应器的注液器路由：现在按 Create 实际工作位把被加工物品投到注液器下方第二格，并从该位置回收产物。
+- 增加动力样板供应器对动力冲压机配方的支持：物品会投到冲压机下方第二格的工作位置并从该位置回收，不扫描掉落物实体。
+- 修复动力样板供应器物品返回栏：把 AE2 返回库存注回网络的逻辑合并到供应器自己的网格 tick 中，返回栏有物品时会自动退回 AE 网络，空闲时仍然睡眠。
+- 修复动力样板供应器的机械手路由：现在按 Create 真实逻辑把被加工物品投到机械手朝向 2 格处，竖直机械手会投到机械手手部下方的料盘/传送带/置物台，而不是机械手方块正下方的空隙。
+- 将动力样板供应器改为使用 AE2 同款 `push_direction`：新放置时不自动指定目标面，扳手右键可设置/循环目标侧，扳手拆卸时也会像 AE2 方块一样抑制额外破坏粒子。
+- 动力样板供应器的投料路由、AE 网络可连接侧、护目镜/Jade 诊断、README 使用说明和记忆卡方向导入导出现在都会按已配置目标侧工作，不再依赖放置时隐式朝向。
+- 增加动力样板供应器，用于单台 Create 机器自动合成。它内置 AE2 样板供应器逻辑，直接识别正面朝向的机器，不需要机器连接器。
+- 动力样板供应器现在可按固定邻位处理 Deployer 物品/施加物输入、Spout 物品/流体输入，以及通用单机物品库存输入；运行时只访问正面机器和固定相邻位置，不扫描世界。
+- 补齐动力样板供应器的方块/物品注册、AE2 网格 capability、模型、掉落表、配方、工程师护目镜/Jade 诊断和中英双语文档。
 - 禁止机械封包样板在潜行右键方块时被清空成空白样板；清空仍保留 AE2 原本的潜行右键空气行为。
 - 改进高级封包分发器诊断：护目镜/Jade 现在会列出每条活动装配线，目标库存模拟/实际插入失败时显示最近失败路线，并避免仍有空余容量时显示过期的忙碌状态。
 - 将机械路线标记限制为分发器实际会路由的方块：料盘、传送带、Deployer 和 Spout。动力冲压机等自然加工机器不再允许标记。
