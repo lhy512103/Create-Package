@@ -3,6 +3,7 @@ package com.lhy.createpackage.client.render;
 import java.util.List;
 
 import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
+import com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity;
 import com.lhy.createpackage.content.pattern.MachineRouteData;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternData;
 import com.lhy.createpackage.registry.ModComponents;
@@ -91,6 +92,9 @@ public final class MechanicalPackagePatternHighlighter {
             if (level.getBlockEntity(distributorPos.pos()) instanceof PackageDistributorBlockEntity distributor
                     && distributor.usesStoredMachineLinks()) {
                 return distributor.getLinkedMachines();
+            }
+            if (level.getBlockEntity(distributorPos.pos()) instanceof KineticPatternProviderBlockEntity provider) {
+                return provider.getLinkedMachines();
             }
         }
         return List.of();

@@ -19,6 +19,7 @@ public class KineticPatternProviderMenu extends PatternProviderMenu {
             Inventory playerInventory, KineticPatternProviderBlockEntity host) {
         super(menuType, id, playerInventory, host);
         this.host = host;
+        setupUpgrades(host.getUpgrades());
         registerClientAction(ACTION_TOGGLE_SMART_DOUBLING, this::toggleSmartDoubling);
     }
 

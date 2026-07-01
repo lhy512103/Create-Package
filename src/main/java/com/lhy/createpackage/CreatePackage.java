@@ -66,6 +66,7 @@ public class CreatePackage {
                     ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(),
                     ModItems.KINETIC_PATTERN_PROVIDER.get());
             Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(), 2);
+            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.KINETIC_PATTERN_PROVIDER.get(), 2);
         });
     }
 }

@@ -2,6 +2,8 @@ package com.lhy.createpackage.content.kinetic;
 
 import com.mojang.serialization.MapCodec;
 
+import com.lhy.createpackage.registry.ModItems;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
@@ -59,6 +61,9 @@ public class KineticPatternProviderBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack heldItem, BlockState state, Level level, BlockPos pos,
             Player player, InteractionHand hand, BlockHitResult hit) {
+        if (heldItem.is(ModItems.MACHINE_LINKER.get())) {
+            return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+        }
         if (!InteractionUtil.isInAlternateUseMode(player) && InteractionUtil.canWrenchRotate(heldItem)) {
             setSide(level, pos, hit.getDirection());
             return ItemInteractionResult.sidedSuccess(level.isClientSide());

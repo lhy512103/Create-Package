@@ -1,24 +1,54 @@
 {
   "type": "create:sequenced_assembly",
   "ingredient": {
-    "tag": "c:plates/gold"
+    "item": "createpackage:basic_package_distributor"
   },
-  "loops": 3,
+  "loops": 5,
   "results": [
     {
-      "id": "createpackage:package_distributor"
+      "chance": 120.0,
+      "id": "createpackage:advanced_package_distributor"
+    },
+    {
+      "chance": 8.0,
+      "id": "create:golden_sheet"
+    },
+    {
+      "chance": 8.0,
+      "id": "create:andesite_alloy"
+    },
+    {
+      "chance": 5.0,
+      "id": "create:cogwheel"
+    },
+    {
+      "chance": 3.0,
+      "id": "minecraft:gold_nugget"
+    },
+    {
+      "chance": 2.0,
+      "id": "create:shaft"
+    },
+    {
+      "chance": 2.0,
+      "id": "create:crushed_raw_gold"
+    },
+    {
+      "id": "minecraft:iron_ingot"
+    },
+    {
+      "id": "minecraft:clock"
     }
   ],
   "sequence": [
     {
       "type": "create:deploying",
-      "keep_held_item": true,
       "ingredients": [
         {
           "item": "createpackage:incomplete_package_distributor"
         },
         {
-          "item": "ae2:silicon_press"
+          "item": "create:sturdy_sheet"
         }
       ],
       "results": [
@@ -29,13 +59,12 @@
     },
     {
       "type": "create:deploying",
-      "keep_held_item": true,
       "ingredients": [
         {
           "item": "createpackage:incomplete_package_distributor"
         },
         {
-          "item": "ae2:logic_processor_press"
+          "item": "ae2:certus_quartz_crystal"
         }
       ],
       "results": [
@@ -45,14 +74,24 @@
       ]
     },
     {
-      "type": "create:deploying",
-      "keep_held_item": true,
+      "type": "create:cutting",
       "ingredients": [
         {
           "item": "createpackage:incomplete_package_distributor"
-        },
+        }
+      ],
+      "processing_time": 100,
+      "results": [
         {
-          "item": "ae2:engineering_processor_press"
+          "id": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
         }
       ],
       "results": [
@@ -62,14 +101,15 @@
       ]
     },
     {
-      "type": "create:deploying",
-      "keep_held_item": true,
+      "type": "create:filling",
       "ingredients": [
         {
           "item": "createpackage:incomplete_package_distributor"
         },
         {
-          "item": "ae2:calculation_processor_press"
+          "type": "neoforge:single",
+          "amount": 500,
+          "fluid": "minecraft:lava"
         }
       ],
       "results": [

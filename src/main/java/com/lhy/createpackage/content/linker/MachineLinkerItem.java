@@ -6,12 +6,14 @@ import org.jetbrains.annotations.Nullable;
 
 import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
+import com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity;
 import com.lhy.createpackage.registry.ModComponents;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -19,6 +21,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.neoforged.neoforge.capabilities.Capabilities;
 
 /**
@@ -76,7 +79,21 @@ public class MachineLinkerItem extends Item {
             return InteractionResult.SUCCESS;
         }
 
-        // Case 2: clicked some other block -> link/unlink it to the selected distributor.
+        // Case 1b: clicked a Kinetic Pattern Provider -> select it, or clear parallel machine links.
+        if (be instanceof KineticPatternProviderBlockEntity provider) {
+            if (player.isShiftKeyDown()) {
+                int cleared = provider.clearLinks();
+                stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
+                msg(player, "kinetic_cleared", cleared);
+            } else {
+                stack.set(ModComponents.LINKED_DISTRIBUTOR.get(),
+                        GlobalPos.of(level.dimension(), clicked.immutable()));
+                msg(player, "kinetic_selected", clicked.getX(), clicked.getY(), clicked.getZ());
+            }
+            return InteractionResult.SUCCESS;
+        }
+
+        // Case 2: clicked some other block -> link/unlink it to the selected host.
         GlobalPos selected = stack.get(ModComponents.LINKED_DISTRIBUTOR.get());
         if (selected == null) {
             msg(player, "no_selection");
@@ -87,38 +104,66 @@ public class MachineLinkerItem extends Item {
             return InteractionResult.SUCCESS;
         }
 
-        PackageDistributorBlockEntity distributor = resolveDistributor(level, selected.pos());
-        if (distributor == null) {
+        BlockEntity selectedBe = level.getBlockEntity(selected.pos());
+        if (selectedBe == null) {
             stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
             msg(player, "selection_gone");
             return InteractionResult.SUCCESS;
         }
-        if (!distributor.usesStoredMachineLinks()) {
-            stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
-            msg(player, "pattern_routed_distributor");
+
+        if (selectedBe instanceof PackageDistributorBlockEntity distributor) {
+            if (!distributor.usesStoredMachineLinks()) {
+                stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
+                msg(player, "pattern_routed_distributor");
+                return InteractionResult.SUCCESS;
+            }
+            if (!hasLinkableCapability(level, clicked)) {
+                msg(player, "not_linkable");
+                return InteractionResult.SUCCESS;
+            }
+            if (player.isShiftKeyDown()) {
+                if (distributor.unlinkMachine(clicked)) {
+                    msg(player, "unlinked", clicked.getX(), clicked.getY(), clicked.getZ(),
+                            distributor.getLinkedMachines().size());
+                } else {
+                    msg(player, "not_linked");
+                }
+            } else {
+                if (distributor.linkMachine(clicked)) {
+                    msg(player, "linked", clicked.getX(), clicked.getY(), clicked.getZ(),
+                            distributor.getLinkedMachines().size());
+                } else {
+                    msg(player, "already_linked");
+                }
+            }
             return InteractionResult.SUCCESS;
         }
 
-        if (!hasLinkableCapability(level, clicked)) {
-            msg(player, "not_linkable");
+        if (selectedBe instanceof KineticPatternProviderBlockEntity provider) {
+            if (!isSameKineticMachine(level, provider, clicked)) {
+                msg(player, "kinetic_wrong_machine");
+                return InteractionResult.SUCCESS;
+            }
+            if (player.isShiftKeyDown()) {
+                if (provider.unlinkMachine(clicked)) {
+                    msg(player, "kinetic_unlinked", clicked.getX(), clicked.getY(), clicked.getZ(),
+                            provider.getLinkedMachines().size());
+                } else {
+                    msg(player, "not_linked");
+                }
+            } else {
+                if (provider.linkMachine(clicked)) {
+                    msg(player, "kinetic_linked", clicked.getX(), clicked.getY(), clicked.getZ(),
+                            provider.getLinkedMachines().size());
+                } else {
+                    msg(player, "already_linked");
+                }
+            }
             return InteractionResult.SUCCESS;
         }
 
-        if (player.isShiftKeyDown()) {
-            if (distributor.unlinkMachine(clicked)) {
-                msg(player, "unlinked", clicked.getX(), clicked.getY(), clicked.getZ(),
-                        distributor.getLinkedMachines().size());
-            } else {
-                msg(player, "not_linked");
-            }
-        } else {
-            if (distributor.linkMachine(clicked)) {
-                msg(player, "linked", clicked.getX(), clicked.getY(), clicked.getZ(),
-                        distributor.getLinkedMachines().size());
-            } else {
-                msg(player, "already_linked");
-            }
-        }
+        stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
+        msg(player, "selection_gone");
         return InteractionResult.SUCCESS;
     }
 
@@ -134,6 +179,17 @@ public class MachineLinkerItem extends Item {
     private static boolean hasLinkableCapability(Level level, BlockPos pos) {
         return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null) != null
                 || level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null) != null;
+    }
+
+    private static boolean isSameKineticMachine(Level level, KineticPatternProviderBlockEntity provider,
+            BlockPos clicked) {
+        BlockPos target = provider.getTargetMachinePos();
+        if (target == null || !level.isLoaded(target) || !level.isLoaded(clicked)) {
+            return false;
+        }
+        ResourceLocation targetId = BuiltInRegistries.BLOCK.getKey(level.getBlockState(target).getBlock());
+        ResourceLocation clickedId = BuiltInRegistries.BLOCK.getKey(level.getBlockState(clicked).getBlock());
+        return targetId != null && targetId.equals(clickedId);
     }
 
     private static void msg(net.minecraft.world.entity.player.Player player, String key, Object... args) {

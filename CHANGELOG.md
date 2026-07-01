@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-06-30
+
+- Changed Kinetic Pattern Provider Parallel Card capacity to 16 matching machines per card, for up to 16 machines with one card and 32 with two cards.
+- Replaced the distributor crafting recipes with sequenced-assembly recipes: Package Distributor now uses reusable AE2 inscriber presses on a gold plate; Basic Package Distributor upgrades a Package Distributor with a Precision Mechanism, lava, water, and pressing; Advanced Package Distributor upgrades a Basic Package Distributor with a Sturdy Sheet, a normally consumed Certus Quartz Crystal step, cutting, pressing, lava, and an 80% success result pool using Create's precision-mechanism scrap weights.
+- Removed the old Package Distributor fluid/cutting/pressing test recipes and the old direct crafting recipes for Basic/Advanced Package Distributors.
+- Fixed Machine Linker interactions on the Kinetic Pattern Provider so right-clicking it selects/clears the provider instead of opening the GUI.
+- Added Parallel Card support to the Kinetic Pattern Provider: installing cards exposes upgrade slots and allows the Machine Linker to bind matching machines of the same type, so one provider can dispatch jobs across several idle machines without world scanning.
+- Added a dedicated Create Package top-level AE2 GuideME navigation section and moved the mod's guide pages under it instead of AE2's Items, Blocks, and Machines category.
+- Added Create Ponder support for Create Package blocks/items, including package distributor, kinetic provider, route-tool, and parallel-card scenes available from Create's hold-W ponder prompt.
+- Updated Chinese guide and in-game diagnostics to use the localized Create machine names 机械手 and 注液器 instead of raw Deployer/Spout labels.
+- Added AE2 GuideME pages and item-index mappings for all Create Package blocks/items, enabling the hold-G item help prompt and direct guide navigation without runtime ticking or mixins.
+
+## 2026-06-30 中文
+
+- 将动力样板供应器的并行卡容量改为每张卡 16 台同类型机器：1 张最多 16 台，2 张最多 32 台。
+- 重写分发器制作配方为序列组装：封包分发器使用金板和不消耗的 AE2 压印模板；基础封包分发器使用封包分发器、精密构件、熔岩、水和冲压；高级封包分发器使用基础封包分发器、坚固板、正常消耗的赛特斯水晶步骤、动力锯、冲压、熔岩，并使用 80% 成功率和 Create 精密构件同权重废料结果池。
+- 移除旧的封包分发器流体/切割/冲压测试配方，以及基础/高级封包分发器直接合成配方。
+- 修复机器链接器右键动力样板供应器会直接打开 GUI 的问题；现在会正确选中/清空动力样板供应器用于并行机器绑定。
+- 为动力样板供应器加入并行卡支持：安装并行卡后会显示升级槽，并可用机器链接器绑定同类型机器，让一个供应器把作业分发到多台空闲机器；运行时仍只访问已链接坐标，不扫描世界。
+- 新增机械动力封包专属 AE2 GuideME 顶级导航页，并把本模组指南页面从 AE2 的“物品、方块和机器”分类移到该专属分类下。
+- 为机械动力封包方块/物品加入 Create Ponder 支持，封包分发器、动力样板供应器、路线工具和并行卡现在可通过 Create 的按住 W 思考入口查看说明。
+- 中文指南和游戏内诊断文本改用本地化机器名“机械手”和“注液器”，不再直接显示 Deployer/Spout。
+- 为机械动力封包全部方块/物品加入 AE2 GuideME 指南页面和物品索引映射，现在物品 tooltip 会出现按住 G 查看帮助，并可直接跳转到对应介绍页；该支持仅使用静态资源，不增加运行时 tick 或 mixin。
+
 ## 2026-06-26
 
 - Changed Kinetic Pattern Provider Smart Doubling to be an explicit per-provider setting that defaults off for newly placed providers, with goggles/Jade showing that provider's current state.

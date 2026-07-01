@@ -11,6 +11,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
+import com.lhy.createpackage.client.ponder.CreatePackagePonderPlugin;
 import com.lhy.createpackage.client.render.MechanicalPackagePatternHighlighter;
 import com.lhy.createpackage.client.screen.AdvancedPackageDistributorScreen;
 import com.lhy.createpackage.client.screen.CreatePackagePatternProviderScreen;
@@ -21,6 +22,7 @@ import com.lhy.createpackage.content.kinetic.KineticPatternProviderMenu;
 import com.lhy.createpackage.registry.ModMenuTypes;
 
 import appeng.client.gui.style.StyleManager;
+import net.createmod.ponder.foundation.PonderIndex;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = CreatePackage.MODID, dist = Dist.CLIENT)
@@ -40,6 +42,7 @@ public class CreatePackageClient {
         // Some client setup code
         CreatePackage.LOGGER.info("HELLO FROM CLIENT SETUP");
         CreatePackage.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+        event.enqueueWork(() -> PonderIndex.addPlugin(new CreatePackagePonderPlugin()));
     }
 
     static void registerScreens(RegisterMenuScreensEvent event) {

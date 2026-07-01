@@ -29,7 +29,11 @@ public final class KineticPatternProviderComponentProvider implements IBlockComp
         tooltip.add(provider.statusLine());
         tooltip.add(provider.aeLine());
         tooltip.add(provider.smartDoublingLine());
+        tooltip.add(provider.parallelLine());
         tooltip.add(provider.machineLine());
+        for (Component line : provider.linkedMachineLines()) {
+            tooltip.add(line);
+        }
         for (Component line : provider.jobLines()) {
             tooltip.add(line.copy().withStyle(ChatFormatting.AQUA));
         }
