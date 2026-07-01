@@ -9,6 +9,7 @@ import com.lhy.createpackage.registry.ModComponents;
 import com.lhy.createpackage.registry.ModCreativeTabs;
 import com.lhy.createpackage.registry.ModItems;
 import com.lhy.createpackage.registry.ModMenuTypes;
+import com.lhy.createpackage.registry.ModSounds;
 import com.mojang.logging.LogUtils;
 
 import net.neoforged.bus.api.IEventBus;
@@ -16,6 +17,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.ModList;
 
 import appeng.api.upgrades.Upgrades;
 import appeng.blockentity.AEBaseBlockEntity;
@@ -43,6 +45,7 @@ public class CreatePackage {
         ModComponents.DATA_COMPONENTS.register(modEventBus);
         ModMenuTypes.MENUS.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
+        ModSounds.SOUND_EVENTS.register(modEventBus);
 
         // Register AE2 capabilities for our block entities.
         modEventBus.addListener(ModCapabilities::register);
@@ -67,6 +70,9 @@ public class CreatePackage {
                     ModItems.KINETIC_PATTERN_PROVIDER.get());
             Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(), 2);
             Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.KINETIC_PATTERN_PROVIDER.get(), 2);
+            if (ModList.get().isLoaded("ftbultimine")) {
+                com.lhy.createpackage.integration.ftbultimine.FtbUltimineCompat.register();
+            }
         });
     }
 }

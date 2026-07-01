@@ -14,7 +14,7 @@
       "type": "create:deploying",
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:basic_package_distributor"
         },
         {
           "item": "create:precision_mechanism"
@@ -22,7 +22,7 @@
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:basic_package_distributor"
         }
       ]
     },
@@ -30,7 +30,7 @@
       "type": "create:filling",
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:basic_package_distributor"
         },
         {
           "type": "neoforge:single",
@@ -40,7 +40,7 @@
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:basic_package_distributor"
         }
       ]
     },
@@ -48,7 +48,7 @@
       "type": "create:filling",
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:basic_package_distributor"
         },
         {
           "type": "neoforge:single",
@@ -58,7 +58,7 @@
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:basic_package_distributor"
         }
       ]
     },
@@ -66,17 +66,17 @@
       "type": "create:pressing",
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:basic_package_distributor"
         }
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:basic_package_distributor"
         }
       ]
     }
   ],
   "transitional_item": {
-    "id": "createpackage:incomplete_package_distributor"
+    "id": "createpackage:basic_package_distributor"
   }
 }

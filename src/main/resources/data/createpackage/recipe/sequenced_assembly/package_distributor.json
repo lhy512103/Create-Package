@@ -15,7 +15,7 @@
       "keep_held_item": true,
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:package_distributor"
         },
         {
           "item": "ae2:silicon_press"
@@ -23,7 +23,7 @@
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:package_distributor"
         }
       ]
     },
@@ -32,7 +32,7 @@
       "keep_held_item": true,
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:package_distributor"
         },
         {
           "item": "ae2:logic_processor_press"
@@ -40,7 +40,7 @@
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:package_distributor"
         }
       ]
     },
@@ -49,7 +49,7 @@
       "keep_held_item": true,
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:package_distributor"
         },
         {
           "item": "ae2:engineering_processor_press"
@@ -57,7 +57,7 @@
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:package_distributor"
         }
       ]
     },
@@ -66,7 +66,7 @@
       "keep_held_item": true,
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:package_distributor"
         },
         {
           "item": "ae2:calculation_processor_press"
@@ -74,12 +74,12 @@
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:package_distributor"
         }
       ]
     }
   ],
   "transitional_item": {
-    "id": "createpackage:incomplete_package_distributor"
+    "id": "createpackage:package_distributor"
   }
 }

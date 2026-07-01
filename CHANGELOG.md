@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-07-01
+
+- Added Re-constructed Wands and Modular Routers 8205099 as local runtime dependencies for development and in-game testing.
+- Improved Machine Linker route highlighting with a Modular Routers-style translucent fill and thick through-block outline while keeping start/middle/end route colors.
+- Added Machine Linker success/error/selection sounds derived from Modular Routers sound assets, with bundled attribution notices for the MIT project and the original Freesound licenses.
+- Added optional FTB Ultimine right-click integration for the Machine Linker: Ultimine shape selections now batch-link or batch-unlink matching machine blocks through the same stored-link logic, without world scanning or mixins.
+- Fixed a client crash when entering a world while route highlighting was active by rendering the translucent highlight fill with an explicit frame-local buffer instead of an unstarted render-buffer batch.
+- Added missing Jade plugin config translations for the Package Distributor and Kinetic Pattern Provider components.
+- Documented Machine Linker FTB Ultimine batch selection support in the AE2 Guide route-tools page.
+- Replaced the Machine Linker item texture with the provided updated asset.
+- Changed the Machine Linker item model from a custom 3D model to a standard 2D generated item model.
+- Added a Machine Linker crafting recipe using any AE2 quartz wrench and a Create Precision Mechanism.
+- Changed Package Distributor, Basic Package Distributor, and Advanced Package Distributor sequenced-assembly transitional items to use their own item models directly.
+
+## 2026-07-01 中文
+
+- 将 Re-constructed Wands 和 Modular Routers 8205099 加入本地运行时依赖，用于开发环境和游戏内测试。
+- 改进机器链接器路线高亮，改为类似 Modular Routers 的半透明填充和穿墙粗轮廓，同时保留路线起点/中段/终点颜色。
+- 为机器链接器加入成功/失败/选中音效，音效来自 Modular Routers 声音资源，并随包附带 MIT 项目和原始 Freesound 许可证归属说明。
+- 新增可选 FTB Ultimine 右键兼容：机器链接器可通过 Ultimine 形状选择批量链接或批量取消同类机器，仍复用原有存储链接逻辑，不扫描世界且不使用 mixin。
+- 修复手持路线工具进入世界时可能因高亮填充渲染写入未开始的渲染批次而崩溃的问题，现在填充高亮使用当前帧独立缓冲绘制。
+- 补充 Jade 插件配置中封包分发器和动力样板供应器组件的翻译，避免资源加载恢复阶段报缺失翻译。
+- 在 AE2 指南的机械路线工具页面写明机器链接器支持 FTB Ultimine 批量选择。
+- 将机器链接器物品贴图替换为提供的新素材。
+- 将机器链接器物品模型从自定义 3D 模型改为标准 2D 生成物品模型。
+- 新增机器链接器合成配方：任意 AE2 石英扳手加 Create 精密构件。
+- 将封包分发器、基础封包分发器和高级封包分发器的序列组装中间物改为直接使用各自物品模型。
+
 ## 2026-06-30
 
 - Changed Kinetic Pattern Provider Parallel Card capacity to 16 matching machines per card, for up to 16 machines with one card and 32 with two cards.

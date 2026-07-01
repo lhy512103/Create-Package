@@ -27,9 +27,18 @@
   "item.createpackage.machine_linker.kinetic_unlinked": "Unlinked parallel machine at [%s, %s, %s] (total: %s)",
   "item.createpackage.machine_linker.not_linked": "This machine is not linked to the selected host",
   "item.createpackage.machine_linker.kinetic_wrong_machine": "Linked machines must match the Kinetic Pattern Provider's front machine",
+  "item.createpackage.machine_linker.batch_linked": "Linked %s matching machine(s) in batch (total: %s)",
+  "item.createpackage.machine_linker.batch_unlinked": "Unlinked %s matching machine(s) in batch (total: %s)",
+  "item.createpackage.machine_linker.kinetic_batch_linked": "Linked %s matching parallel machine(s) in batch (total: %s)",
+  "item.createpackage.machine_linker.kinetic_batch_unlinked": "Unlinked %s matching parallel machine(s) in batch (total: %s)",
+  "item.createpackage.machine_linker.batch_none": "No matching machines were available for batch linking",
   "item.createpackage.machine_linker.tooltip.unbound": "Not bound. Right-click a Package Distributor or Kinetic Pattern Provider to select it.",
   "item.createpackage.machine_linker.tooltip.bound": "Bound to machine host [%s, %s, %s]",
-  "item.createpackage.machine_linker.tooltip.usage": "Right-click machines to link; sneak + right-click to unlink.",
+  "item.createpackage.machine_linker.tooltip.usage": "Right-click machines to link; sneak + right-click to unlink. Hold an FTB Ultimine shape selection to batch-process matching machines.",
+
+  "subtitle.createpackage.machine_linker.success": "Machine Linker succeeds",
+  "subtitle.createpackage.machine_linker.error": "Machine Linker fails",
+  "subtitle.createpackage.machine_linker.thud": "Machine Linker selects a host",
 
   "item.createpackage.mechanical_pattern_converter.marked": "Marked machine at [%s, %s, %s] (total: %s)",
   "item.createpackage.mechanical_pattern_converter.already_marked": "This machine is already marked",
@@ -158,6 +167,9 @@
   "tooltip.createpackage.kinetic_pattern_provider.role.generic": "Generic inventory machine",
   "tooltip.createpackage.kinetic_pattern_provider.not_configured": "Not configured",
   "tooltip.createpackage.kinetic_pattern_provider.unloaded": "Unloaded",
+
+  "config.jade.plugin_createpackage.package_distributor": "Package Distributor Info",
+  "config.jade.plugin_createpackage.kinetic_pattern_provider": "Kinetic Pattern Provider Info",
 
   "createpackage.ponder.tag.create_package": "Create Package",
   "createpackage.ponder.tag.create_package.description": "AE2 autocrafting support for Create machines and sequenced assembly",

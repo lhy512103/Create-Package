@@ -10,7 +10,6 @@ item_ids:
 - createpackage:package_distributor
 - createpackage:basic_package_distributor
 - createpackage:advanced_package_distributor
-- createpackage:incomplete_package_distributor
 ---
 
 # Create Package Distributors

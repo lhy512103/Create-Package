@@ -27,9 +27,18 @@
   "item.createpackage.machine_linker.kinetic_unlinked": "已取消链接位于 [%s, %s, %s] 的并行机器(剩余 %s 台)",
   "item.createpackage.machine_linker.not_linked": "该机器未链接到选中的机器主机",
   "item.createpackage.machine_linker.kinetic_wrong_machine": "并行机器必须与动力样板供应器正面机器类型相同",
+  "item.createpackage.machine_linker.batch_linked": "已批量链接 %s 台同类机器(共 %s 台)",
+  "item.createpackage.machine_linker.batch_unlinked": "已批量取消链接 %s 台同类机器(剩余 %s 台)",
+  "item.createpackage.machine_linker.kinetic_batch_linked": "已批量链接 %s 台同类型并行机器(共 %s 台)",
+  "item.createpackage.machine_linker.kinetic_batch_unlinked": "已批量取消链接 %s 台同类型并行机器(剩余 %s 台)",
+  "item.createpackage.machine_linker.batch_none": "没有可批量处理的同类机器",
   "item.createpackage.machine_linker.tooltip.unbound": "未绑定。右键封包分发器或动力样板供应器以选中它。",
   "item.createpackage.machine_linker.tooltip.bound": "已绑定机器主机 [%s, %s, %s]",
-  "item.createpackage.machine_linker.tooltip.usage": "右键机器进行链接;潜行+右键取消链接。",
+  "item.createpackage.machine_linker.tooltip.usage": "右键机器进行链接;潜行+右键取消链接。按住 FTB Ultimine 选择时可批量处理同类机器。",
+
+  "subtitle.createpackage.machine_linker.success": "机器链接器：链接成功",
+  "subtitle.createpackage.machine_linker.error": "机器链接器：链接失败",
+  "subtitle.createpackage.machine_linker.thud": "机器链接器：选中机器主机",
 
   "item.createpackage.mechanical_pattern_converter.marked": "已标记位于 [%s, %s, %s] 的机器(共 %s 台)",
   "item.createpackage.mechanical_pattern_converter.already_marked": "该机器已经标记过了",
@@ -158,6 +167,9 @@
   "tooltip.createpackage.kinetic_pattern_provider.role.generic": "通用库存机器",
   "tooltip.createpackage.kinetic_pattern_provider.not_configured": "未设置",
   "tooltip.createpackage.kinetic_pattern_provider.unloaded": "未加载",
+
+  "config.jade.plugin_createpackage.package_distributor": "封包分发器信息",
+  "config.jade.plugin_createpackage.kinetic_pattern_provider": "动力样板供应器信息",
 
   "createpackage.ponder.tag.create_package": "机械动力封包",
   "createpackage.ponder.tag.create_package.description": "为 Create 机器和序列组装提供 AE2 自动合成支持",

@@ -28,6 +28,8 @@ The Machine Linker stores the ordered machine route on a Package Distributor or 
 
 Right-click a distributor to select it. Then right-click route blocks in order: input depot or belt first, deployers and spouts in physical order, and the output depot or belt last. Sneak-right-click a linked machine to remove it. Sneak-right-click the selected distributor to clear the route.
 
+With FTB Ultimine installed, hold the Ultimine selection key and right-click matching machines to batch-link or batch-unlink the selected shape. Batch linking still only stores the selected positions and does not scan the world.
+
 Holding the Machine Linker highlights the currently selected route in the world.
 
 ## Mechanical Pattern Converter

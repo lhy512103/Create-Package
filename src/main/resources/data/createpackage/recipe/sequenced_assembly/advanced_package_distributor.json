@@ -45,7 +45,7 @@
       "type": "create:deploying",
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:advanced_package_distributor"
         },
         {
           "item": "create:sturdy_sheet"
@@ -53,7 +53,7 @@
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:advanced_package_distributor"
         }
       ]
     },
@@ -61,7 +61,7 @@
       "type": "create:deploying",
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:advanced_package_distributor"
         },
         {
           "item": "ae2:certus_quartz_crystal"
@@ -69,7 +69,7 @@
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:advanced_package_distributor"
         }
       ]
     },
@@ -77,13 +77,13 @@
       "type": "create:cutting",
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:advanced_package_distributor"
         }
       ],
       "processing_time": 100,
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:advanced_package_distributor"
         }
       ]
     },
@@ -91,12 +91,12 @@
       "type": "create:pressing",
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:advanced_package_distributor"
         }
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:advanced_package_distributor"
         }
       ]
     },
@@ -104,7 +104,7 @@
       "type": "create:filling",
       "ingredients": [
         {
-          "item": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:advanced_package_distributor"
         },
         {
           "type": "neoforge:single",
@@ -114,12 +114,12 @@
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "id": "createpackage:advanced_package_distributor"
         }
       ]
     }
   ],
   "transitional_item": {
-    "id": "createpackage:incomplete_package_distributor"
+    "id": "createpackage:advanced_package_distributor"
   }
 }

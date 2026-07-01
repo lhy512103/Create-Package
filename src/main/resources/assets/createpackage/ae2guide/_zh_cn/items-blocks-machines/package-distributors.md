@@ -10,7 +10,6 @@ item_ids:
 - createpackage:package_distributor
 - createpackage:basic_package_distributor
 - createpackage:advanced_package_distributor
-- createpackage:incomplete_package_distributor
 ---
 
 # 机械动力封包分发器

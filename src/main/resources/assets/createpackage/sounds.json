@@ -1,0 +1,23 @@
+{
+  "machine_linker_error": {
+    "category": "player",
+    "subtitle": "subtitle.createpackage.machine_linker.error",
+    "sounds": [
+      "createpackage:machine_linker_error"
+    ]
+  },
+  "machine_linker_success": {
+    "category": "player",
+    "subtitle": "subtitle.createpackage.machine_linker.success",
+    "sounds": [
+      "createpackage:machine_linker_success"
+    ]
+  },
+  "machine_linker_thud": {
+    "category": "player",
+    "subtitle": "subtitle.createpackage.machine_linker.thud",
+    "sounds": [
+      "createpackage:machine_linker_thud"
+    ]
+  }
+}
