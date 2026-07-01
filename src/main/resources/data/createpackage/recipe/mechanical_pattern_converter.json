@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "create:precision_mechanism"
+    },
+    {
+      "item": "ae2:blank_pattern"
+    }
+  ],
+  "result": {
+    "id": "createpackage:mechanical_pattern_converter"
+  }
+}

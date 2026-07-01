@@ -1,320 +1,479 @@
-# Create Package / 机械动力封包
+# Create Package
 
-机械动力封包为 AE2 自动合成提供 Create 序列组装支持。
+Create Package connects Applied Energistics 2 autocrafting to real Create machines. It is designed for players who want AE2 to request a craft while Create still performs the physical processing with belts, depots, deployers, spouts, presses, saws, basins, power, and item movement.
 
-它的目标是让一个 AE2 样板供应器把一整条序列组装请求交给一个封包分发器。分发器负责把基础原料送到起点料盘或传送带，把 Deployer 施加物送到对应 Deployer，把 Spout 流体送到对应 Spout，并把终点产物回收到 AE2 网络。真正的加工仍由玩家搭建的 Create 机器、传送带和动力系统完成。
+Instead of replacing Create contraptions with an abstract crafting block, this mod adds routing devices that receive AE2 processing-pattern jobs, supply the selected Create machine positions, watch the configured output positions, and return recovered products to the ME network.
 
-仓库地址: https://github.com/lhy512103/Create-Package.git
+Repository: https://github.com/lhy512103/Create-Package.git
 
-## 当前状态
-
-这是 Minecraft 1.21.1 / NeoForge 的早期开发版本。
-
-已实现:
-
-- 封包分发器接入 AE2 网格，并向相邻样板供应器暴露 AE2 crafting-machine capability。
-- 基础封包分发器内置 AE2 样板供应器逻辑，可直接放入样板并向 AE2 网络提供这些样板。
-- 高级封包分发器内置 AE2 样板供应器逻辑，并按每张机械封包样板保存的机器链接路线执行，可在一个方块里存放多条装配线样板；安装并行卡后可同时运行多条不重叠装配线。
-- 动力样板供应器内置 AE2 样板供应器逻辑，用于单台 Create 机器或单个工作单元；它不使用机器连接器，而是直接识别正面朝向的机器。
-- 机械样板转换器可以直接按顺序标记机器路线，并把普通 AE2 已编码样板转换为带路线的机械封包样板。
-- 机器链接器可以保存一组有序链接的 Create 机器位置。
-- 可以把 Create 序列组装配方解析为供料计划。
-- 分发器会校验、模拟、执行投料，然后等待主产物出现在终点料盘或传送带并回收到 AE2。
-- 多循环序列组装支持自动回流：终点出现当前配方的 Create 中间产物时，分发器会把原始物品重新放回起点，保留序列组装进度组件。
-- 几率主产物没有产出时会自动补刷：终点收到副产物会立即再投一轮；一轮完全没有产物时会在配置的等待时间后再投一轮。
-- 工程师护目镜/Jade 可显示作业主产物名称、剩余主产物数量、当前补刷轮次和 AE 状态；普通/基础分发器显示已链接机器，高级分发器显示机械封包样板路线来源。
-- 运行时不使用 mixin、不使用反射、不扫描世界；只访问玩家链接的位置，空闲时 AE2 tick 会睡眠。
-- 不消耗的 Deployer 持有物：机械手已预装对应物品：样板里可以不写这个物品。
-机械手没预装，但 AE 网络里有：分发器会从 AE 网络取 1 个放进机械手。
-样板里写了 1 个：会拿这 1 个放进机械手。
-样板里写了 3 个或多写了同类物品：只需要的部分用于预装，多余的会立即退回 AE 网络，不再报“样板存在未使用输入”。
-
-计划中:
-
-- 专用的 Create 序列组装样板编码器。
-- 更细的缺料诊断。
-
-## 依赖
+## Requirements
 
 - Minecraft 1.21.1
 - NeoForge 21.1.x
 - Applied Energistics 2 19.2.x
 - Create 6.0.x
 
-## 分发器怎么使用
+## Core Ideas
 
-1. 搭建真实的 Create 序列组装流水线。
-   使用正常的传送带、料盘、机械手、注液器、辊压机、切割机、动力和物品流。分发器不会直接推进序列组装进度，Create 机器本身必须能自然加工物品。
+Create Package has two main crafting paths:
 
-2. 把封包分发器接入 AE2 网络。
-   分发器需要 AE2 频道。把 AE2 样板供应器放在分发器旁边，让供应器可以把加工样板推送给分发器。
+- **Sequenced assembly routing** for multi-step Create lines. Use Package Distributors, route tools, and Mechanical Package Patterns.
+- **Single-machine processing** for one Create machine or several identical machines. Use the Kinetic Pattern Provider.
 
-   如果使用基础封包分发器，则不需要额外放 AE2 样板供应器。把基础封包分发器接入 AE2 网络后，右键打开它自己的样板槽，把 AE2 加工样板直接放进去即可。AE2 下单时会把该基础分发器当作样板供应源，材料会直接进入它自己的分发管线。
+The mod uses AE2 processing patterns as the crafting contract. It validates and simulates target insertions before spending inputs whenever possible. It does not scan the world for dropped item entities; outputs must be recoverable through configured depots, belts, basins, inventories, or machine handlers.
 
-   如果使用高级封包分发器，也不需要额外放 AE2 样板供应器。高级封包分发器只执行机械封包样板；每张机械封包样板都带有自己的机器链接路线，所以一个高级分发器可以存放多条装配线的样板。默认同时运行 1 条装配线；升级槽内放入 1 张并行卡后为 2 条，放入 2 张后为 4 条。
+Runtime behavior is intentionally narrow: devices touch their configured or saved positions, sleep while idle, and avoid mixins, reflection, and world scanning.
 
-3. 用机器链接器按物品流动顺序链接机器。
-   先右键封包分发器选中它，再按流水线顺序右键 Create 机器:
+## Blocks and Items
 
-   - 第一个链接的料盘或传送带会作为起点投料位置；
-   - 按物品经过顺序链接 Deployer 和 Spout；
-   - 最后一个链接的料盘或传送带会作为终点回收位置。
+### Package Distributor
 
-   潜行 + 右键已链接机器可以取消链接。潜行 + 右键已选中的分发器可以清空全部链接。
+The Package Distributor is the external target for a normal AE2 Pattern Provider.
 
-4. 目前先使用普通 AE2 加工样板。
-   在专用编码器完成前，样板的主输出需要能唯一匹配一个 Create 序列组装配方。
+Use it when you already have an AE2 Pattern Provider and want one linked Create sequenced-assembly route. Place the Package Distributor on the ME network, place an AE2 Pattern Provider next to it, put processing patterns in the AE2 Pattern Provider, then link the physical Create line with the Machine Linker.
 
-   样板输入应包含:
+The linked route is interpreted as:
 
-   - 1 个序列组装基础原料；
-   - 完整循环次数所需的 Deployer 消耗物品；
-   - 完整循环次数所需的 Spout 流体。
+- first depot or belt: input position;
+- deployers and spouts: supplied in linked order;
+- last depot or belt: output recovery position.
 
-   当前匹配逻辑比较保守。多余输入、缺少输入、或多个配方同时匹配时会拒绝接单，避免错误消耗 AE2 物品。
+Pressing, cutting, and other passive Create processing steps are performed by the real Create line. They usually do not need to be linked unless they are also an inventory target required by the route.
 
-5. 把样板放进 AE2 样板供应器并从 AE2 发起合成。
-   AE2 推送样板后，分发器会先模拟所有目标能否接收材料。模拟成功后才会真正投料，并等待终点位置出现主产物。回收到的物品会注入 AE2 网络存储。
+### Basic Package Distributor
 
-   使用基础封包分发器时，把样板放进基础封包分发器本体，不要再额外贴一个样板供应器。
+The Basic Package Distributor combines a Package Distributor with an embedded AE2 pattern-provider inventory.
 
-## 高级封包分发器与机械封包样板
+Use it when you want a compact single-route distributor. Put AE2 processing patterns directly into the Basic Package Distributor GUI. It still uses the Machine Linker route saved on the block, but it does not need a separate AE2 Pattern Provider beside it.
 
-高级封包分发器用于“一个分发器管理多条装配线”。它不读取方块当前链接列表来执行样板，而是读取机械封包样板里保存的路线。
+It is best for one physical sequenced-assembly line at a time.
 
-使用流程:
+### Advanced Package Distributor
 
-1. 手持机械样板转换器，按物品流动顺序右键 Create 机器来标记路线。
-2. 第一个料盘或传送带是起点，最后一个料盘或传送带是终点；Deployer/Spout 仍按标记顺序对应配方步骤。
-3. 路线只需要标记料盘/传送带、Deployer 和 Spout。动力冲压机、切石机等自然加工机器不需要也不能标记。
-4. 潜行 + 右键已标记机器可以取消标记；潜行 + 空中右键转换器可以清空整条路线。
-5. 空中右键机械样板转换器打开转换 GUI。
-6. 把普通 AE2 已编码加工样板放入左侧输入槽，点击“转换”，右侧会生成机械封包样板。
-7. 取出机械封包样板，放入高级封包分发器的样板槽。
-8. 对每条装配线重复以上流程。每张机械封包样板都会保存转换当时转换器内的机器路线快照。
+The Advanced Package Distributor stores patterns for multiple saved routes in one block.
 
-注意:
+It does not use the Machine Linker route on the block itself. Instead, each Mechanical Package Pattern carries its own saved machine route. Put Mechanical Package Patterns into the Advanced Package Distributor GUI, and the distributor will execute each job using the route stored inside that pattern.
 
-- 转换器 tooltip 会直接显示已标记机器数量；按住 Shift 会展开机器名称和坐标。
-- 转换后的机械封包样板 tooltip 也会显示路线数量；按住 Shift 会展开保存的机器路线。
-- 已转换的机械封包样板可以重新放回机械样板转换器，点击转换后会保留原 AE2 样板并写入转换器当前路线。
-- 手持机械封包样板也可以直接右键机器改写它自己的路线；潜行 + 右键机器会从样板路线里移除该位置。
-- 手持机械样板转换器时，主世界会高亮当前标记路线；手持已转换的机械封包样板时，会高亮它保存的机器路线。终点使用橙色高亮，便于检查是否标记错线。
-- 机器链接器不能选中高级封包分发器；高级封包分发器的路线来自机械封包样板，不来自方块自身链接列表。
-- 转换后再修改转换器的标记路线，不会自动改写已经转换好的机械封包样板，除非把该机械封包样板重新放入转换器再转换一次。
-- 当前高级封包分发器只执行机械封包样板；普通 AE2 加工样板应放在基础封包分发器或相邻样板供应器 + 普通封包分发器方案中。
-- 高级封包分发器最多安装 2 张并行卡；并行卡在普通库存中可以堆叠，但 AE2 升级槽仍然一槽只能放一张。并行调度只会同时启动机器路线不重叠的作业，避免两张样板抢同一条物理装配线。
-- 手持机器链接器、机械样板转换器或机械封包样板时，主世界会高亮对应的机器路线；终点使用橙色高亮。
+Parallel Cards allow the Advanced Package Distributor to run multiple jobs at once when their saved routes do not overlap:
 
-## 动力样板供应器
+- 0 Parallel Cards: 1 active line;
+- 1 Parallel Card: up to 2 active lines;
+- 2 Parallel Cards: up to 4 active lines.
 
-动力样板供应器用于单个 Create 机器或一组相同 Create 机器，不处理多机器序列组装路线。默认只使用正面机器；安装并行卡后，可以用机器链接器额外绑定同类型机器。
+This is the preferred option for a shared AE2 interface that manages several independent Create assembly lines.
 
-使用方式:
+### Machine Linker
 
-1. 把动力样板供应器贴着目标机器放置。刚放下时它和 AE2 样板供应器一样是未定向状态，不会自动选中某一侧机器。
-2. 手持 AE2/Create 扳手右键供应器的某个侧面，设置它要对准的目标侧。目标机器必须在这个侧面的相邻方块。
-3. 接入 AE2 网络，右键打开原版样板供应器界面，把普通 AE2 加工样板放入其中。
-4. 从 AE2 下单。供应器只访问已设置目标侧的机器和固定相邻位置，不扫描世界。
+The Machine Linker stores ordered machine routes.
 
-并行机器:
+For Package Distributors and Basic Package Distributors:
 
-- 默认只使用正面机器。
-- 在动力样板供应器升级槽内放入并行卡后，可以用机器链接器给它额外链接同类型机器。
-- 手持机器链接器右键动力样板供应器选中它，再右键和正面机器相同方块类型的机器进行链接；潜行 + 右键已链接机器可取消链接，潜行 + 右键动力样板供应器可清空链接。
-- 0 张并行卡 = 1 台机器，1 张 = 最多 16 台机器，2 张 = 最多 32 台机器。实际并行数还受已链接同类型机器数量限制。
-- 下单时，动力样板供应器会优先把新作业发配到空闲机器；智能翻倍则是在某台已活动机器仍能接收下一份输入时继续堆叠同一处理样板。
+1. Right-click the distributor with the Machine Linker to select it.
+2. Right-click route blocks in item-flow order.
+3. Sneak-right-click a linked block to remove it.
+4. Sneak-right-click the selected distributor to clear all links.
 
-目标侧规则:
+For Kinetic Pattern Providers with Parallel Cards:
 
-- 未设置目标侧时，护目镜/Jade 会显示“目标机器：未设置”，AE2 下单会被拒绝并提示需要用扳手设置目标面。
-- 设置目标侧后，该侧留给 Create 机器，其余侧仍可连接 AE2 网络。
-- 再次用扳手调整目标侧时，会使用 AE2 样板供应器同款方向循环规则。
+1. Right-click the Kinetic Pattern Provider to select it.
+2. Right-click matching machines of the same block type as the provider's target machine.
+3. Sneak-right-click linked machines to unlink them.
 
-当前固定规则:
+When FTB Ultimine shape selection is available, the Machine Linker can batch-link or batch-unlink matching machines without scanning the world globally.
 
-- Deployer: 供应器正面对准 Deployer；样板第一个物品输入投到 Deployer 朝向 2 格处的加工位置，第二个物品输入投到 Deployer 手持物库存；输出从加工位置回收。常见向下 Deployer 的加工位置是机械手下方第二格的料盘/传送带/置物台。
-- Spout: 供应器正面对准 Spout；物品输入投到 Spout 下方第二格的料盘/传送带/置物台，流体输入投到 Spout 流体库存；输出从该工作位置回收。
-- 动力冲压机: 供应器正面对准动力冲压机；如果冲压机下方第二格是工作盆，会把样板里的全部物品/流体输入投进工作盆并从工作盆回收输出；否则按单物品模式投到下方第二格的料盘/传送带并回收。不会扫描掉落物实体。
-- 动力搅拌器: 供应器正面对准动力搅拌器；动力搅拌器必须使用下方第二格的工作盆。样板里的全部物品/流体输入会投进工作盆，输出也从工作盆回收。
-- 动力锯等带物品 capability 的单机处理器: 物品输入直接投到正面机器自身物品库存，并从该库存回收样板输出。
-- 石磨: 物品输入投到石磨输入槽，输出从石磨输出槽回收；石磨实际产出的概率副产物也会一并注入 AE 网络。
-- 粉碎轮: 供应器必须对准 `create:crushing_wheel_controller`，不要直接对准普通粉碎轮方块。粉碎轮控制器必须能把产物推到 Create 固定输出位置的传送带/料盘/库存，供应器从该位置回收；不会扫描掉落物实体。
-- GUI 里的物品返回栏会随供应器的低频 AE tick 自动尝试退回网络；没有作业、返回栏为空时 tick 会睡眠。
+### Mechanical Pattern Converter
 
-这个方块适合单机处理，不适合精密构件这类多步骤序列组装。多步骤仍使用封包分发器/基础封包分发器/高级封包分发器。
+The Mechanical Pattern Converter marks routes and converts normal AE2 encoded processing patterns into Mechanical Package Patterns.
 
-动力样板供应器处理概率产物时遵循 AE2 普通加工样板的限制:
+Use it for Advanced Package Distributor workflows:
 
-- AE2 普通加工样板没有“概率输出”语义。写在样板输出里的物品会被 AE2 当成必定产物等待。
-- 石磨/粉碎轮的概率副产物不要写进 AE 样板输出；只写需要完成订单的主产物。副产物实际出现时仍会被供应器回收到 AE 网络。
-- 如果主产物本身是概率产物，供应器会在一轮没有凑齐主产物时，从 AE 网络再抽同一轮输入补刷，直到主产物回收到位、AE 取消等待、缺材料，或达到硬超时。
-- 如果取消 AE 合成后供应器仍在等待，供应器会通过 AE 等待量检测或硬超时释放内部作业，不需要拆掉重放。
+1. Right-click route blocks in order while holding the converter.
+2. Sneak-right-click a marked block to remove it.
+3. Sneak-right-click air to clear the current route.
+4. Right-click air to open the converter GUI.
+5. Insert an AE2 encoded processing pattern or an existing Mechanical Package Pattern.
+6. Press Convert to write the converter's current route into the output pattern.
 
-## 多循环自动回流
+The converter shows the marked route in its tooltip. Hold Shift to expand machine names and coordinates. Holding the converter in-world highlights the current route.
 
-Create 的序列组装中间产物带有配方 id、步骤和进度组件。分发器会识别当前作业的中间产物:
+Crafting recipe: one Create Precision Mechanism plus one AE2 Blank Pattern.
 
-- 终点出现当前配方的中间产物时，分发器会把这个原始 ItemStack 重新插回起点料盘或传送带。
-- 回流时不会把物品拆成普通物品，也不会丢失 Create 的序列组装进度。
-- 起点暂时不能接收时，状态会显示“等待起点接收中间产物”，并在后续 tick 继续重试。
-- 只有最终主产物会减少 AE2 请求量；非中间产物的副产物/废料仍会回收到 AE2，并按几率产物逻辑补刷。
+### Mechanical Package Pattern
 
-因此玩家可以搭建线性流水线：起点 -> 各加工机器 -> 终点。多循环配方不再强制玩家用传送带额外绕回起点。
+Mechanical Package Patterns are AE2 processing patterns with an additional Create route snapshot.
 
-## 几率产物与补刷
+They preserve the original AE2 encoded pattern and add route data for the Advanced Package Distributor. This means one Advanced Package Distributor can store patterns for different physical lines, and each pattern knows where it should run.
 
-AE2 的一次样板推送只会交给分发器一轮材料。对精密构件这类几率主产物，分发器会按主产物计量:
+Mechanical Package Patterns can also be edited in-world:
 
-- 如果终点回收到主产物，剩余主产物数量减少。
-- 如果终点回收到副产物或废料，但主产物仍不足，分发器会从 AE 网络再抽一轮基础原料、Deployer 消耗物和 Spout 流体并继续投料。
-- 如果一轮加工后终点完全没有任何产物，分发器会等待 `emptyOutputRefillTimeoutTicks` tick，默认 1200 tick/60 秒，然后按空产出处理并补刷。
-- 如果 AE 网络缺少补刷材料，会显示“等待补刷材料”，并每 5 秒轻量重试一次。
-
-精密构件样板示例:
-
-- 输入: `1 x 金板 + 5 x 齿轮 + 5 x 大齿轮 + 5 x 铁粒`
-- 输出: `1 x 精密构件`
-
-不要把金板写成 5 个。循环 5 次的是同一个半成品，基础原料只消耗 1 个。
-
-## 测试配方
-
-模组内置的分发器制作配方都改为 Create 序列组装:
-
-- `createpackage:sequenced_assembly/package_distributor`: 金板为基础物品，机械手依次安装 AE2 硅、逻辑、工程、运算压印模板，模板均不消耗，循环 3 次。
-- `createpackage:sequenced_assembly/basic_package_distributor`: 封包分发器为基础物品，机械手安装精密构件，注入 1000 mB 熔岩，注入 1000 mB 水，再由动力冲压机冲压。
-- `createpackage:sequenced_assembly/advanced_package_distributor`: 基础封包分发器为基础物品，机械手安装坚固板，机械手安装赛特斯水晶，动力锯切割，动力冲压机冲压，注入 500 mB 熔岩，循环 5 次。赛特斯水晶正常消耗。结果池使用精密构件同款权重：120 权重高级封包分发器，30 总权重随机废料，实际为 80% 成功。
-
-旧的封包分发器流体/切割/冲压测试配方，以及基础/高级封包分发器的直接合成配方已经移除。
-
-## 链接顺序规则
-
-第一个被识别为料盘或传送带的链接位置是起点。
-最后一个被识别为料盘或传送带的链接位置是终点。
-
-Deployer 按链接顺序对应 deploying 步骤。这个顺序很重要，因为一个 Deployer 同一时间只能握一种施加物。
-
-Spout 按链接顺序对应 filling 步骤。分发器通过 NeoForge 流体 capability 给已链接的 Spout 补流体。
-
-Pressing 和 cutting 步骤由真实 Create 流水线上的机器自然完成，它们不需要分发器补耗材。
-
-## 当前限制
-
-- 普通封包分发器和基础封包分发器同一时间只处理一个作业。
-- 基础封包分发器复用 AE2 原版样板供应器菜单和样板库存，但目前仍只按本模组支持的 Create 序列组装样板执行。
-- 高级封包分发器当前只支持机械封包样板；并行卡只并行不重叠的物理路线，不会把同一条路线拆成多个并发作业。
-- 自动回流只处理带有当前配方 `sequenced_assembly` 组件的中间产物；普通副产物不会被回流。
-- 起点和终点料盘或传送带必须是不同位置。
-- Create 流水线必须有效、有动力，并且能把产物送到终点位置。
-- 如果真实流水线卡住但没有达到空产出等待时间，分发器会继续等待。
-- 当前实现会严格拒绝不确定的样板匹配，优先避免丢物品。
-
-## English
-
-Create Package adds AE2 autocrafting support for Create sequenced assembly.
-
-One AE2 Pattern Provider can push a full sequenced-assembly craft into one
-Package Distributor. The distributor supplies the linked Create line: base input
-to the input depot or belt, deployer held items to linked deployers, spout fluids
-to linked spouts, and recovered outputs back into AE2 storage. The actual
-processing still happens in the real Create machines and belts built by the
-player.
-
-### Current Usage
-
-1. Build a real Create sequenced-assembly line with normal belts, depots,
-   deployers, spouts, presses, saws, power, and item movement.
-2. Place a Package Distributor on the AE2 network and put an AE2 Pattern
-   Provider next to it.
-   With a Basic Package Distributor, no adjacent Pattern Provider is needed:
-   place it on the AE2 network, right-click it, and put encoded AE2 processing
-   patterns into its built-in pattern slots.
-3. Use the Machine Linker: right-click the distributor to select it, then link
-   the input depot or belt first, deployers/spouts in physical order, and the
-   output depot or belt last.
-4. Encode a normal AE2 processing pattern for now. Inputs should contain one
-   base item, all consumed deployer items for the full loop count, and all spout
-   fluids for the full loop count. The primary output must uniquely match one
-   Create sequenced-assembly recipe.
-5. Request the craft from AE2. The distributor simulates all insertions first,
-   supplies the linked machines only if the simulation succeeds, then waits for
-   the primary output at the linked output position and inserts recovered items
-   into AE2 storage.
-
-### Status
-
-Implemented: AE2 grid integration, ordered machine linking, sequenced-assembly
-supply-plan parsing, conservative validation, simulated insertion before real
-insertion, output recovery, probabilistic-output refills, Engineer's Goggles/Jade
-diagnostics, a Basic Package Distributor with an embedded AE2 pattern-provider
-inventory, an Advanced Package Distributor that routes mechanical package
-patterns by their saved machine-link snapshots, automatic transitional-item
-reflow for multi-loop sequenced assembly, Parallel Cards for running up to four
-disjoint Advanced Package Distributor lines at once, a Kinetic Pattern Provider
-for single Create machines facing the provider, and low-overhead ticking with no
-mixins, reflection, or world scanning.
+- right-click a markable route block to append it to the pattern route;
+- sneak-right-click a route block to remove it;
+- hold the pattern to highlight its saved route;
+- put it back into the Mechanical Pattern Converter to rewrite the route while preserving the original AE2 pattern.
 
 ### Kinetic Pattern Provider
 
-The Kinetic Pattern Provider is for one Create machine or a group of matching
-Create machines. Place it so its configured target side points at the machine,
-put normal AE2 processing patterns into its built-in pattern-provider slots, and
-request the craft from AE2.
+The Kinetic Pattern Provider is for single-machine Create processing.
 
-By default it uses only the front machine. Install Parallel Cards in its upgrade
-slots to unlock linked machines, then use the Machine Linker to select the
-provider and link machines of the same block type as the front target. New jobs
-are dispatched to idle linked machines before the provider reports busy: 1 card
-allows up to 16 active machines, and 2 cards allow up to 32. Smart Doubling still
-batches extra copies into an already active machine only when that machine can
-simulate accepting the next input set.
+It embeds AE2 Pattern Provider behavior and faces one configured target side. Use a wrench to set the side that points at the Create machine. Put normal AE2 processing patterns into the provider GUI, connect it to the ME network, and request the craft from AE2.
 
-Current fixed routing:
+Supported routing includes:
 
-- Deployer: first item input goes to the working position two blocks along the
-  deployer's facing direction, second item input goes into the deployer's
-  held-item inventory, and output is recovered from that working position.
-- Spout: item input goes to the depot/belt/table two blocks below the spout,
-  fluid input goes into the spout, and output is recovered from that working
-  position.
-- Mechanical Press: with a basin two blocks below the press, all item/fluid
-  pattern inputs are inserted into that basin and outputs are recovered from the
-  basin. Without a basin, it stays in single-item depot/belt mode. Dropped item
-  entities are not scanned.
-- Mechanical Mixer: requires a basin two blocks below the mixer. All item/fluid
-  pattern inputs are inserted into that basin and outputs are recovered from it.
-- Mechanical Saw: face an upward-facing running saw. When a pattern is pushed,
-  the provider sets the saw's recipe filter to the pattern's primary output,
-  inserts the item into the saw, and recovers results from the adjacent
-  belt/depot/inventory position selected by the saw's current rotation
-  direction. Dropped item entities are not scanned, so that output position must
-  be recoverable.
-- Other single-machine item handlers: item input goes into the front machine's
-  item handler and expected outputs are recovered from the same handler.
-- Millstone: item input goes into the millstone input slot. Outputs are
-  recovered from the millstone output slots, including probabilistic byproducts
-  that actually appeared.
-- Crushing Wheel: face the `create:crushing_wheel_controller`. The controller
-  must push results into Create's fixed downstream belt/depot/inventory output
-  position; the provider recovers from that position and does not scan dropped
-  item entities.
-- Pattern Access/Management terminals group Kinetic Pattern Providers by the
-  machine they face when possible, falling back to the provider itself only when
-  no target machine name can be resolved.
-- Return slots are merged into the provider's own AE ticker, so they return
-  items to the network without adding a separate world scan or always-on tick.
+- **Deployer**: first item input goes to the working position two blocks along the deployer's facing direction; second item input goes into the deployer's held-item inventory; output is recovered from the working position.
+- **Spout**: item input goes to the working position two blocks below the spout; fluid input goes into the spout; output is recovered from that working position.
+- **Mechanical Press**: with a basin two blocks below, all item and fluid inputs go into the basin and outputs are recovered from the basin. Without a basin, one item input goes to the depot, belt, or inventory two blocks below.
+- **Mechanical Mixer**: requires a basin two blocks below. Inputs and outputs use that basin.
+- **Mechanical Saw**: the saw must face up and be running. The provider sets the saw filter from the pattern's primary output, inserts the input, and recovers from the saw's fixed output side.
+- **Millstone**: input goes into the millstone and actual outputs, including probabilistic byproducts, are recovered.
+- **Crushing Wheel**: target the `create:crushing_wheel_controller`, not the wheel block. The controller must output into a recoverable belt, depot, or inventory.
+- **Generic item handlers**: one item input goes into the target machine inventory and expected outputs are recovered from it.
 
-AE2 processing patterns do not encode probabilistic outputs. Do not put
-probabilistic byproducts in the AE pattern output list unless you want AE2 to
-wait for them as required outputs. The provider still recovers probabilistic
-byproducts from millstone/crushing outputs when they appear. If the primary
-output itself is probabilistic, the provider refills one more input round from
-AE storage until the primary output arrives, AE stops waiting, inputs run out,
-or the job reaches its timeout.
+Parallel Cards let one Kinetic Pattern Provider distribute jobs to multiple identical machines:
 
-Planned: dedicated sequenced-assembly pattern encoder and more detailed missing-input diagnostics.
+- 0 Parallel Cards: front target only;
+- 1 Parallel Card: up to 16 active machines;
+- 2 Parallel Cards: up to 32 active machines.
+
+Smart Doubling can be enabled per provider. When enabled, matching processing-pattern pushes can be batched into the current active job. If the target machine cannot currently receive another input set, the provider keeps a lightweight internal pending-dispatch queue and tries again while the job is active. Pending inputs are persisted with the job and returned through AE2 return inventory if the craft is cancelled before dispatch.
+
+### Parallel Card
+
+Parallel Cards upgrade the Advanced Package Distributor and Kinetic Pattern Provider.
+
+In the Advanced Package Distributor, they increase the number of non-overlapping saved routes that can run at the same time. In the Kinetic Pattern Provider, they unlock linked identical machines for multi-machine dispatch.
+
+Parallel Cards stack in normal inventories, but AE2 upgrade slots still accept one card per slot.
+
+### Incomplete Package Distributor
+
+The Incomplete Package Distributor is the transitional item used by the mod's Create sequenced-assembly crafting recipes.
+
+It is not a normal tool or machine. It exists so the mod's own blocks can be crafted through Create assembly chains.
+
+## Pattern Rules
+
+Create Package currently uses normal AE2 processing patterns.
+
+For sequenced assembly, encode:
+
+- one base input item;
+- consumed deployer items for the full loop count;
+- spout fluids for the full loop count;
+- the final primary output.
+
+For Precision Mechanism-style recipes, the base item is consumed once and the intermediate item loops through the line. Do not multiply the base item by the number of loops.
+
+Example Precision Mechanism pattern:
+
+- inputs: `1 Gold Sheet`, `5 Cogwheels`, `5 Large Cogwheels`, `5 Iron Nuggets`;
+- output: `1 Precision Mechanism`.
+
+AE2 processing patterns do not have probabilistic-output semantics. Do not put optional byproducts in the pattern output list unless AE2 should wait for them as required outputs. Create Package still recovers actual byproducts when they appear.
+
+## Sequenced Assembly Behavior
+
+Package Distributors match the pattern's primary output to a Create sequenced-assembly recipe. If multiple recipes match or required inputs are missing, the job is rejected before consuming inputs.
+
+During a job, the distributor:
+
+1. validates the route and pattern inputs;
+2. simulates all target insertions;
+3. supplies base items, deployer held items, and spout fluids;
+4. watches the configured output position;
+5. returns recovered outputs to AE2.
+
+For multi-loop sequenced assembly, Create's transitional item keeps recipe progress data. When the distributor sees the current job's transitional item at the output position, it sends that same item stack back to the input position without stripping its progress data.
+
+For probabilistic primary outputs, the distributor can refill another input round from AE storage when byproducts or empty-output timeouts show that the primary output has not arrived yet.
+
+## Diagnostics
+
+Engineer’s Goggles and Jade show useful runtime state:
+
+- AE node power, channel, and online status;
+- current status and rejection reason;
+- active job output and remaining amount;
+- route links or saved Mechanical Package Pattern routes;
+- parallel-card capacity and active job count;
+- Kinetic Pattern Provider target machine and linked parallel machines.
+
+These diagnostics are meant to make blocked crafts understandable without checking logs first.
+
+## Limitations
+
+- Create machines must be powered and physically able to move items.
+- Outputs must enter configured recoverable positions. Dropped item entities are not scanned.
+- Package Distributor and Basic Package Distributor each run one route at a time.
+- Advanced Package Distributor parallelism only runs routes that do not overlap.
+- Kinetic Pattern Provider is for single-machine processing, not multi-step sequenced assembly.
+- Current pattern matching is conservative and may reject ambiguous setups to avoid consuming the wrong inputs.
 
 ## License
 
 Create Package is licensed under the MIT License. See [LICENSE](LICENSE).
+
+## Third-party Notices
+
+### Modular Routers sound assets
+
+Create Package includes the following sound assets derived from Modular Routers by desht:
+
+- `assets/createpackage/sounds/machine_linker_success.ogg`, from `assets/modularrouters/sounds/success.ogg`
+- `assets/createpackage/sounds/machine_linker_error.ogg`, from `assets/modularrouters/sounds/error.ogg`
+- `assets/createpackage/sounds/machine_linker_thud.ogg`, from `assets/modularrouters/sounds/thud.ogg`
+
+Modular Routers is distributed under the MIT License. Copyright (c) 2016 Des Herriott.
+
+Source: https://github.com/desht/ModularRouters
+
+The Modular Routers README identifies its sounds as free sound assets with these source licenses:
+
+- Scrampunk, https://freesound.org/people/Scrampunk/sounds/345297/ - Creative Commons Attribution 4.0
+- Autistic Lucario, https://freesound.org/people/Autistic%20Lucario/sounds/142608/ - Creative Commons Attribution 4.0
+- Reitanna, https://freesound.org/people/Reitanna/sounds/332661/ - Creative Commons 0
+
+No code from Modular Routers' Botania-derived `me.desht.modularrouters.client.fx` package is included.
+
+## Acknowledgements
+
+Special thanks to **xiaoleng5261** for providing the models, textures, and matching JSON files used by Create Package.
+
+# 机械动力封包
+
+机械动力封包把 Applied Energistics 2 自动合成连接到真实的 Create 机器。它适合希望“由 AE2 下单、由 Create 实体流水线加工”的玩法：传送带、料盘、机械手、注液器、冲压机、动力锯、工作盆、动力系统和物品流仍然由玩家搭建。
+
+这个模组不会用一个抽象机器替代 Create 生产线，而是提供一组路由方块：接收 AE2 处理样板作业，把材料送到指定的 Create 位置，监听配置好的产物位置，并把回收到的产物送回 ME 网络。
+
+仓库地址：https://github.com/lhy512103/Create-Package.git
+
+## 运行需求
+
+- Minecraft 1.21.1
+- NeoForge 21.1.x
+- Applied Energistics 2 19.2.x
+- Create 6.0.x
+
+## 核心思路
+
+机械动力封包主要有两条自动合成路径：
+
+- **序列组装路线**：用于多步骤 Create 流水线，使用封包分发器、路线工具和机械封包样板。
+- **单机器处理**：用于单台 Create 机器或多台同类型机器，使用动力样板供应器。
+
+模组使用 AE2 处理样板作为合成契约。设备会尽量在消耗输入前校验并模拟目标插入。模组不会扫描世界里的掉落物实体；产物必须进入可回收的料盘、传送带、工作盆、库存或机器处理器。
+
+运行时行为保持克制：只访问已配置或已保存的位置，空闲时睡眠，不使用 mixin、反射或世界扫描。
+
+## 方块与物品
+
+### 封包分发器
+
+封包分发器是普通 AE2 样板供应器的外部目标。
+
+当你已经有 AE2 样板供应器，并且只想让它驱动一条 Create 序列组装路线时，使用这个方块。把封包分发器接入 ME 网络，在旁边放置 AE2 样板供应器，把处理样板放进 AE2 样板供应器，然后用机器链接器链接真实的 Create 流水线。
+
+链接路线按以下方式解释：
+
+- 第一个料盘或传送带：输入位置；
+- 机械手和注液器：按链接顺序供料；
+- 最后一个料盘或传送带：产物回收位置。
+
+冲压、切割等被动物理加工由真实 Create 流水线完成。通常不需要链接这些加工机器，除非它们也是路线需要访问的库存目标。
+
+### 基础封包分发器
+
+基础封包分发器把封包分发器和 AE2 样板供应器库存合在一个方块里。
+
+它适合更紧凑的单路线方案。把 AE2 处理样板直接放进基础封包分发器 GUI。它仍然使用机器链接器保存在方块上的路线，但不需要旁边额外放一个 AE2 样板供应器。
+
+它最适合一次运行一条物理序列组装线。
+
+### 高级封包分发器
+
+高级封包分发器可以在一个方块里存放多条已保存路线的样板。
+
+它不使用方块自身的机器链接器路线，而是读取每张机械封包样板中保存的路线。把机械封包样板放进高级封包分发器 GUI 后，每个作业都会按照对应样板内部保存的路线执行。
+
+并行卡可以让高级封包分发器同时运行多条互不重叠的路线：
+
+- 0 张并行卡：1 条活动路线；
+- 1 张并行卡：最多 2 条活动路线；
+- 2 张并行卡：最多 4 条活动路线。
+
+如果你希望一个 AE2 入口管理多条独立 Create 装配线，优先使用高级封包分发器。
+
+### 机器链接器
+
+机器链接器用于保存有序机器路线。
+
+用于封包分发器和基础封包分发器时：
+
+1. 手持机器链接器右键分发器以选中它。
+2. 按物品流动顺序右键路线方块。
+3. 潜行右键已链接方块可移除。
+4. 潜行右键已选中的分发器可清空全部链接。
+
+用于安装了并行卡的动力样板供应器时：
+
+1. 右键动力样板供应器以选中它。
+2. 右键与供应器目标机器同方块类型的机器。
+3. 潜行右键已链接机器可取消链接。
+
+如果安装了 FTB Ultimine 并存在形状选择，机器链接器可以批量链接或取消同类机器，而不进行全世界扫描。
+
+### 机械样板转换器
+
+机械样板转换器用于标记路线，并把普通 AE2 已编码处理样板转换成机械封包样板。
+
+高级封包分发器的常用流程：
+
+1. 手持转换器，按顺序右键路线方块。
+2. 潜行右键已标记方块可移除。
+3. 潜行右键空气可清空当前路线。
+4. 右键空气打开转换器 GUI。
+5. 放入 AE2 已编码处理样板或已有机械封包样板。
+6. 点击转换，把转换器当前路线写入输出样板。
+
+转换器 tooltip 会显示已标记路线。按住 Shift 可展开机器名称和坐标。手持转换器时，世界中会高亮当前路线。
+
+合成配方：1 个 Create 精密构件加 1 个 AE2 空白样板。
+
+### 机械封包样板
+
+机械封包样板是带有 Create 路线快照的 AE2 处理样板。
+
+它保留原始 AE2 已编码样板，同时额外保存供高级封包分发器使用的路线数据。因此一个高级封包分发器可以存放多条不同物理线路的样板，每张样板都知道自己应该在哪条线路运行。
+
+机械封包样板也可以在世界中直接编辑：
+
+- 右键可标记路线方块，将其追加到样板路线；
+- 潜行右键路线方块，将其从样板路线中移除；
+- 手持样板时会高亮它保存的路线；
+- 放回机械样板转换器再次转换，可以保留原 AE2 样板并重写路线。
+
+### 动力样板供应器
+
+动力样板供应器用于单机器 Create 处理。
+
+它内置 AE2 样板供应器逻辑，并朝向一个已配置的目标侧。用扳手设置目标侧，让这一侧指向 Create 机器。把普通 AE2 处理样板放进供应器 GUI，接入 ME 网络，然后从 AE2 下单。
+
+当前支持的路由规则：
+
+- **机械手**：第一个物品输入送到机械手朝向两格处的工作位置；第二个物品输入送入机械手手持物库存；产物从工作位置回收。
+- **注液器**：物品输入送到注液器下方两格的工作位置；流体输入送入注液器；产物从该工作位置回收。
+- **动力冲压机**：如果下方两格是工作盆，全部物品和流体输入进入工作盆，产物也从工作盆回收。没有工作盆时，按单物品模式送到下方两格的料盘、传送带或库存。
+- **动力搅拌器**：需要下方两格有工作盆。输入和输出都使用该工作盆。
+- **动力锯**：动力锯必须朝上且正在运行。供应器会按样板主产物设置动力锯过滤器，插入输入物，并从动力锯当前旋转方向决定的固定输出侧回收。
+- **石磨**：输入送入石磨，实际产物和出现的概率副产物都会回收。
+- **粉碎轮**：目标必须是 `create:crushing_wheel_controller`，不是普通粉碎轮方块。控制器需要把产物推到可回收的传送带、料盘或库存。
+- **通用物品处理器**：一个物品输入进入目标机器库存，预期产物从同一库存回收。
+
+并行卡让一个动力样板供应器把作业分发给多台同类型机器：
+
+- 0 张并行卡：只使用正面目标；
+- 1 张并行卡：最多 16 台活动机器；
+- 2 张并行卡：最多 32 台活动机器。
+
+智能翻倍可按供应器单独开启。开启后，相同处理样板可以批量并入当前活动作业。如果目标机器暂时不能接收下一份输入，供应器会把这份输入保存在轻量内部待投料队列中，并在作业活动期间继续重试。待投料输入会随作业保存；如果合成在投料前被取消，会通过 AE2 返回库存退回网络。
+
+### 并行卡
+
+并行卡用于升级高级封包分发器和动力样板供应器。
+
+在高级封包分发器中，它提高可同时运行的互不重叠路线数量。在动力样板供应器中，它解锁多台同类型机器分发。
+
+并行卡在普通库存中可以堆叠，但 AE2 升级槽仍然一槽只能放一张。
+
+### 未完成的封包分发器
+
+未完成的封包分发器是本模组 Create 序列组装配方使用的过渡物品。
+
+它不是普通工具或机器，只用于让本模组自己的方块通过 Create 装配链制作。
+
+## 样板规则
+
+机械动力封包当前使用普通 AE2 处理样板。
+
+序列组装样板应编码：
+
+- 1 个基础输入物品；
+- 完整循环次数所需的机械手消耗物；
+- 完整循环次数所需的注液器流体；
+- 最终主产物。
+
+对于精密构件这类配方，基础物品只消耗一次，中间产物会在流水线中循环。不要把基础物品乘以循环次数。
+
+精密构件样板示例：
+
+- 输入：`1 金板`、`5 齿轮`、`5 大齿轮`、`5 铁粒`；
+- 输出：`1 精密构件`。
+
+AE2 处理样板没有“概率输出”语义。不要把可选副产物写进样板输出列表，除非你希望 AE2 把它当成必需产物等待。机械动力封包仍然会在副产物实际出现时回收它们。
+
+## 序列组装行为
+
+封包分发器会用样板主产物匹配 Create 序列组装配方。如果多个配方匹配，或样板缺少必要输入，作业会在消耗输入前被拒绝。
+
+一次作业中，分发器会：
+
+1. 校验路线和样板输入；
+2. 模拟所有目标插入；
+3. 供应基础物品、机械手手持物和注液器流体；
+4. 监听配置好的输出位置；
+5. 把回收到的产物送回 AE2。
+
+对于多循环序列组装，Create 的中间产物会保存配方进度数据。分发器在输出位置发现当前作业的中间产物时，会把同一个物品栈送回输入位置，不会剥离进度数据。
+
+对于概率主产物，如果副产物或空产出超时说明主产物还没有出现，分发器可以从 AE 存储中再抽取一轮输入继续补刷。
+
+## 诊断信息
+
+工程师护目镜和 Jade 会显示有用的运行状态：
+
+- AE 节点供电、频道和在线状态；
+- 当前状态和拒单原因；
+- 活动作业产物与剩余数量；
+- 已链接路线或机械封包样板保存的路线；
+- 并行卡容量和活动作业数；
+- 动力样板供应器目标机器和已链接并行机器。
+
+这些诊断用于让卡住的合成不用先翻日志也能看懂。
+
+## 当前限制
+
+- Create 机器必须有动力，并且物品流必须真实可运行。
+- 产物必须进入配置好的可回收位置。模组不扫描掉落物实体。
+- 封包分发器和基础封包分发器一次只运行一条路线。
+- 高级封包分发器的并行只会运行互不重叠的路线。
+- 动力样板供应器用于单机器处理，不适合多步骤序列组装。
+- 当前样板匹配偏保守，遇到不确定情况会拒绝接单，以避免消耗错误输入。
+
+## 许可证
+
+机械动力封包使用 MIT License。详见 [LICENSE](LICENSE)。
+
+## 第三方声明
+
+### Modular Routers 声音素材
+
+机械动力封包包含以下来源于 desht 的 Modular Routers 的声音素材：
+
+- `assets/createpackage/sounds/machine_linker_success.ogg`，来自 `assets/modularrouters/sounds/success.ogg`
+- `assets/createpackage/sounds/machine_linker_error.ogg`，来自 `assets/modularrouters/sounds/error.ogg`
+- `assets/createpackage/sounds/machine_linker_thud.ogg`，来自 `assets/modularrouters/sounds/thud.ogg`
+
+Modular Routers 使用 MIT License 分发。Copyright (c) 2016 Des Herriott。
+
+来源：https://github.com/desht/ModularRouters
+
+Modular Routers 的 README 将其声音标识为免费声音素材，对应来源许可如下：
+
+- Scrampunk，https://freesound.org/people/Scrampunk/sounds/345297/ - Creative Commons Attribution 4.0
+- Autistic Lucario，https://freesound.org/people/Autistic%20Lucario/sounds/142608/ - Creative Commons Attribution 4.0
+- Reitanna，https://freesound.org/people/Reitanna/sounds/332661/ - Creative Commons 0
+
+本模组未包含 Modular Routers 中派生自 Botania 的 `me.desht.modularrouters.client.fx` 包代码。
+
+## 致谢
+
+特别感谢 **xiaoleng5261** 为机械动力封包提供模型、材质与对应 JSON 文件。

@@ -146,6 +146,7 @@
   "tooltip.createpackage.kinetic_pattern_provider.status.saw_not_powered": "Mechanical Saw must be running to determine output direction",
   "tooltip.createpackage.kinetic_pattern_provider.status.missing_saw_output": "Mechanical Saw output is not recoverable",
   "tooltip.createpackage.kinetic_pattern_provider.status.missing_saw_filter": "Mechanical Saw filter is not accessible",
+  "tooltip.createpackage.kinetic_pattern_provider.status.waiting_target_space": "Waiting for target space",
   "tooltip.createpackage.kinetic_pattern_provider.status.waiting_refill_inputs": "Waiting for refill inputs",
   "tooltip.createpackage.kinetic_pattern_provider.status.refill_target_full": "Refill target cannot accept inputs",
   "tooltip.createpackage.kinetic_pattern_provider.status.refill_unavailable": "This job cannot be refilled",

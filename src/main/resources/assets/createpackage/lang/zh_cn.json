@@ -146,6 +146,7 @@
   "tooltip.createpackage.kinetic_pattern_provider.status.saw_not_powered": "动力锯需要先运转以确定输出方向",
   "tooltip.createpackage.kinetic_pattern_provider.status.missing_saw_output": "动力锯输出点不可回收",
   "tooltip.createpackage.kinetic_pattern_provider.status.missing_saw_filter": "动力锯过滤器不可访问",
+  "tooltip.createpackage.kinetic_pattern_provider.status.waiting_target_space": "等待目标接收下一份输入",
   "tooltip.createpackage.kinetic_pattern_provider.status.waiting_refill_inputs": "等待补刷材料",
   "tooltip.createpackage.kinetic_pattern_provider.status.refill_target_full": "补刷目标无法接收",
   "tooltip.createpackage.kinetic_pattern_provider.status.refill_unavailable": "该作业无法补刷",

@@ -93,6 +93,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     private static final int REFILL_RETRY_TICKS = 20 * 5;
     private static final int ROUND_OUTPUT_TIMEOUT_TICKS = 20 * 60;
     private static final int MAX_SMART_BATCH_PATTERNS = 64;
+    private static final int PENDING_DISPATCH_RETRY_TICKS = 5;
     private static final ResourceLocation ID_DEPLOYER = ResourceLocation.fromNamespaceAndPath("create", "deployer");
     private static final ResourceLocation ID_SPOUT = ResourceLocation.fromNamespaceAndPath("create", "spout");
     private static final ResourceLocation ID_MECHANICAL_PRESS = ResourceLocation.fromNamespaceAndPath("create", "mechanical_press");
@@ -607,8 +608,16 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
         Plan plan = target.plan();
         if (!plan.simulate()) {
-            rememberStatus("simulate_failed");
-            return false;
+            if (target.job() == null || !target.allowQueue()) {
+                rememberStatus("simulate_failed");
+                return false;
+            }
+            consumeInputs(inputs);
+            queuePendingPattern(target.job(), primary.amount(), flattenedInputs);
+            lastStatusKey = "working";
+            saveAndSync();
+            wakeTicker();
+            return true;
         }
         if (!plan.execute()) {
             rememberStatus("execute_failed");
@@ -637,6 +646,13 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         return true;
     }
 
+    private void queuePendingPattern(KineticJob job, long outputAmount, List<GenericStack> inputs) {
+        job.remaining = safeAdd(job.remaining, outputAmount);
+        job.queuedPatterns++;
+        job.pendingDispatches.add(new KineticJob.PendingDispatch(outputAmount, copyStacks(inputs)));
+        job.ticks = 0;
+    }
+
     @Nullable
     private DispatchTarget selectDispatchTarget(IPatternDetails patternDetails, AEItemKey primaryOutput,
             long outputAmount, List<GenericStack> inputs) {
@@ -648,7 +664,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 }
                 Plan plan = createPlanAt(machinePos, primaryOutput, outputAmount, patternDetails.getOutputs(), inputs);
                 if (plan != null && plan.simulate()) {
-                    return new DispatchTarget(null, plan);
+                    return new DispatchTarget(null, plan, false);
                 }
                 if (firstFailure == null) {
                     firstFailure = plan;
@@ -658,11 +674,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
         for (KineticJob job : activeJobs) {
             Plan plan = planForAppend(job, patternDetails, outputAmount, inputs);
-            if (plan != null && plan.simulate()) {
-                return new DispatchTarget(job, plan);
+            if (plan != null) {
+                return new DispatchTarget(job, plan, true);
             }
         }
-        return firstFailure == null ? null : new DispatchTarget(null, firstFailure);
+        return firstFailure == null ? null : new DispatchTarget(null, firstFailure, false);
     }
 
     private boolean canAppendToActiveJob(IPatternDetails patternDetails, KeyCounter[] inputs) {
@@ -714,14 +730,13 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             return false;
         }
         for (KineticJob job : activeJobs) {
-            Plan plan = createPlanAt(job.machinePos, job.primaryOutput, job.remaining,
+            Plan plan = createPlanAt(job.machinePos, job.primaryOutput, 1,
                     job.patternOutputs, job.refillInputs);
             if (job.queuedPatterns < MAX_SMART_BATCH_PATTERNS
                     && plan != null
                     && Objects.equals(plan.outputPos(), job.outputPos)
                     && Objects.equals(plan.machineRole(), job.machineRole)
-                    && plan.collectUnexpectedOutputs() == job.collectUnexpectedOutputs
-                    && plan.simulate()) {
+                    && plan.collectUnexpectedOutputs() == job.collectUnexpectedOutputs) {
                 return true;
             }
         }
@@ -946,12 +961,26 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 continue;
             }
             if (isCraftingJobNoLongerWaiting(job)) {
-                activeJobs.remove(i--);
-                lastStatusKey = activeJobs.isEmpty() ? "cancelled" : "working";
-                didWork = true;
+                job.statusKey = "cancelled";
+                didWork = returnPendingDispatches(job) || didWork;
+                if (!job.hasPendingDispatches()) {
+                    activeJobs.remove(i--);
+                    lastStatusKey = activeJobs.isEmpty() ? "cancelled" : "working";
+                    didWork = true;
+                }
                 continue;
             }
-            if (job.waitingForRefill()) {
+            if (job.returningPendingDispatches()) {
+                didWork = returnPendingDispatches(job) || didWork;
+                if (!job.hasPendingDispatches()) {
+                    activeJobs.remove(i--);
+                    lastStatusKey = activeJobs.isEmpty() ? job.statusKey : "working";
+                    didWork = true;
+                }
+                continue;
+            } else if (job.hasPendingDispatches()) {
+                didWork = dispatchPendingPattern(job) || didWork;
+            } else if (job.waitingForRefill()) {
                 didWork = retryRefillRound(job) || didWork;
             } else if (job.roundTicks > emptyOutputRefillTimeoutTicks()) {
                 didWork = startRefillRound(job, job.roundHasOutput ? "output_timeout" : "empty_output") || didWork;
@@ -959,13 +988,89 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             if (job.ticks > MAX_JOB_TICKS) {
                 CreatePackage.LOGGER.warn("[Kinetic Pattern Provider @ {}] timed out waiting for {} x{} from {} at {}",
                         getBlockPos(), job.primaryOutput, job.remaining, job.machineRole, job.machinePos);
-                activeJobs.remove(i--);
-                lastStatusKey = activeJobs.isEmpty() ? "timeout" : "working";
-                didWork = true;
+                job.statusKey = "timeout";
+                didWork = returnPendingDispatches(job) || didWork;
+                if (!job.hasPendingDispatches()) {
+                    activeJobs.remove(i--);
+                    lastStatusKey = activeJobs.isEmpty() ? "timeout" : "working";
+                    didWork = true;
+                }
             }
         }
         if (didWork) {
             saveAndSync();
+        }
+        return didWork;
+    }
+
+    private boolean dispatchPendingPattern(KineticJob job) {
+        if (job.pendingDispatchTicks > 0) {
+            job.pendingDispatchTicks--;
+            return false;
+        }
+        KineticJob.PendingDispatch pending = job.pendingDispatches.get(0);
+        Plan plan = createPlanAt(job.machinePos, job.primaryOutput, pending.outputAmount(),
+                job.patternOutputs, pending.inputs());
+        if (plan == null
+                || !Objects.equals(plan.outputPos(), job.outputPos)
+                || !Objects.equals(plan.machineRole(), job.machineRole)
+                || plan.collectUnexpectedOutputs() != job.collectUnexpectedOutputs) {
+            job.pendingDispatchTicks = PENDING_DISPATCH_RETRY_TICKS;
+            rememberJobStatus(job, "waiting_target_space");
+            return false;
+        }
+        if (!plan.simulate()) {
+            job.pendingDispatchTicks = PENDING_DISPATCH_RETRY_TICKS;
+            rememberJobStatus(job, "waiting_target_space");
+            return false;
+        }
+        if (!plan.execute()) {
+            job.pendingDispatchTicks = PENDING_DISPATCH_RETRY_TICKS;
+            rememberJobStatus(job, "execute_failed");
+            return false;
+        }
+
+        job.pendingDispatches.remove(0);
+        job.pendingDispatchTicks = 0;
+        job.roundsStarted++;
+        job.roundTicks = 0;
+        job.roundHasOutput = false;
+        rememberJobStatus(job, "working");
+        saveAndSync();
+        wakeTicker();
+        return true;
+    }
+
+    private boolean returnPendingDispatches(KineticJob job) {
+        if (job.pendingDispatches.isEmpty()) {
+            return false;
+        }
+        boolean didWork = false;
+        for (int pendingIndex = 0; pendingIndex < job.pendingDispatches.size();) {
+            KineticJob.PendingDispatch pending = job.pendingDispatches.get(pendingIndex);
+            List<GenericStack> remainingInputs = new ArrayList<>();
+            for (GenericStack input : pending.inputs()) {
+                long inserted = logic.getReturnInv().insert(input.what(), input.amount(), Actionable.MODULATE,
+                        actionSource);
+                if (inserted < input.amount()) {
+                    remainingInputs.add(new GenericStack(input.what(), input.amount() - inserted));
+                }
+                didWork |= inserted > 0;
+            }
+            if (remainingInputs.isEmpty()) {
+                job.pendingDispatches.remove(pendingIndex);
+                job.remaining = Math.max(0, job.remaining - pending.outputAmount());
+                job.queuedPatterns = Math.max(1, job.queuedPatterns - 1);
+                didWork = true;
+            } else {
+                job.pendingDispatches.set(pendingIndex,
+                        new KineticJob.PendingDispatch(pending.outputAmount(), remainingInputs));
+                pendingIndex++;
+            }
+        }
+        job.pendingDispatchTicks = 0;
+        if (didWork) {
+            wakeTicker();
         }
         return didWork;
     }
@@ -1428,7 +1533,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         ChatFormatting color = switch (status) {
             case "ready", "completed" -> ChatFormatting.GREEN;
             case "working" -> ChatFormatting.AQUA;
-            case "busy", "waiting_refill_inputs", "refill_target_full" -> ChatFormatting.YELLOW;
+            case "busy", "waiting_refill_inputs", "refill_target_full", "waiting_target_space" -> ChatFormatting.YELLOW;
             default -> ChatFormatting.RED;
         };
         return Component.translatable("tooltip." + CreatePackage.MODID + ".kinetic_pattern_provider.status",
@@ -1656,6 +1761,10 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         private static final String NBT_PATTERN_OUTPUTS = "patternOutputs";
         private static final String NBT_COLLECT_UNEXPECTED_OUTPUTS = "collectUnexpectedOutputs";
         private static final String NBT_DEFINITION = "definition";
+        private static final String NBT_PENDING_DISPATCHES = "pendingDispatches";
+        private static final String NBT_PENDING_OUTPUT = "outputAmount";
+        private static final String NBT_PENDING_INPUTS = "inputs";
+        private static final String NBT_PENDING_DISPATCH_TICKS = "pendingDispatchTicks";
 
         private final AEItemKey primaryOutput;
         private AEItemKey patternDefinition;
@@ -1672,6 +1781,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         private boolean roundHasOutput;
         private int queuedPatterns = 1;
         private String statusKey = "working";
+        private final List<PendingDispatch> pendingDispatches = new ArrayList<>();
+        private int pendingDispatchTicks;
 
         private KineticJob(AEItemKey primaryOutput, AEItemKey patternDefinition, long remaining, BlockPos machinePos,
                 BlockPos outputPos, String machineRole, List<GenericStack> patternOutputs,
@@ -1691,6 +1802,14 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             return "waiting_refill_inputs".equals(statusKey) || "refill_target_full".equals(statusKey);
         }
 
+        private boolean returningPendingDispatches() {
+            return "cancelled".equals(statusKey) || "timeout".equals(statusKey);
+        }
+
+        private boolean hasPendingDispatches() {
+            return !pendingDispatches.isEmpty();
+        }
+
         private CompoundTag write(HolderLookup.Provider registries) {
             CompoundTag tag = new CompoundTag();
             tag.put(NBT_PRIMARY, primaryOutput.toTag(registries));
@@ -1708,6 +1827,17 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             tag.putBoolean(NBT_COLLECT_UNEXPECTED_OUTPUTS, collectUnexpectedOutputs);
             tag.put(NBT_PATTERN_OUTPUTS, writeStackList(registries, patternOutputs));
             tag.put(NBT_REFILL_INPUTS, writeStackList(registries, refillInputs));
+            tag.putInt(NBT_PENDING_DISPATCH_TICKS, pendingDispatchTicks);
+            if (!pendingDispatches.isEmpty()) {
+                net.minecraft.nbt.ListTag pendingTags = new net.minecraft.nbt.ListTag();
+                for (PendingDispatch pending : pendingDispatches) {
+                    CompoundTag pendingTag = new CompoundTag();
+                    pendingTag.putLong(NBT_PENDING_OUTPUT, pending.outputAmount());
+                    pendingTag.put(NBT_PENDING_INPUTS, writeStackList(registries, pending.inputs()));
+                    pendingTags.add(pendingTag);
+                }
+                tag.put(NBT_PENDING_DISPATCHES, pendingTags);
+            }
             return tag;
         }
 
@@ -1738,6 +1868,16 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             job.queuedPatterns = tag.contains("queuedPatterns") ? Math.max(1, tag.getInt("queuedPatterns")) : 1;
             job.roundHasOutput = tag.getBoolean(NBT_ROUND_HAS_OUTPUT);
             job.statusKey = tag.contains(NBT_JOB_STATUS) ? tag.getString(NBT_JOB_STATUS) : "working";
+            job.pendingDispatchTicks = tag.getInt(NBT_PENDING_DISPATCH_TICKS);
+            var pendingTags = tag.getList(NBT_PENDING_DISPATCHES, net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int i = 0; i < pendingTags.size(); i++) {
+                CompoundTag pendingTag = pendingTags.getCompound(i);
+                long outputAmount = pendingTag.getLong(NBT_PENDING_OUTPUT);
+                List<GenericStack> pendingInputs = readStackList(pendingTag, registries, NBT_PENDING_INPUTS);
+                if (outputAmount > 0 && !pendingInputs.isEmpty()) {
+                    job.pendingDispatches.add(new PendingDispatch(outputAmount, pendingInputs));
+                }
+            }
             return job;
         }
 
@@ -1762,6 +1902,12 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             }
             return stacks;
         }
+
+        private record PendingDispatch(long outputAmount, List<GenericStack> inputs) {
+            private PendingDispatch {
+                inputs = List.copyOf(inputs);
+            }
+        }
     }
 
     private record Plan(BlockPos machinePos, BlockPos outputPos, String machineRole, List<SupplyAction> actions,
@@ -1775,7 +1921,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
     }
 
-    private record DispatchTarget(@Nullable KineticJob job, Plan plan) {
+    private record DispatchTarget(@Nullable KineticJob job, Plan plan, boolean allowQueue) {
     }
 
     private interface SupplyAction {
