@@ -16,7 +16,7 @@ dependencies {
     // === Local runtime: core mods this mod depends on at runtime ===
     localRuntime "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     localRuntime "de.mari_023:ae2wtlib:${ae2wtlib_version}"
-    localRuntime("com.simibubi.create:create-1.21.1:${create_version}") {
+    localRuntime("curse.maven:create-328085:7963363") {
         // Prevent game-test crashes pulled in by Create's optional integrations.
         exclude group: "maven.modrinth", module: "journeymap"
         exclude group: "info.journeymap", module: "journeymap-api-neoforge"
@@ -49,6 +49,7 @@ dependencies {
     localRuntime "curse.maven:productivebees-377897:8022994"
     localRuntime "curse.maven:sophisticated-storage-619320:8249877"
     localRuntime "curse.maven:sophisticated-core-618298:8272330"
+    localRuntime "curse.maven:create-more-machines-1478956:8163651"
     localRuntime "curse.maven:re-constructed-wands-1425382:7441810"
     localRuntime "curse.maven:modular-routers-250294:8205099"
     localRuntime "dev.architectury:architectury-neoforge:${architectury_version}"
@@ -71,4 +72,6 @@ dependencies {
     clientLocalRuntime "curse.maven:controlling-250398:${controlling_file}"
     clientLocalRuntime "curse.maven:imblocker-483760:${imblocker_file}"
     clientLocalRuntime "curse.maven:just-enough-characters-250702:${jech_file}"
+    clientLocalRuntime "curse.maven:sodium-394468:8313068"
+    // clientLocalRuntime "curse.maven:sodium-extra-447673:8189182"
 }

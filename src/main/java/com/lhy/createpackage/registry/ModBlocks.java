@@ -24,6 +24,7 @@ public final class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .strength(2.0f, 6.0f)
                     .sound(SoundType.METAL)
+                    .noOcclusion()
                     .requiresCorrectToolForDrops()));
 
     public static final DeferredBlock<PackageDistributorBlock> BASIC_PACKAGE_DISTRIBUTOR = BLOCKS.register(
@@ -32,6 +33,7 @@ public final class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .strength(3.0f, 6.0f)
                     .sound(SoundType.METAL)
+                    .noOcclusion()
                     .requiresCorrectToolForDrops(),
                     BasicPackageDistributorBlockEntity::new));
 
@@ -41,6 +43,7 @@ public final class ModBlocks {
                     .mapColor(MapColor.METAL)
                     .strength(4.0f, 8.0f)
                     .sound(SoundType.METAL)
+                    .noOcclusion()
                     .requiresCorrectToolForDrops(),
                     AdvancedPackageDistributorBlockEntity::new));
 

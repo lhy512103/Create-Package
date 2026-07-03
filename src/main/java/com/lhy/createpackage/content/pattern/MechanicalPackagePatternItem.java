@@ -21,11 +21,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 
-public class MechanicalPackagePatternItem extends EncodedPatternItem<MechanicalPackagePatternDetails> {
+public class MechanicalPackagePatternItem extends EncodedPatternItem<RoutedMechanicalPackagePatternDetails> {
     private static final String KEY_PREFIX = "item." + CreatePackage.MODID + ".mechanical_package_pattern.";
 
     public MechanicalPackagePatternItem(Properties properties,
-            EncodedPatternDecoder<MechanicalPackagePatternDetails> decoder,
+            EncodedPatternDecoder<RoutedMechanicalPackagePatternDetails> decoder,
             @Nullable InvalidPatternTooltipStrategy invalidPatternTooltip) {
         super(properties, decoder, invalidPatternTooltip);
     }
@@ -80,7 +80,7 @@ public class MechanicalPackagePatternItem extends EncodedPatternItem<MechanicalP
                 msg(player, "marked", clicked.getX(), clicked.getY(), clicked.getZ(), updatedRoute.size());
             }
             stack.set(ModComponents.MECHANICAL_PACKAGE_PATTERN.get(),
-                    new MechanicalPackagePatternData(data.encodedPattern(), updatedRoute));
+                    new MechanicalPackagePatternData(data.encodedPattern(), updatedRoute, data.encoder()));
         }
         return InteractionResult.sidedSuccess(level.isClientSide());
     }
@@ -91,6 +91,10 @@ public class MechanicalPackagePatternItem extends EncodedPatternItem<MechanicalP
         super.appendHoverText(stack, context, lines, flags);
         MechanicalPackagePatternData data = MechanicalPackagePatternData.from(stack);
         if (data != null) {
+            data.encoder().ifPresent(encoder -> lines.add(Component.translatable(
+                            "tooltip.createpackage.mechanical_package_pattern.encoded_by",
+                            encoder.name().isBlank() ? encoder.uuid().toString() : encoder.name())
+                    .withStyle(ChatFormatting.GRAY)));
             MachineRouteTooltip.addRouteLines(lines, context.level(), data.route(), flags.hasShiftDown());
             lines.add(Component.translatable("tooltip.createpackage.route.held_highlight")
                     .withStyle(ChatFormatting.DARK_GRAY));

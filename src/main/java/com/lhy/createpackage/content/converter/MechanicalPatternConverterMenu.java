@@ -2,7 +2,6 @@ package com.lhy.createpackage.content.converter;
 
 import java.util.List;
 
-import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.pattern.MachineRouteData;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternData;
 import com.lhy.createpackage.registry.ModComponents;
@@ -12,7 +11,6 @@ import com.lhy.createpackage.registry.ModMenuTypes;
 import appeng.api.crafting.PatternDetailsHelper;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -23,10 +21,12 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
-    public static final int INPUT_SLOT = 0;
-    public static final int OUTPUT_SLOT = 1;
-    private static final int INTERNAL_SLOT_COUNT = 2;
-    private static final int BUTTON_CONVERT = 0;
+    public static final int INPUT_SLOT_START = 0;
+    public static final int INPUT_SLOT_COUNT = 9;
+    public static final int OUTPUT_SLOT_START = INPUT_SLOT_START + INPUT_SLOT_COUNT;
+    public static final int OUTPUT_SLOT_COUNT = 9;
+    public static final int INTERNAL_SLOT_COUNT = INPUT_SLOT_COUNT + OUTPUT_SLOT_COUNT;
+    public static final int BUTTON_CONVERT = 0;
 
     private final InteractionHand hand;
     private final SimpleContainer container = new SimpleContainer(INTERNAL_SLOT_COUNT);
@@ -42,17 +42,21 @@ public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
         super(type, windowId);
         this.hand = hand;
 
-        addSlot(new InputSlot(container, INPUT_SLOT, 44, 35));
-        addSlot(new OutputSlot(container, OUTPUT_SLOT, 116, 35));
+        for (int col = 0; col < INPUT_SLOT_COUNT; col++) {
+            addSlot(new InputSlot(container, INPUT_SLOT_START + col, 8 + col * 18, 45));
+        }
+        for (int col = 0; col < OUTPUT_SLOT_COUNT; col++) {
+            addSlot(new OutputSlot(container, OUTPUT_SLOT_START + col, 8 + col * 18, 97));
+        }
 
-        int invStartY = 84;
+        int invStartY = 131;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 addSlot(new Slot(inventory, col + row * 9 + 9, 8 + col * 18, invStartY + row * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(inventory, col, 8 + col * 18, invStartY + 58));
+            addSlot(new Slot(inventory, col, 8 + col * 18, 189));
         }
     }
 
@@ -74,32 +78,52 @@ public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
     }
 
     private void convert(Player player) {
-        ItemStack input = container.getItem(INPUT_SLOT);
-        if (input.isEmpty() || !isConvertiblePattern(input) || !container.getItem(OUTPUT_SLOT).isEmpty()) {
+        if (!hasConvertibleSlot()) {
             return;
         }
 
         List<net.minecraft.core.BlockPos> route = routeFromConverter(player);
-        if (route.isEmpty()) {
-            player.displayClientMessage(Component.translatable(
-                    "gui." + CreatePackage.MODID + ".mechanical_pattern_converter.no_route"), true);
-            return;
-        }
 
-        ItemStack originalPattern = originalPattern(input);
-        if (originalPattern.isEmpty()) {
-            return;
-        }
-        ItemStack result = new ItemStack(ModItems.MECHANICAL_PACKAGE_PATTERN.get());
-        result.set(ModComponents.MECHANICAL_PACKAGE_PATTERN.get(),
-                new MechanicalPackagePatternData(originalPattern, route));
+        boolean converted = false;
+        for (int i = 0; i < INPUT_SLOT_COUNT; i++) {
+            int inputSlot = INPUT_SLOT_START + i;
+            int outputSlot = OUTPUT_SLOT_START + i;
+            ItemStack input = container.getItem(inputSlot);
+            if (input.isEmpty() || !isConvertiblePattern(input) || !container.getItem(outputSlot).isEmpty()) {
+                continue;
+            }
 
-        input.shrink(1);
-        if (input.isEmpty()) {
-            container.setItem(INPUT_SLOT, ItemStack.EMPTY);
+            ItemStack originalPattern = originalPattern(input);
+            if (originalPattern.isEmpty()) {
+                continue;
+            }
+            ItemStack result = new ItemStack(ModItems.MECHANICAL_PACKAGE_PATTERN.get());
+            result.set(ModComponents.MECHANICAL_PACKAGE_PATTERN.get(),
+                    new MechanicalPackagePatternData(originalPattern, route,
+                            java.util.Optional.of(MechanicalPackagePatternData.PatternEncoder.of(player))));
+
+            input.shrink(1);
+            if (input.isEmpty()) {
+                container.setItem(inputSlot, ItemStack.EMPTY);
+            }
+            container.setItem(outputSlot, result);
+            converted = true;
         }
-        container.setItem(OUTPUT_SLOT, result);
-        broadcastChanges();
+        if (converted) {
+            broadcastChanges();
+        }
+    }
+
+    private boolean hasConvertibleSlot() {
+        for (int i = 0; i < INPUT_SLOT_COUNT; i++) {
+            ItemStack input = container.getItem(INPUT_SLOT_START + i);
+            if (!input.isEmpty()
+                    && isConvertiblePattern(input)
+                    && container.getItem(OUTPUT_SLOT_START + i).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private List<net.minecraft.core.BlockPos> routeFromConverter(Player player) {
@@ -132,16 +156,16 @@ public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
 
         ItemStack stack = slot.getItem();
         ItemStack original = stack.copy();
-        if (index == OUTPUT_SLOT) {
+        if (isOutputSlot(index)) {
             if (!moveItemStackTo(stack, INTERNAL_SLOT_COUNT, slots.size(), true)) {
                 return ItemStack.EMPTY;
             }
-        } else if (index == INPUT_SLOT) {
+        } else if (isInputSlot(index)) {
             if (!moveItemStackTo(stack, INTERNAL_SLOT_COUNT, slots.size(), true)) {
                 return ItemStack.EMPTY;
             }
         } else if (isConvertiblePattern(stack)) {
-            if (!moveItemStackTo(stack, INPUT_SLOT, INPUT_SLOT + 1, false)) {
+            if (!moveItemStackTo(stack, INPUT_SLOT_START, OUTPUT_SLOT_START, false)) {
                 return ItemStack.EMPTY;
             }
         } else {
@@ -158,6 +182,14 @@ public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
         }
         slot.onTake(player, stack);
         return original;
+    }
+
+    private static boolean isInputSlot(int index) {
+        return index >= INPUT_SLOT_START && index < OUTPUT_SLOT_START;
+    }
+
+    private static boolean isOutputSlot(int index) {
+        return index >= OUTPUT_SLOT_START && index < INTERNAL_SLOT_COUNT;
     }
 
     @Override
@@ -180,7 +212,7 @@ public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
 
         @Override
         public int getMaxStackSize() {
-            return 64;
+            return 1;
         }
     }
 

@@ -56,6 +56,8 @@
 
   "gui.createpackage.mechanical_pattern_converter": "Mechanical Pattern Converter",
   "gui.createpackage.mechanical_pattern_converter.convert": "Convert",
+  "gui.createpackage.mechanical_pattern_converter.input_patterns": "Input Patterns",
+  "gui.createpackage.mechanical_pattern_converter.output_patterns": "Output Patterns",
   "gui.createpackage.mechanical_pattern_converter.route_hint": "Conversion writes the converter's currently marked machine route.",
   "gui.createpackage.mechanical_pattern_converter.no_route": "No machine-link route available",
   "gui.createpackage.smart_doubling": "Smart Doubling",
@@ -66,6 +68,7 @@
   "tooltip.createpackage.route.hold_shift": "Hold Shift to show the machine route",
   "tooltip.createpackage.route.entry": "#%s %s @ [%s, %s, %s]",
   "tooltip.createpackage.route.more": "%s more link(s) hidden",
+  "tooltip.createpackage.mechanical_package_pattern.encoded_by": "Encoded by %s",
   "tooltip.createpackage.route.held_highlight": "Highlights the saved machine route while held",
   "tooltip.createpackage.route.held_highlight_marked": "Highlights the currently marked machine route while held",
 
@@ -92,6 +95,7 @@
   "tooltip.createpackage.package_distributor.status.timeout": "Timed out waiting for output",
   "tooltip.createpackage.package_distributor.status.waiting_refill_inputs": "Waiting for refill inputs",
   "tooltip.createpackage.package_distributor.status.refill_target_full": "Refill target cannot accept inputs",
+  "tooltip.createpackage.package_distributor.status.waiting_target_space": "Waiting for target to accept queued inputs",
   "tooltip.createpackage.package_distributor.status.refill_unavailable": "This job cannot be refilled",
   "tooltip.createpackage.package_distributor.status.waiting_reflow_input": "Waiting for input to accept transitional item",
   "tooltip.createpackage.package_distributor.status.invalid_mechanical_pattern": "Mechanical package pattern required",
@@ -99,6 +103,7 @@
   "tooltip.createpackage.package_distributor.ae_node_missing": "AE: node not created yet",
   "tooltip.createpackage.package_distributor.job": "Job: %s, primary remaining %s, round %s",
   "tooltip.createpackage.package_distributor.job_entry": "#%s %s, remaining %s, round %s, [%s,%s,%s] -> [%s,%s,%s]",
+  "tooltip.createpackage.package_distributor.missing_refill_input": "Missing refill input: %s x %s",
   "tooltip.createpackage.package_distributor.parallel_cards": "Parallel cards: %s/%s, max lines %s",
   "tooltip.createpackage.package_distributor.parallel_jobs": "Active lines: %s/%s",
   "tooltip.createpackage.package_distributor.failure_route": "Last failed route: pattern slot #%s, [%s,%s,%s] -> [%s,%s,%s]",
@@ -117,6 +122,9 @@
   "tooltip.createpackage.package_distributor.unloaded": "Unloaded",
   "tooltip.createpackage.package_distributor.yes": "yes",
   "tooltip.createpackage.package_distributor.no": "no",
+  "message.createpackage.prefix": "[Create Package]",
+  "message.createpackage.package_distributor.missing_refill_input": "%s %s refill %s is missing %s",
+  "message.createpackage.package_distributor.teleport_to_distributor": "Teleport to this Package Distributor",
 
   "tooltip.createpackage.kinetic_pattern_provider.header": "%s Info",
   "tooltip.createpackage.kinetic_pattern_provider.status": "Status: %s",
@@ -194,6 +202,12 @@
   "createpackage.configuration.title": "Create Package Configs",
   "createpackage.configuration.section.createpackage.common.toml": "Create Package Configs",
   "createpackage.configuration.section.createpackage.common.toml.title": "Create Package Configs",
+  "createpackage.configuration.section.createpackage.server.toml": "Create Package Server Configs",
+  "createpackage.configuration.section.createpackage.server.toml.title": "Create Package Server Configs",
   "createpackage.configuration.enableDebugLogging": "Enable Debug Logging",
-  "createpackage.configuration.emptyOutputRefillTimeoutTicks": "Empty Output Refill Timeout (ticks)"
+  "createpackage.configuration.enableDebugLogging.tooltip": "Logs detailed package distributor and kinetic pattern provider activity for testing.",
+  "createpackage.configuration.emptyOutputRefillTimeoutTicks": "Empty Output Refill Timeout (ticks)",
+  "createpackage.configuration.emptyOutputRefillTimeoutTicks.tooltip": "How long a package distributor waits after starting a sequenced-assembly round before treating no output as an empty probability result and attempting a refill.",
+  "createpackage.configuration.missingRefillNoticeIntervalSeconds": "Missing Refill Notice Interval (seconds)",
+  "createpackage.configuration.missingRefillNoticeIntervalSeconds.tooltip": "How often package distributors resend chat warnings while a probabilistic refill is missing materials from AE storage."
 }

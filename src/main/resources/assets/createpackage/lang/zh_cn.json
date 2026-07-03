@@ -56,6 +56,8 @@
 
   "gui.createpackage.mechanical_pattern_converter": "机械样板转换器",
   "gui.createpackage.mechanical_pattern_converter.convert": "转换",
+  "gui.createpackage.mechanical_pattern_converter.input_patterns": "输入样板",
+  "gui.createpackage.mechanical_pattern_converter.output_patterns": "输出样板",
   "gui.createpackage.mechanical_pattern_converter.route_hint": "转换时写入转换器当前标记的机器路线。",
   "gui.createpackage.mechanical_pattern_converter.no_route": "没有可写入的机器链接路线",
   "gui.createpackage.smart_doubling": "智能翻倍",
@@ -66,6 +68,7 @@
   "tooltip.createpackage.route.hold_shift": "按住 Shift 显示机器路线",
   "tooltip.createpackage.route.entry": "#%s %s @ [%s, %s, %s]",
   "tooltip.createpackage.route.more": "还有 %s 个链接未显示",
+  "tooltip.createpackage.mechanical_package_pattern.encoded_by": "由 %s 编码",
   "tooltip.createpackage.route.held_highlight": "手持时高亮保存的机器路线",
   "tooltip.createpackage.route.held_highlight_marked": "手持时高亮当前标记的机器路线",
 
@@ -92,6 +95,7 @@
   "tooltip.createpackage.package_distributor.status.timeout": "等待产物超时",
   "tooltip.createpackage.package_distributor.status.waiting_refill_inputs": "等待补刷材料",
   "tooltip.createpackage.package_distributor.status.refill_target_full": "补刷目标无法接收",
+  "tooltip.createpackage.package_distributor.status.waiting_target_space": "等待目标接收剩余投料",
   "tooltip.createpackage.package_distributor.status.refill_unavailable": "该作业无法补刷",
   "tooltip.createpackage.package_distributor.status.waiting_reflow_input": "等待起点接收中间产物",
   "tooltip.createpackage.package_distributor.status.invalid_mechanical_pattern": "需要机械封包样板",
@@ -99,6 +103,7 @@
   "tooltip.createpackage.package_distributor.ae_node_missing": "AE：节点尚未创建",
   "tooltip.createpackage.package_distributor.job": "作业：%s，剩余主产物 %s，第 %s 轮",
   "tooltip.createpackage.package_distributor.job_entry": "#%s %s，剩余 %s，第 %s 轮，[%s,%s,%s] -> [%s,%s,%s]",
+  "tooltip.createpackage.package_distributor.missing_refill_input": "缺少补刷材料：%s x %s",
   "tooltip.createpackage.package_distributor.parallel_cards": "并行卡：%s/%s，最大装配线 %s",
   "tooltip.createpackage.package_distributor.parallel_jobs": "活动装配线：%s/%s",
   "tooltip.createpackage.package_distributor.failure_route": "最近失败路线：样板槽 #%s，[%s,%s,%s] -> [%s,%s,%s]",
@@ -117,6 +122,9 @@
   "tooltip.createpackage.package_distributor.unloaded": "未加载",
   "tooltip.createpackage.package_distributor.yes": "是",
   "tooltip.createpackage.package_distributor.no": "否",
+  "message.createpackage.prefix": "【机械动力：封包】",
+  "message.createpackage.package_distributor.missing_refill_input": "%s %s 补刷 %s 缺少 %s",
+  "message.createpackage.package_distributor.teleport_to_distributor": "传送到这个封包分发器",
 
   "tooltip.createpackage.kinetic_pattern_provider.header": "%s信息",
   "tooltip.createpackage.kinetic_pattern_provider.status": "状态：%s",
@@ -194,6 +202,12 @@
   "createpackage.configuration.title": "机械动力封包配置",
   "createpackage.configuration.section.createpackage.common.toml": "机械动力封包配置",
   "createpackage.configuration.section.createpackage.common.toml.title": "机械动力封包配置",
+  "createpackage.configuration.section.createpackage.server.toml": "机械动力封包服务端配置",
+  "createpackage.configuration.section.createpackage.server.toml.title": "机械动力封包服务端配置",
   "createpackage.configuration.enableDebugLogging": "启用调试日志",
-  "createpackage.configuration.emptyOutputRefillTimeoutTicks": "空产出补刷等待时间(tick)"
+  "createpackage.configuration.enableDebugLogging.tooltip": "记录封包分发器和动力样板供应器的详细调试信息，主要用于测试问题。",
+  "createpackage.configuration.emptyOutputRefillTimeoutTicks": "空产出补刷等待时间(tick)",
+  "createpackage.configuration.emptyOutputRefillTimeoutTicks.tooltip": "封包分发器启动一轮序列组装后，等待多久仍没有产物时，将其视为空概率结果并尝试补刷。",
+  "createpackage.configuration.missingRefillNoticeIntervalSeconds": "补刷缺料提示间隔(秒)",
+  "createpackage.configuration.missingRefillNoticeIntervalSeconds.tooltip": "概率补刷缺少 AE 存储材料时，封包分发器重复发送聊天栏提示的间隔。"
 }

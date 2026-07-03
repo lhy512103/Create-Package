@@ -1,5 +1,57 @@
 # Changelog
 
+## 2026-07-03
+
+- Reworked the Mechanical Pattern Converter screen to use AE2's ME Pattern Provider main-panel layout, with nine input pattern slots, nine matching output slots, AE2 pattern-slot placeholder icons on both rows, and an AE2 blocking-mode-off styled conversion button between the rows.
+- Changed the Mechanical Pattern Converter to batch-convert up to nine encoded patterns at once. Each input slot writes to the matching output slot, preserves existing output slots, consumes one input pattern, and keeps support for rewriting existing Mechanical Package Patterns while preserving their original AE2 encoded pattern.
+- Kept Mechanical Pattern Converter conversions based on the converter item's currently marked machine route, so marked route positions can be written directly into newly converted Mechanical Package Patterns.
+- Added the Mechanical Pattern Converter shapeless recipe using a Create Precision Mechanism and an AE2 Blank Pattern.
+- Rewrote the README as formal bilingual documentation, separated the mod overview from item mechanics, merged the previous NOTICE content into the README, and kept the model/texture/JSON acknowledgement in both English and Chinese sections.
+- Added local runtime coverage for CreateMoreMachines, Re-constructed Wands, Sodium, and the CurseForge Create runtime used for compatibility testing; bumped the development mod version to `0.0.1-beta`.
+- Added lightweight internal pending dispatch support and temporary debug logging around Kinetic Pattern Provider smart batching, so active jobs can accept queued same-pattern pushes without mixins, reflection, or world scanning.
+- Added CreateMoreMachines compatibility for the Kinetic Pattern Provider by recognizing its tiered deployers, spouts, mechanical presses, mechanical mixers, saws, and basins by registry id suffix while continuing to use standard item/fluid capabilities.
+- Improved Kinetic Pattern Provider smart batching for high-capacity targets: the batch limit is now derived from the target item/fluid handler capacity instead of being capped at 64, allowing CreateMoreMachines large-capacity machines to receive larger batches.
+- Fixed Kinetic Pattern Provider probabilistic crushing/milling jobs so actual recovered outputs are returned to AE storage and a completed probabilistic run no longer waits forever for a declared chance primary output that did not roll.
+- Improved Kinetic Pattern Provider output collection for large-capacity handlers by extracting the visible slot amount instead of only checking 64 items per slot.
+- Aligned the Mechanical Pattern Converter slot hover highlight with AE2's pattern-provider screens, changed its labels to Input Patterns and Output Patterns, and replaced the conversion control with a normal/hover-only AE2 toolbar button using a clockwise-rotated arrow icon.
+- Allowed the Mechanical Pattern Converter to create Mechanical Package Patterns even when no route is marked, so processing patterns can be packaged first and routed later.
+- Kept route-less Mechanical Package Patterns invalid for AE2 autocrafting registration until at least one machine route position is marked.
+- Allowed valid Mechanical Package processing patterns to be edited in AE2's Pattern Encoding Terminal while preserving their saved machine route when the pattern is re-encoded.
+- Added a lightweight per-job queued input buffer to Package Distributors, allowing sequenced assembly recipes whose looped item/fluid requirements exceed the current target capacity to keep the remaining inputs inside the distributor and feed them as the target frees space.
+- Changed Package Distributor refill rounds to use the same queued-input behavior, so probabilistic or repeated sequenced assembly refills no longer require a spout/deployer/input depot to accept the full loop batch at once.
+- Mechanical Package Patterns now record the player who converted or re-encoded them, allowing Package Distributor refill-input warnings to target that online player when their pattern needs extra materials.
+- Mechanical Package Pattern tooltips now show the player who encoded them when that metadata is available.
+- Added missing-refill-input diagnostics for Package Distributors: goggles/Jade show the missing stack and amount, and the server sends a configurable throttled chat warning to the encoded player or nearby players when probabilistic refills cannot pull enough materials from AE storage. Encoded players also receive one warning shortly after logging in if one of their active patterns is still missing refill inputs.
+- Improved Package Distributor missing-refill chat warnings with a colored Create Package prefix, orange refill pattern names, yellow missing-material text, and clickable distributor coordinates for players who have teleport command permission.
+- Added missing NeoForge configuration-screen translations and Chinese tooltips for the server config entries, including the missing-refill warning interval option.
+- Changed Package Distributor blocks, including Basic and Advanced variants, to use a two-block-tall non-occluding shape so their model behaves as an incomplete/tall block in selection and collision.
+
+## 2026-07-03 中文
+
+- 将机械样板转换器界面重做为 AE2 ME 样板供应器的主面板布局：上方九格输入样板槽、下方九格对应输出槽，两行槽位都绘制 AE2 样板槽底图，并在两行中间放置 AE2 阻挡模式关闭样式的转换按钮。
+- 机械样板转换器现在可一次批量转换最多九张已编码样板。每个输入槽只写入对应输出槽，不覆盖已有输出，每次消耗一张输入样板，并继续支持把已有机械封包样板重新写入路线且保留原 AE2 已编码样板。
+- 机械样板转换器转换时继续读取转换器物品当前标记的机器路线，因此已标记的位置可直接写入新生成的机械封包样板。
+- 新增机械样板转换器无序合成配方：Create 精密构件加 AE2 空白样板。
+- 将 README 重写为正式中英双语文档，拆分模组介绍和各物品机制说明，把原 NOTICE 内容合并进 README，并在英文和中文部分分别保留模型、材质与 JSON 致谢。
+- 为兼容测试补充 CreateMoreMachines、Re-constructed Wands、Sodium，以及 CurseForge Create 运行时依赖；开发版本号改为 `0.0.1-beta`。
+- 为动力样板供应器智能批量加入轻量内部待投料队列和临时调试日志，同一活动作业可继续接收相同样板推送，仍不使用 mixin、反射或世界扫描。
+- 为动力样板供应器增加 CreateMoreMachines 兼容：按注册 ID 后缀识别其分级机械手、注液器、动力冲压机、动力搅拌器、动力锯和工作盆，并继续通过标准物品/流体 capability 交互。
+- 改进动力样板供应器对高容量目标的智能倍增：批量上限改为根据目标物品/流体 handler 容量计算，不再固定限制为 64，使 CreateMoreMachines 大容量机器可接收更大的批次。
+- 修复动力样板供应器处理粉碎轮/石磨概率产物时的卡单问题：实际回收的产物会返还 AE，概率主产物未出现时不再无限等待样板声明数量。
+- 改进动力样板供应器大容量输出回收：按槽内实际可见数量抽取，不再每槽只检查 64 个物品。
+- 将机械样板转换器的槽位悬停高亮对齐 AE2 样板供应器界面，把标签改为“输入样板”和“输出样板”，并将转换控件替换为仅普通/悬停两态的 AE2 工具栏按钮，图标改为顺时针旋转的箭头。
+- 允许机械样板转换器在未标记路线时也生成机械封包样板，处理样板可以先封包，之后再写入路线。
+- 未写入路线的机械封包样板会继续被 AE2 自动合成注册视为无效样板，直到至少标记一个机器路线位置。
+- 有效的机械封包处理样板现在可放入 AE2 样板编码终端重新编辑，重新编码后会保留原先保存的机器路线位置。
+- 为封包分发器加入轻量的按作业待投料缓存；序列组装循环配方的物品/流体总需求超过目标机器当前容量时，剩余材料会暂存在分发器作业内，并在目标腾出空间后继续投料。
+- 封包分发器补刷轮次也改用同一套待投料逻辑，概率产物或重复序列组装补刷时不再要求注液器、机械手或起点料盘一次接收完整循环批量。
+- 机械封包样板现在会记录转换或重新编码它的玩家；封包分发器补刷缺料时会优先把提示发送给该在线玩家。
+- 机械封包样板 tooltip 现在会在存在编码者信息时显示“由 XX 编码”。
+- 为封包分发器加入补刷缺料诊断：护目镜/Jade 会显示缺少的材料和数量；概率补刷无法从 AE 存储抽取足够材料时，服务端会按可配置间隔向编码玩家或附近玩家发送聊天栏提示。编码玩家进服后，如果仍有自己的活动样板缺少补刷材料，也会收到一次提示。
+- 改进封包分发器补刷缺料聊天提示：加入绿色“【机械动力：封包】”前缀，补刷样板名显示为橙色，缺失材料段显示为黄色，并在玩家拥有传送命令权限时让分发器坐标可点击传送。
+- 补齐 NeoForge 配置界面的服务端配置翻译和中文 tooltip，包括补刷缺料提示间隔配置项，避免界面显示键名或回退到英文注释。
+- 封包分发器、基础封包分发器和高级封包分发器改为两格高的非遮挡方块外形，使选择框和碰撞按不完整高方块处理。
+
 ## 2026-07-01
 
 - Added Re-constructed Wands and Modular Routers 8205099 as local runtime dependencies for development and in-game testing.

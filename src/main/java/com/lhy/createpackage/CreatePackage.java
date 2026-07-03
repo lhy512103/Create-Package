@@ -10,6 +10,8 @@ import com.lhy.createpackage.registry.ModCreativeTabs;
 import com.lhy.createpackage.registry.ModItems;
 import com.lhy.createpackage.registry.ModMenuTypes;
 import com.lhy.createpackage.registry.ModSounds;
+import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
+import com.lhy.createpackage.integration.ae2.MechanicalPackagePatternEncodingCompat;
 import com.mojang.logging.LogUtils;
 
 import net.neoforged.bus.api.IEventBus;
@@ -18,6 +20,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.common.NeoForge;
 
 import appeng.api.upgrades.Upgrades;
 import appeng.blockentity.AEBaseBlockEntity;
@@ -49,9 +52,12 @@ public class CreatePackage {
 
         // Register AE2 capabilities for our block entities.
         modEventBus.addListener(ModCapabilities::register);
+        NeoForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onPlayerTick);
+        NeoForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onContainerClose);
+        NeoForge.EVENT_BUS.addListener(PackageDistributorBlockEntity::onPlayerLoggedIn);
 
-        // Register the common config.
-        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        // Register server-side behavior config.
+        modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

@@ -3,7 +3,10 @@ package com.lhy.createpackage.content.distributor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -13,6 +16,8 @@ import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 
 import com.lhy.createpackage.Config;
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.content.pattern.MechanicalPackagePatternData;
+import com.lhy.createpackage.content.pattern.RoutedMechanicalPackagePatternDetails;
 import com.lhy.createpackage.content.recipe.AssemblyPlan;
 import com.lhy.createpackage.content.recipe.AssemblyRecipeMatcher;
 import com.lhy.createpackage.registry.ModBlockEntities;
@@ -28,8 +33,13 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.Item;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -38,6 +48,7 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
@@ -50,6 +61,7 @@ import appeng.api.networking.security.IActionHost;
 import appeng.api.networking.ticking.IGridTickable;
 import appeng.api.networking.ticking.TickRateModulation;
 import appeng.api.networking.ticking.TickingRequest;
+import appeng.api.stacks.AmountFormat;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
@@ -80,6 +92,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     private static final int ROUND_OUTPUT_TIMEOUT_TICKS = 20 * 60;
     private static final int REFILL_RETRY_TICKS = 20 * 5;
     private static final int MAX_TOOLTIP_LINKS = 12;
+    private static final int MISSING_REFILL_NOTICE_RADIUS = 64;
+    private static final Map<UUID, Long> ENCODER_LOGIN_NOTICE_GENERATIONS = new ConcurrentHashMap<>();
 
     /**
      * Ordered list of linked Create machines (depot / deployers / spouts), in the physical sequence
@@ -101,6 +115,12 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     public PackageDistributorBlockEntity(BlockPos pos, BlockState blockState) {
         this(ModBlockEntities.PACKAGE_DISTRIBUTOR.get(), ModItems.PACKAGE_DISTRIBUTOR.get(),
                 "block." + CreatePackage.MODID + ".package_distributor", pos, blockState, true);
+    }
+
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            ENCODER_LOGIN_NOTICE_GENERATIONS.merge(player.getUUID(), 1L, Long::sum);
+        }
     }
 
     protected PackageDistributorBlockEntity(BlockEntityType<?> type, Item visualItem, String descriptionId,
@@ -179,6 +199,30 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                     job.outputPos.getX(), job.outputPos.getY(), job.outputPos.getZ()));
         }
         return lines;
+    }
+
+    public List<Component> getMissingRefillLines() {
+        if (activeJobs.isEmpty()) {
+            return List.of();
+        }
+        List<Component> lines = new ArrayList<>();
+        for (DistributionJob job : activeJobs) {
+            if (job.missingRefillInput != null) {
+                lines.add(missingRefillLine(job.missingRefillInput));
+            }
+        }
+        return lines;
+    }
+
+    private static Component missingRefillLine(GenericStack missing) {
+        return Component.translatable("tooltip." + CreatePackage.MODID
+                        + ".package_distributor.missing_refill_input",
+                stackAmount(missing), missing.what().getDisplayName())
+                .withStyle(ChatFormatting.YELLOW);
+    }
+
+    private static Component stackAmount(GenericStack stack) {
+        return Component.literal(stack.what().formatAmount(stack.amount(), AmountFormat.FULL));
     }
 
     public int getMaxActiveJobs() {
@@ -330,6 +374,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             data.writeBoolean(job.roundHasOutput);
             data.writeBoolean(job.awaitingFinalOutput);
             data.writeUtf(job.statusKey);
+            data.writeBoolean(job.missingRefillInput != null);
+            if (job.missingRefillInput != null) {
+                GenericStack.writeBuffer(job.missingRefillInput, data);
+            }
         }
     }
 
@@ -384,13 +432,16 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 route.add(data.readBlockPos());
             }
             DistributionJob streamedJob = new DistributionJob(recipeId, primaryOutput, primaryRemaining, inputPos, outputPos,
-                    transitionalItem, sequenceLength, loops, List.of(), route);
+                    transitionalItem, sequenceLength, loops, List.of(), List.of(), null, route);
             streamedJob.ticks = data.readVarInt();
             streamedJob.roundTicks = data.readVarInt();
             streamedJob.roundsStarted = data.readVarLong();
             streamedJob.roundHasOutput = data.readBoolean();
             streamedJob.awaitingFinalOutput = data.readBoolean();
             streamedJob.statusKey = data.readUtf();
+            if (data.readBoolean()) {
+                streamedJob.missingRefillInput = GenericStack.readBuffer(data);
+            }
             streamedJobs.add(streamedJob);
         }
         if (!sameJobs(activeJobs, streamedJobs)) {
@@ -459,7 +510,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         DistributionJob job = new DistributionJob(context.recipeId(), context.primaryOutputKey(),
                 context.primaryOutputAmount(), context.inputPos(), context.outputPos(), context.transitionalItemKey(),
-                context.sequenceLength(), context.loops(), context.refillInputs(), route);
+                context.sequenceLength(), context.loops(), context.refillInputs(), context.pendingSupplies(),
+                patternEncoder(patternDetails), route);
         job.roundsStarted = 1;
         activeJobs.add(job);
         consumeInputs(inputs);
@@ -471,6 +523,14 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 getBlockPos(), context.recipeId(), context.primaryOutputKey(), context.primaryOutputAmount(),
                 context.outputPos());
         return true;
+    }
+
+    @Nullable
+    private static MechanicalPackagePatternData.PatternEncoder patternEncoder(IPatternDetails patternDetails) {
+        if (patternDetails instanceof RoutedMechanicalPackagePatternDetails routed) {
+            return routed.encoder().orElse(null);
+        }
+        return null;
     }
 
     @Override
@@ -543,8 +603,12 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         var returnActions = new ArrayList<SupplyAction>();
         var actions = new ArrayList<SupplyAction>();
+        var pendingSupplies = new ArrayList<PendingSupply>();
         var refillInputs = new ArrayList<GenericStack>();
-        actions.add(new ItemSupplyAction(inputPos, inputStack));
+        if (!scheduleItemSupply(inputPos, inputStack, actions, pendingSupplies)) {
+            rememberStatus("simulate_failed");
+            return null;
+        }
         addRefillInput(refillInputs, inputStack);
 
         var deployers = machines.withRole(LinkedMachines.Role.DEPLOYER);
@@ -572,7 +636,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                                     supplied = true;
                                 }
                             } else {
-                                actions.add(new ItemSupplyAction(deployer, held));
+                                if (!scheduleItemSupply(deployer, held, actions, pendingSupplies)) {
+                                    rememberStatus("simulate_failed");
+                                    return null;
+                                }
                                 supplied = true;
                             }
                             if (!supplied) {
@@ -595,7 +662,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                                 rememberStatus("missing_deployer_item");
                                 return null;
                             }
-                            actions.add(new ItemSupplyAction(deployer, held));
+                            if (!scheduleItemSupply(deployer, held, actions, pendingSupplies)) {
+                                rememberStatus("simulate_failed");
+                                return null;
+                            }
                         }
                         ItemStack refill = exampleItemStack(step.heldItem(), amount);
                         if (refill.isEmpty()) {
@@ -626,7 +696,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                             rememberStatus("missing_spout_fluid");
                             return null;
                         }
-                        actions.add(new FluidSupplyAction(spout, fluid));
+                        if (!scheduleFluidSupply(spout, fluid, actions, pendingSupplies)) {
+                            rememberStatus("simulate_failed");
+                            return null;
+                        }
                     }
                     FluidStack refill = exampleFluidStack(step.fluid(), amount);
                     if (refill.isEmpty()) {
@@ -652,7 +725,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         allActions.addAll(returnActions);
         allActions.addAll(actions);
         return new PlanContext(match.id(), primaryOutputKey, primary.amount(), inputPos, outputPos,
-                transitionalItemKey, plan.steps().size(), plan.loops(), allActions, refillInputs);
+                transitionalItemKey, plan.steps().size(), plan.loops(), allActions, pendingSupplies, refillInputs);
     }
 
     protected final boolean tickDistributorJob() {
@@ -666,6 +739,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             DistributionJob job = activeJobs.get(i);
             didWork = tickJob(job) || didWork;
             if (job.primaryRemaining <= 0) {
+                returnPendingSupplies(job);
                 CreatePackage.LOGGER.info("[Distributor @ {}] completed recipe {}", getBlockPos(), job.recipeId);
                 activeJobs.remove(i--);
                 completed = true;
@@ -684,13 +758,17 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         job.roundTicks++;
         boolean waitingForRefill = job.waitingForRefill();
         boolean waitingForReflow = job.waitingForReflow();
-        boolean didWork = collectOutput(job);
+        boolean waitingForTargetSpace = job.waitingForTargetSpace();
+        boolean didWork = supplyPending(job);
+        didWork = collectOutput(job) || didWork;
+        notifyEncoderLoginIfMissingRefillInput(job);
         if (job.primaryRemaining <= 0) {
             return true;
         }
         if (waitingForRefill) {
             didWork = retryRefillRound(job) || didWork;
-        } else if (!waitingForReflow && job.awaitingFinalOutput && !job.roundHasOutput
+        } else if (!waitingForReflow && !waitingForTargetSpace && job.pendingSupplies.isEmpty()
+                && job.awaitingFinalOutput && !job.roundHasOutput
                 && job.roundTicks > emptyOutputRefillTimeoutTicks()) {
             CreatePackage.LOGGER.warn("[Distributor @ {}] no output appeared for recipe {} after {} ticks; treating "
                     + "this round as an empty probability result", getBlockPos(), job.recipeId,
@@ -706,6 +784,70 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             saveAndSync();
         }
         return didWork;
+    }
+
+    private boolean supplyPending(DistributionJob job) {
+        if (job.pendingSupplies.isEmpty()) {
+            if (job.waitingForTargetSpace()) {
+                rememberJobStatus(job, "working");
+            }
+            return false;
+        }
+
+        boolean didWork = false;
+        boolean blocked = false;
+        for (int i = 0; i < job.pendingSupplies.size(); i++) {
+            PendingSupply supply = job.pendingSupplies.get(i);
+            long inserted = insertPendingSupply(supply);
+            if (inserted <= 0) {
+                blocked = true;
+                continue;
+            }
+            didWork = true;
+            long remaining = supply.stack().amount() - inserted;
+            if (remaining <= 0) {
+                job.pendingSupplies.remove(i--);
+            } else {
+                job.pendingSupplies.set(i, supply.withAmount(remaining));
+            }
+        }
+
+        if (job.pendingSupplies.isEmpty()) {
+            rememberJobStatus(job, "working");
+        } else if (blocked) {
+            rememberJobStatus(job, "waiting_target_space");
+        }
+        if (didWork) {
+            setChanged();
+            wakeTicker();
+        }
+        return didWork;
+    }
+
+    private long insertPendingSupply(PendingSupply supply) {
+        GenericStack stack = supply.stack();
+        if (stack.what() instanceof AEItemKey itemKey) {
+            int amount = (int) Math.min(stack.amount(), Integer.MAX_VALUE);
+            ItemStack itemStack = itemKey.toStack(amount);
+            ItemStack remaining = insertItem(supply.target(), itemStack, false);
+            return amount - remaining.getCount();
+        }
+        if (stack.what() instanceof AEFluidKey fluidKey) {
+            IFluidHandler handler = fluidHandler(supply.target());
+            if (handler == null) {
+                return 0;
+            }
+            int amount = (int) Math.min(stack.amount(), Integer.MAX_VALUE);
+            return handler.fill(fluidKey.toStack(amount), IFluidHandler.FluidAction.EXECUTE);
+        }
+        return 0;
+    }
+
+    private void returnPendingSupplies(DistributionJob job) {
+        for (PendingSupply supply : job.pendingSupplies) {
+            insertIntoNetwork(supply.stack().what(), supply.stack().amount(), Actionable.MODULATE);
+        }
+        job.pendingSupplies.clear();
     }
 
     private boolean retryRefillRound(DistributionJob job) {
@@ -773,7 +915,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             }
             didWork = inserted > 0 || didWork;
         }
-        if (otherCollected > 0 && primaryCollected == 0 && job.primaryRemaining > 0) {
+        if (otherCollected > 0 && primaryCollected == 0 && job.primaryRemaining > 0
+                && job.pendingSupplies.isEmpty()) {
             didWork = startRefillRound(job, "secondary_output") || didWork;
         }
         if (didWork) {
@@ -899,14 +1042,17 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         for (GenericStack input : context.inputs()) {
             long available = extractFromNetwork(input.what(), input.amount(), Actionable.SIMULATE);
             if (available < input.amount()) {
+                GenericStack missing = new GenericStack(input.what(), input.amount() - available);
                 if (!"waiting_refill_inputs".equals(job.statusKey)) {
                     CreatePackage.LOGGER.warn("[Distributor @ {}] cannot refill recipe {} after {}; missing {} x{}",
-                            getBlockPos(), job.recipeId, reason, input.what(), input.amount() - available);
+                            getBlockPos(), job.recipeId, reason, input.what(), missing.amount());
                 }
+                setMissingRefillInput(job, missing, reason);
                 rememberJobStatus(job, "waiting_refill_inputs");
                 return false;
             }
         }
+        clearMissingRefillInput(job);
 
         if (!context.simulate()) {
             if (!"refill_target_full".equals(job.statusKey)) {
@@ -920,11 +1066,13 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         for (GenericStack input : context.inputs()) {
             long extracted = extractFromNetwork(input.what(), input.amount(), Actionable.MODULATE);
             if (extracted < input.amount()) {
+                GenericStack missing = new GenericStack(input.what(), input.amount() - extracted);
                 CreatePackage.LOGGER.warn("[Distributor @ {}] refill extraction changed during execution for {} "
                         + "({} < {})", getBlockPos(), input.what(), extracted, input.amount());
                 if (extracted > 0) {
                     insertIntoNetwork(input.what(), extracted, Actionable.MODULATE);
                 }
+                setMissingRefillInput(job, missing, reason);
                 rememberJobStatus(job, "waiting_refill_inputs");
                 return false;
             }
@@ -940,6 +1088,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return false;
         }
 
+        job.pendingSupplies.addAll(context.pendingSupplies());
         job.roundsStarted++;
         job.roundTicks = 0;
         job.roundHasOutput = false;
@@ -950,6 +1099,118 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         saveAndSync();
         wakeTicker();
         return true;
+    }
+
+    private void setMissingRefillInput(DistributionJob job, GenericStack missing, String reason) {
+        boolean changed = !Objects.equals(job.missingRefillInput, missing);
+        job.missingRefillInput = missing;
+        if (changed) {
+            job.nextMissingRefillNoticeTick = 0;
+            saveAndSync();
+        }
+        notifyMissingRefillInput(job, missing, reason, changed);
+    }
+
+    private void clearMissingRefillInput(DistributionJob job) {
+        if (job.missingRefillInput != null) {
+            job.missingRefillInput = null;
+            saveAndSync();
+        }
+    }
+
+    private void notifyEncoderLoginIfMissingRefillInput(DistributionJob job) {
+        if (job.encoder == null || job.missingRefillInput == null) {
+            return;
+        }
+        long generation = encoderLoginGeneration(job.encoder.uuid());
+        if (generation <= job.lastEncoderLoginNoticeGeneration) {
+            return;
+        }
+        if (notifyMissingRefillInput(job, job.missingRefillInput, "login", true)) {
+            job.lastEncoderLoginNoticeGeneration = generation;
+        }
+    }
+
+    private boolean notifyMissingRefillInput(DistributionJob job, GenericStack missing, String reason, boolean force) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return false;
+        }
+        long now = serverLevel.getGameTime();
+        if (!force && now < job.nextMissingRefillNoticeTick) {
+            return false;
+        }
+
+        boolean delivered = false;
+        if (job.encoder != null && serverLevel.getServer() != null) {
+            ServerPlayer player = serverLevel.getServer().getPlayerList().getPlayer(job.encoder.uuid());
+            if (player != null) {
+                player.sendSystemMessage(missingRefillMessage(job, missing, serverLevel, player));
+                delivered = true;
+            }
+        }
+
+        if (!delivered) {
+            double radiusSq = MISSING_REFILL_NOTICE_RADIUS * MISSING_REFILL_NOTICE_RADIUS;
+            for (ServerPlayer player : serverLevel.players()) {
+                if (player.distanceToSqr(getBlockPos().getCenter()) <= radiusSq) {
+                    player.sendSystemMessage(missingRefillMessage(job, missing, serverLevel, player));
+                    delivered = true;
+                }
+            }
+        }
+
+        if (delivered) {
+            job.nextMissingRefillNoticeTick = now + missingRefillNoticeIntervalTicks();
+        }
+        return delivered;
+    }
+
+    private Component missingRefillMessage(DistributionJob job, GenericStack missing, ServerLevel serverLevel,
+            ServerPlayer recipient) {
+        MutableComponent prefix = Component.translatable("message." + CreatePackage.MODID + ".prefix")
+                .withStyle(ChatFormatting.GREEN);
+        MutableComponent body = Component.translatable("message." + CreatePackage.MODID
+                        + ".package_distributor.missing_refill_input",
+                Component.translatable(descriptionId),
+                noticeLocation(serverLevel, recipient),
+                job.primaryOutput.getDisplayName().copy().withStyle(ChatFormatting.GOLD),
+                missingStackText(missing));
+        return Component.empty().append(prefix).append(" ").append(body);
+    }
+
+    private Component noticeLocation(ServerLevel serverLevel, ServerPlayer recipient) {
+        BlockPos pos = getBlockPos();
+        MutableComponent location = Component.literal("[" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + "]");
+        if (!recipient.hasPermissions(2)) {
+            return location;
+        }
+
+        double x = pos.getX() + 0.5D;
+        double y = pos.getY() + 1.0D;
+        double z = pos.getZ() + 0.5D;
+        String command = "/execute in " + serverLevel.dimension().location() + " run tp @s "
+                + x + " " + y + " " + z;
+        return location.withStyle(ChatFormatting.AQUA, ChatFormatting.UNDERLINE)
+                .withStyle(style -> style
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                                Component.translatable("message." + CreatePackage.MODID
+                                        + ".package_distributor.teleport_to_distributor"))));
+    }
+
+    private static Component missingStackText(GenericStack missing) {
+        return Component.empty()
+                .append(stackAmount(missing).copy().withStyle(ChatFormatting.YELLOW))
+                .append(Component.literal(" x ").withStyle(ChatFormatting.YELLOW))
+                .append(missing.what().getDisplayName().copy().withStyle(ChatFormatting.YELLOW));
+    }
+
+    private static long encoderLoginGeneration(UUID playerId) {
+        return ENCODER_LOGIN_NOTICE_GENERATIONS.getOrDefault(playerId, 0L);
+    }
+
+    private static int missingRefillNoticeIntervalTicks() {
+        return Config.MISSING_REFILL_NOTICE_INTERVAL_SECONDS.get() * 20;
     }
 
     @Nullable
@@ -974,13 +1235,17 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         List<GenericStack> remaining = copyStacks(refillInputs);
         List<SupplyAction> actions = new ArrayList<>();
+        List<PendingSupply> pendingSupplies = new ArrayList<>();
         List<GenericStack> inputs = new ArrayList<>();
         ItemStack inputStack = takeMatchingItem(remaining, plan.baseInput(), 1);
         if (inputStack.isEmpty()) {
             rememberJobStatus(job, "missing_base");
             return null;
         }
-        actions.add(new ItemSupplyAction(inputPos, inputStack));
+        if (!scheduleItemSupply(inputPos, inputStack, actions, pendingSupplies)) {
+            rememberJobStatus(job, "refill_target_full");
+            return null;
+        }
         addRefillInput(inputs, inputStack);
 
         var deployers = machines.withRole(LinkedMachines.Role.DEPLOYER);
@@ -1002,7 +1267,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                                 rememberJobStatus(job, "missing_deployer_item");
                                 return null;
                             }
-                            actions.add(new ItemSupplyAction(deployer, held.stack()));
+                            if (!scheduleItemSupply(deployer, held.stack(), actions, pendingSupplies)) {
+                                rememberJobStatus(job, "refill_target_full");
+                                return null;
+                            }
                             addRefillInput(inputs, held.stack());
                         }
                     } else {
@@ -1015,7 +1283,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                                 rememberJobStatus(job, "missing_deployer_item");
                                 return null;
                             }
-                            actions.add(new ItemSupplyAction(deployer, held));
+                            if (!scheduleItemSupply(deployer, held, actions, pendingSupplies)) {
+                                rememberJobStatus(job, "refill_target_full");
+                                return null;
+                            }
                             addRefillInput(inputs, held);
                         }
                     }
@@ -1035,7 +1306,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                             rememberJobStatus(job, "missing_spout_fluid");
                             return null;
                         }
-                        actions.add(new FluidSupplyAction(spouts.get(fillIdx).pos(), fluid));
+                        if (!scheduleFluidSupply(spouts.get(fillIdx).pos(), fluid, actions, pendingSupplies)) {
+                            rememberJobStatus(job, "refill_target_full");
+                            return null;
+                        }
                         addRefillInput(inputs, fluid);
                     }
                     fillIdx++;
@@ -1045,7 +1319,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             }
         }
 
-        return new RefillContext(actions, inputs);
+        return new RefillContext(actions, pendingSupplies, inputs);
     }
 
     private IItemHandler itemHandler(BlockPos pos) {
@@ -1067,6 +1341,99 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
     private boolean canInsertAll(BlockPos target, ItemStack stack) {
         return insertItem(target, stack, true).isEmpty();
+    }
+
+    private boolean scheduleItemSupply(BlockPos target, ItemStack stack, List<SupplyAction> actions,
+            List<PendingSupply> pendingSupplies) {
+        if (stack.isEmpty()) {
+            return true;
+        }
+        AEItemKey key = AEItemKey.of(stack);
+        if (key == null) {
+            return false;
+        }
+
+        int accepted = acceptedItemAmount(target, stack);
+        if (accepted <= 0 && !itemTargetCouldEventuallyAccept(target, stack)) {
+            return false;
+        }
+        if (accepted > 0) {
+            actions.add(new ItemSupplyAction(target, stack.copyWithCount(accepted)));
+        }
+        int pending = stack.getCount() - accepted;
+        if (pending > 0) {
+            pendingSupplies.add(new PendingSupply(target, new GenericStack(key, pending)));
+        }
+        return true;
+    }
+
+    private int acceptedItemAmount(BlockPos target, ItemStack stack) {
+        ItemStack remaining = insertItem(target, stack, true);
+        return stack.getCount() - remaining.getCount();
+    }
+
+    private boolean itemTargetCouldEventuallyAccept(BlockPos target, ItemStack stack) {
+        IItemHandler handler = itemHandler(target);
+        if (handler == null) {
+            return false;
+        }
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            ItemStack stored = handler.getStackInSlot(slot);
+            if (stored.isEmpty() || ItemStack.isSameItemSameComponents(stored, stack)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean scheduleFluidSupply(BlockPos target, FluidStack stack, List<SupplyAction> actions,
+            List<PendingSupply> pendingSupplies) {
+        if (stack.isEmpty()) {
+            return true;
+        }
+        AEFluidKey key = AEFluidKey.of(stack);
+        if (key == null) {
+            return false;
+        }
+
+        int accepted = acceptedFluidAmount(target, stack);
+        if (accepted <= 0 && !fluidTargetCouldEventuallyAccept(target, stack)) {
+            return false;
+        }
+        if (accepted > 0) {
+            actions.add(new FluidSupplyAction(target, stack.copyWithAmount(accepted)));
+        }
+        long pending = (long) stack.getAmount() - accepted;
+        if (pending > 0) {
+            pendingSupplies.add(new PendingSupply(target, new GenericStack(key, pending)));
+        }
+        return true;
+    }
+
+    private int acceptedFluidAmount(BlockPos target, FluidStack stack) {
+        IFluidHandler handler = fluidHandler(target);
+        if (handler == null) {
+            return 0;
+        }
+        return handler.fill(stack.copy(), IFluidHandler.FluidAction.SIMULATE);
+    }
+
+    private boolean fluidTargetCouldEventuallyAccept(BlockPos target, FluidStack stack) {
+        IFluidHandler handler = fluidHandler(target);
+        if (handler == null) {
+            return false;
+        }
+        AEFluidKey key = AEFluidKey.of(stack);
+        for (int tank = 0; tank < handler.getTanks(); tank++) {
+            if (!handler.isFluidValid(tank, stack)) {
+                continue;
+            }
+            FluidStack stored = handler.getFluidInTank(tank);
+            if (stored.isEmpty() || key.equals(AEFluidKey.of(stored))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ItemStack insertItem(BlockPos target, ItemStack stack, boolean simulate) {
@@ -1170,7 +1537,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
         if (activeJobs.isEmpty()) {
             return switch (lastStatusKey) {
-                case "working", "waiting_reflow_input", "waiting_refill_inputs", "refill_target_full", "busy" -> "ready";
+                case "working", "waiting_reflow_input", "waiting_refill_inputs", "waiting_target_space",
+                        "refill_target_full", "busy" -> "ready";
                 default -> lastStatusKey;
             };
         }
@@ -1263,6 +1631,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         for (Component line : getVisibleJobLines()) {
             tooltip.add(line.copy().withStyle(ChatFormatting.AQUA));
         }
+        tooltip.addAll(getMissingRefillLines());
 
         addParallelInfoToTooltip(tooltip);
 
@@ -1311,7 +1680,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         ChatFormatting color = switch (status) {
             case "ready", "completed" -> ChatFormatting.GREEN;
             case "working" -> ChatFormatting.AQUA;
-            case "busy", "waiting_reflow_input" -> ChatFormatting.YELLOW;
+            case "busy", "waiting_reflow_input", "waiting_target_space", "refill_target_full" -> ChatFormatting.YELLOW;
             default -> ChatFormatting.RED;
         };
         return Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.status",
@@ -1398,6 +1767,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 && left.roundsStarted == right.roundsStarted
                 && left.roundHasOutput == right.roundHasOutput
                 && left.awaitingFinalOutput == right.awaitingFinalOutput
+                && Objects.equals(left.pendingSupplies, right.pendingSupplies)
+                && Objects.equals(left.missingRefillInput, right.missingRefillInput)
                 && Objects.equals(left.statusKey, right.statusKey);
     }
 
@@ -1596,6 +1967,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             int sequenceLength,
             int loops,
             List<SupplyAction> actions,
+            List<PendingSupply> pendingSupplies,
             List<GenericStack> refillInputs) {
 
         boolean simulate() {
@@ -1607,7 +1979,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
     }
 
-    private record RefillContext(List<SupplyAction> actions, List<GenericStack> inputs) {
+    private record RefillContext(List<SupplyAction> actions, List<PendingSupply> pendingSupplies,
+            List<GenericStack> inputs) {
         boolean simulate() {
             return actions.stream().allMatch(action -> action.perform(true));
         }
@@ -1625,6 +1998,17 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private record NetworkItemStack(AEItemKey key, ItemStack stack) {
+    }
+
+    private record PendingSupply(BlockPos target, GenericStack stack) {
+        private PendingSupply {
+            target = target.immutable();
+            Objects.requireNonNull(stack);
+        }
+
+        private PendingSupply withAmount(long amount) {
+            return new PendingSupply(target, new GenericStack(stack.what(), amount));
+        }
     }
 
     private final class ItemSupplyAction implements SupplyAction {
@@ -1733,6 +2117,14 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private static final String NBT_REFILL_INPUTS = "refillInputs";
         private static final String NBT_REFILL_KEY = "key";
         private static final String NBT_REFILL_AMOUNT = "amount";
+        private static final String NBT_ENCODER = "encoder";
+        private static final String NBT_ENCODER_UUID = "uuid";
+        private static final String NBT_ENCODER_NAME = "name";
+        private static final String NBT_MISSING_REFILL_INPUT = "missingRefillInput";
+        private static final String NBT_PENDING_SUPPLIES = "pendingSupplies";
+        private static final String NBT_PENDING_TARGET = "target";
+        private static final String NBT_PENDING_KEY = "key";
+        private static final String NBT_PENDING_AMOUNT = "amount";
         private static final String NBT_ROUTE = "route";
 
         private final ResourceLocation recipeId;
@@ -1744,17 +2136,25 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private final int sequenceLength;
         private final int loops;
         private final List<GenericStack> refillInputs;
+        private final List<PendingSupply> pendingSupplies;
+        @Nullable
+        private final MechanicalPackagePatternData.PatternEncoder encoder;
         private final List<BlockPos> route;
         private int ticks;
         private int roundTicks;
         private long roundsStarted;
         private boolean roundHasOutput;
         private boolean awaitingFinalOutput;
+        @Nullable
+        private GenericStack missingRefillInput;
+        private long nextMissingRefillNoticeTick;
+        private long lastEncoderLoginNoticeGeneration;
         private String statusKey = "working";
 
         private DistributionJob(ResourceLocation recipeId, AEItemKey primaryOutput, long primaryRemaining,
                 BlockPos inputPos, BlockPos outputPos, AEItemKey transitionalItem, int sequenceLength, int loops,
-                List<GenericStack> refillInputs, List<BlockPos> route) {
+                List<GenericStack> refillInputs, List<PendingSupply> pendingSupplies,
+                @Nullable MechanicalPackagePatternData.PatternEncoder encoder, List<BlockPos> route) {
             this.recipeId = Objects.requireNonNull(recipeId);
             this.primaryOutput = Objects.requireNonNull(primaryOutput);
             this.primaryRemaining = primaryRemaining;
@@ -1764,8 +2164,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             this.sequenceLength = sequenceLength;
             this.loops = loops;
             this.refillInputs = List.copyOf(refillInputs);
+            this.pendingSupplies = new ArrayList<>(pendingSupplies);
+            this.encoder = encoder;
             this.route = route.stream().map(BlockPos::immutable).toList();
             this.awaitingFinalOutput = loops <= 1;
+            this.lastEncoderLoginNoticeGeneration = encoder == null ? 0 : encoderLoginGeneration(encoder.uuid());
         }
 
         private boolean waitingForRefill() {
@@ -1774,6 +2177,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         private boolean waitingForReflow() {
             return "waiting_reflow_input".equals(statusKey);
+        }
+
+        private boolean waitingForTargetSpace() {
+            return "waiting_target_space".equals(statusKey);
         }
 
         private CompoundTag write(HolderLookup.Provider registries) {
@@ -1800,6 +2207,24 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 refillList.add(inputTag);
             }
             tag.put(NBT_REFILL_INPUTS, refillList);
+            if (encoder != null) {
+                CompoundTag encoderTag = new CompoundTag();
+                encoderTag.putString(NBT_ENCODER_UUID, encoder.uuid().toString());
+                encoderTag.putString(NBT_ENCODER_NAME, encoder.name());
+                tag.put(NBT_ENCODER, encoderTag);
+            }
+            if (missingRefillInput != null) {
+                tag.put(NBT_MISSING_REFILL_INPUT, GenericStack.writeTag(registries, missingRefillInput));
+            }
+            ListTag pendingList = new ListTag();
+            for (PendingSupply supply : pendingSupplies) {
+                CompoundTag supplyTag = new CompoundTag();
+                supplyTag.putLong(NBT_PENDING_TARGET, supply.target().asLong());
+                supplyTag.put(NBT_PENDING_KEY, supply.stack().what().toTagGeneric(registries));
+                supplyTag.putLong(NBT_PENDING_AMOUNT, supply.stack().amount());
+                pendingList.add(supplyTag);
+            }
+            tag.put(NBT_PENDING_SUPPLIES, pendingList);
             long[] packedRoute = new long[route.size()];
             for (int i = 0; i < packedRoute.length; i++) {
                 packedRoute[i] = route.get(i).asLong();
@@ -1830,18 +2255,35 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                     refillInputs.add(new GenericStack(key, amount));
                 }
             }
+            List<PendingSupply> pendingSupplies = new ArrayList<>();
+            ListTag pendingList = tag.getList(NBT_PENDING_SUPPLIES, Tag.TAG_COMPOUND);
+            for (int i = 0; i < pendingList.size(); i++) {
+                CompoundTag supplyTag = pendingList.getCompound(i);
+                AEKey key = AEKey.fromTagGeneric(registries, supplyTag.getCompound(NBT_PENDING_KEY));
+                long amount = supplyTag.getLong(NBT_PENDING_AMOUNT);
+                if (key != null && amount > 0) {
+                    pendingSupplies.add(new PendingSupply(BlockPos.of(supplyTag.getLong(NBT_PENDING_TARGET)),
+                            new GenericStack(key, amount)));
+                }
+            }
             BlockPos outputPos = BlockPos.of(tag.getLong(NBT_OUTPUT_POS));
             BlockPos inputPos = tag.contains(NBT_INPUT_POS) ? BlockPos.of(tag.getLong(NBT_INPUT_POS)) : outputPos;
             List<BlockPos> route = new ArrayList<>();
             for (long packed : tag.getLongArray(NBT_ROUTE)) {
                 route.add(BlockPos.of(packed));
             }
+            MechanicalPackagePatternData.PatternEncoder encoder = readEncoder(tag);
             var job = new DistributionJob(recipe, output, tag.getLong(NBT_REMAINING), inputPos, outputPos,
                     transitional,
                     tag.contains(NBT_SEQUENCE_LENGTH) ? tag.getInt(NBT_SEQUENCE_LENGTH) : 1,
                     tag.contains(NBT_LOOPS) ? tag.getInt(NBT_LOOPS) : 1,
                     refillInputs,
+                    pendingSupplies,
+                    encoder,
                     route);
+            if (tag.contains(NBT_MISSING_REFILL_INPUT, Tag.TAG_COMPOUND)) {
+                job.missingRefillInput = GenericStack.readTag(registries, tag.getCompound(NBT_MISSING_REFILL_INPUT));
+            }
             job.ticks = tag.getInt(NBT_TICKS);
             job.roundTicks = tag.getInt(NBT_ROUND_TICKS);
             job.roundsStarted = tag.contains(NBT_ROUNDS_STARTED) ? tag.getLong(NBT_ROUNDS_STARTED) : 1;
@@ -1851,6 +2293,21 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                     : job.loops <= 1;
             job.statusKey = tag.contains(NBT_STATUS) ? tag.getString(NBT_STATUS) : "working";
             return job;
+        }
+
+        @Nullable
+        private static MechanicalPackagePatternData.PatternEncoder readEncoder(CompoundTag tag) {
+            if (!tag.contains(NBT_ENCODER, Tag.TAG_COMPOUND)) {
+                return null;
+            }
+            CompoundTag encoderTag = tag.getCompound(NBT_ENCODER);
+            try {
+                UUID uuid = UUID.fromString(encoderTag.getString(NBT_ENCODER_UUID));
+                return new MechanicalPackagePatternData.PatternEncoder(uuid,
+                        encoderTag.getString(NBT_ENCODER_NAME));
+            } catch (IllegalArgumentException ignored) {
+                return null;
+            }
         }
     }
 

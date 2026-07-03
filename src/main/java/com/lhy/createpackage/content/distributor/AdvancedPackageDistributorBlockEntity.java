@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.compat.ExtendedAePlusCompat;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternDetails;
+import com.lhy.createpackage.content.pattern.RoutedMechanicalPackagePatternDetails;
 import com.lhy.createpackage.registry.ModBlockEntities;
 import com.lhy.createpackage.registry.ModItems;
 import com.lhy.createpackage.registry.ModMenuTypes;
@@ -354,7 +355,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
             if (key == null || level == null) {
                 continue;
             }
-            MechanicalPackagePatternDetails details = MechanicalPackagePatternDetails.decode(key, level);
+            RoutedMechanicalPackagePatternDetails details = MechanicalPackagePatternDetails.decode(key, level);
             if (details != null && details.route().equals(route)) {
                 return i;
             }
@@ -382,12 +383,12 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
             if (getCraftingLockedReason() != LockCraftingMode.NONE) {
                 return false;
             }
-            if (!(patternDetails instanceof MechanicalPackagePatternDetails mechanical)) {
+            if (!(patternDetails instanceof RoutedMechanicalPackagePatternDetails mechanical)) {
                 rememberStatus("invalid_mechanical_pattern");
                 return false;
             }
             boolean accepted = AdvancedPackageDistributorBlockEntity.this.pushPattern(
-                    mechanical.delegate(), inputHolder, Direction.UP, mechanical.route());
+                    mechanical, inputHolder, Direction.UP, mechanical.route());
             if (accepted) {
                 resetCraftingLock();
             }

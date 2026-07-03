@@ -42,6 +42,9 @@ public final class PackageDistributorComponentProvider implements IBlockComponen
         for (Component line : distributor.getVisibleJobLines()) {
             tooltip.add(line.copy().withStyle(ChatFormatting.AQUA));
         }
+        for (Component line : distributor.getMissingRefillLines()) {
+            tooltip.add(line);
+        }
 
         if (distributor instanceof com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity advanced) {
             tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.parallel_cards",
@@ -116,7 +119,7 @@ public final class PackageDistributorComponentProvider implements IBlockComponen
         return switch (status) {
             case "ready", "completed" -> ChatFormatting.GREEN;
             case "working" -> ChatFormatting.AQUA;
-            case "busy", "waiting_reflow_input" -> ChatFormatting.YELLOW;
+            case "busy", "waiting_reflow_input", "waiting_target_space", "refill_target_full" -> ChatFormatting.YELLOW;
             default -> ChatFormatting.RED;
         };
     }
