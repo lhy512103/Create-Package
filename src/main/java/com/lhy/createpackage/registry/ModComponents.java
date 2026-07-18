@@ -38,6 +38,23 @@ public final class ModComponents {
                     .persistent(MachineRouteData.CODEC)
                     .networkSynchronized(MachineRouteData.STREAM_CODEC));
 
+    /**
+     * Currently selected route mark index for ordered route tools in Edit mode.
+     */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> ROUTE_CURSOR =
+            register("route_cursor", builder -> builder
+                    .persistent(com.mojang.serialization.Codec.INT)
+                    .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.VAR_INT));
+
+    /**
+     * Ordered-route tool mode. Absent/false = Append (default); true = Edit.
+     * Toggled by left-clicking air while holding a supported route tool.
+     */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> ROUTE_EDIT_MODE =
+            register("route_edit_mode", builder -> builder
+                    .persistent(com.mojang.serialization.Codec.BOOL)
+                    .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.BOOL));
+
     private static <T> DeferredHolder<DataComponentType<?>, DataComponentType<T>> register(
             String name, Consumer<DataComponentType.Builder<T>> customizer) {
         return DATA_COMPONENTS.register(name, () -> {

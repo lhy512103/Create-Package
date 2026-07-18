@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
 import com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity;
+import com.lhy.createpackage.content.route.RouteTools;
 import com.lhy.createpackage.registry.ModComponents;
 import com.lhy.createpackage.registry.ModSounds;
 
@@ -94,11 +95,16 @@ public class MachineLinkerItem extends Item {
             if (player.isShiftKeyDown()) {
                 int cleared = provider.clearLinks();
                 stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
+                RouteTools.setCursor(stack, -1);
+                RouteTools.setMode(stack, RouteTools.Mode.APPEND);
                 msg(player, "kinetic_cleared", cleared);
                 play(level, clicked, ModSounds.MACHINE_LINKER_SUCCESS.get());
             } else {
                 stack.set(ModComponents.LINKED_DISTRIBUTOR.get(),
                         GlobalPos.of(level.dimension(), clicked.immutable()));
+                // Kinetic hosts are a parallel set, not an ordered route.
+                RouteTools.setCursor(stack, -1);
+                RouteTools.setMode(stack, RouteTools.Mode.APPEND);
                 msg(player, "kinetic_selected", clicked.getX(), clicked.getY(), clicked.getZ());
                 play(level, clicked, ModSounds.MACHINE_LINKER_THUD.get());
             }
@@ -148,6 +154,11 @@ public class MachineLinkerItem extends Item {
 
     private static void linkSingle(Level level, net.minecraft.world.entity.player.Player player, ItemStack stack,
             BlockPos clicked) {
+        // Edit-mode ordered-route edits are handled client-side via RouteMarkEditPayload.
+        if (RouteTools.isEditMode(stack) && RouteTools.supportsOrderedRouteCursor(player, stack)) {
+            return;
+        }
+
         LinkTarget target = resolveTarget(level, stack, player, clicked);
         if (target == null) {
             return;
@@ -157,6 +168,9 @@ public class MachineLinkerItem extends Item {
         int changed = tryChangeLink(target, blockId(level, clicked), clicked, unlink);
         if (target.distributor != null) {
             if (changed > 0) {
+                // Keep any existing highlight only if still valid; never force-select after append.
+                RouteTools.setCursor(stack, RouteTools.clampCursor(RouteTools.getCursor(stack),
+                        target.distributor.getLinkedMachines().size()));
                 if (unlink) {
                     msg(player, "unlinked", clicked.getX(), clicked.getY(), clicked.getZ(),
                             target.distributor.getLinkedMachines().size());
@@ -171,6 +185,8 @@ public class MachineLinkerItem extends Item {
                 play(level, clicked, ModSounds.MACHINE_LINKER_ERROR.get());
             }
         } else {
+            // Kinetic hosts stay set-like: no ordered route cursor.
+            RouteTools.setCursor(stack, -1);
             if (changed > 0) {
                 if (unlink) {
                     msg(player, "kinetic_unlinked", clicked.getX(), clicked.getY(), clicked.getZ(),
@@ -309,6 +325,12 @@ public class MachineLinkerItem extends Item {
             tooltip.add(Component.translatable(KEY_PREFIX + "tooltip.bound", p.getX(), p.getY(), p.getZ())
                     .withStyle(ChatFormatting.GREEN));
         }
-        tooltip.add(Component.translatable(KEY_PREFIX + "tooltip.usage").withStyle(ChatFormatting.DARK_GRAY));
+        RouteTools.Mode mode = RouteTools.getMode(stack);
+        tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.mode",
+                RouteTools.modeLabel(mode).copy().withStyle(
+                        mode == RouteTools.Mode.EDIT ? ChatFormatting.YELLOW : ChatFormatting.GREEN))
+                .withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.guide_hint")
+                .withStyle(ChatFormatting.DARK_GRAY));
     }
 }

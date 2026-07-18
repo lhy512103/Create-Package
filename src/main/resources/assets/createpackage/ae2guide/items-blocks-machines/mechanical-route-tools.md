@@ -2,7 +2,7 @@
 navigation:
   parent: createpackage:create-package.md
   title: Mechanical Route Tools
-  icon: machine_linker
+  icon: mechanical_pattern_converter
   position: 257
 categories:
 - tools
@@ -20,30 +20,46 @@ item_ids:
 <ItemImage id="mechanical_package_pattern" scale="4" />
 </Row>
 
-Create Package uses explicit route marking so it only touches known machine positions during autocrafting.
+These tools mark Create machine routes for Package Distributors and Mechanical Package Patterns. Holding a route tool highlights the current route in-world.
+
+## Shared ordered-route controls
+
+Applies to **Package Distributor** linking and to converter / mechanical pattern routes. Kinetic Pattern Provider links stay set-like (no Append/Edit mark mode).
+
+| Control | Action |
+| --- | --- |
+| Left-click air | Toggle **Append** / **Edit** |
+| Append + right-click | Add mark |
+| Append + sneak + right-click | Remove clicked mark |
+| Edit + scroll | Select mark |
+| Edit + right-click | Replace selected mark |
+| Edit + sneak + right-click | Remove selected mark |
+| **G** | Auto-route between endpoints (straight corridor; optional same-Y L-shape) |
+
+Auto-route keeps input/output endpoints and process machines that actually feed the corridor. Presses and other passive path machines are skipped. Mechanical Package Patterns in Edit mode can show the expected material for the selected mark when the AE pattern and sequenced recipe resolve.
 
 ## Machine Linker
 
-The Machine Linker stores the ordered machine route on a Package Distributor or Basic Package Distributor.
+1. Right-click a <ItemLink id="package_distributor" />, <ItemLink id="basic_package_distributor" />, or <ItemLink id="kinetic_pattern_provider" /> to bind.
+2. Right-click machines to link; sneak + right-click to unlink.
+3. Sneak + right-click the host to clear its stored links (distributor hosts that use stored links).
+4. Hold an FTB Ultimine selection to batch-link / batch-unlink matching machines.
 
-Right-click a distributor to select it. Then right-click route blocks in order: input depot or belt first, deployers and spouts in physical order, and the output depot or belt last. Sneak-right-click a linked machine to remove it. Sneak-right-click the selected distributor to clear the route.
-
-With FTB Ultimine installed, hold the Ultimine selection key and right-click matching machines to batch-link or batch-unlink the selected shape. Batch linking still only stores the selected positions and does not scan the world.
-
-Holding the Machine Linker highlights the currently selected route in the world.
+Advanced Package Distributors do **not** use the linker: their routes live on Mechanical Package Patterns.
 
 ## Mechanical Pattern Converter
 
-The Mechanical Pattern Converter stores a route on the converter item before converting patterns.
+1. Mark a route on markable blocks (depot, belt, deployer, spout, …).
+2. Right-click air to open the converter UI.
+3. Insert up to nine AE2 processing patterns (or existing Mechanical Package Patterns) and convert.
 
-Right-click markable route blocks to append them. Sneak-right-click a marked block to remove it. Right-click air to open the converter GUI. Put an AE2 processing pattern or an existing Mechanical Package Pattern in the input slot and press Convert.
-
-The output Mechanical Package Pattern keeps the encoded AE2 pattern and adds the marked route snapshot.
+Conversion writes the converter's currently marked route into each output Mechanical Package Pattern while preserving the original AE2 encoded pattern. Patterns can be converted with an empty route and routed later; AE2 will not register a mechanical pattern for autocrafting until it has at least one route mark. Valid mechanical processing patterns can be re-encoded in AE2's Pattern Encoding Terminal while keeping their saved route.
 
 ## Mechanical Package Pattern
 
-Mechanical Package Patterns are used by the Advanced Package Distributor. Each pattern carries the original AE2 pattern data plus the Create route that should receive that job.
+Stores the original AE2 pattern plus a Create route for the <ItemLink id="advanced_package_distributor" />.
 
-Holding Shift on the item tooltip shows the saved route names and positions. Holding the item highlights the saved route in the world. You can also right-click markable route blocks while holding the pattern to edit the saved route directly.
-
-Only blocks that the distributor can route through are markable: depots, belts, deployers, and spouts.
+* Tooltip shows encoder, mode, mark count; hold Shift for route coordinates.
+* In Edit mode, selected-mark material hints appear when resolvable.
+* Right-click markable blocks to edit the saved route while holding the pattern.
+* Press **G** to rebuild the saved route between endpoints.

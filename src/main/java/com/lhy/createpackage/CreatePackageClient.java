@@ -1,17 +1,18 @@
 package com.lhy.createpackage;
 
-import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 import com.lhy.createpackage.client.ponder.CreatePackagePonderPlugin;
+import com.lhy.createpackage.client.AutoRouteKeys;
 import com.lhy.createpackage.client.render.MechanicalPackagePatternHighlighter;
 import com.lhy.createpackage.client.screen.AdvancedPackageDistributorScreen;
 import com.lhy.createpackage.client.screen.CreatePackagePatternProviderScreen;
@@ -30,7 +31,12 @@ public class CreatePackageClient {
     public CreatePackageClient(IEventBus modEventBus, ModContainer container) {
         modEventBus.addListener(CreatePackageClient::onClientSetup);
         modEventBus.addListener(CreatePackageClient::registerScreens);
+        modEventBus.addListener(CreatePackageClient::registerKeyMappings);
         NeoForge.EVENT_BUS.addListener(MechanicalPackagePatternHighlighter::render);
+        NeoForge.EVENT_BUS.addListener(AutoRouteKeys::onClientTick);
+        NeoForge.EVENT_BUS.addListener(AutoRouteKeys::onMouseScroll);
+        NeoForge.EVENT_BUS.addListener(AutoRouteKeys::onRightClickBlock);
+        NeoForge.EVENT_BUS.addListener(AutoRouteKeys::onLeftClickEmpty);
 
         // Allows NeoForge to create a config screen for this mod's configs.
         // The config screen is accessed by going to the Mods screen > clicking on your mod > clicking on config.
@@ -39,9 +45,6 @@ public class CreatePackageClient {
     }
 
     static void onClientSetup(FMLClientSetupEvent event) {
-        // Some client setup code
-        CreatePackage.LOGGER.info("HELLO FROM CLIENT SETUP");
-        CreatePackage.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
         event.enqueueWork(() -> PonderIndex.addPlugin(new CreatePackagePonderPlugin()));
     }
 
@@ -59,5 +62,9 @@ public class CreatePackageClient {
                 ModMenuTypes.KINETIC_PATTERN_PROVIDER.get(), (menu, playerInv, title) ->
                 new CreatePackagePatternProviderScreen<>(menu, playerInv, title,
                         StyleManager.loadStyleDoc("/screens/pattern_provider.json")));
+    }
+
+    static void registerKeyMappings(RegisterKeyMappingsEvent event) {
+        AutoRouteKeys.register(event);
     }
 }

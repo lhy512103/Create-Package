@@ -1,6 +1,32 @@
 # Changelog
 
+## v0.0.2
+
+### English
+
+1. Machine Linker, Mechanical Pattern Converter, and Mechanical Package Pattern now support `G` auto-routing, including optional same-height L-shaped corridors.
+2. Ordered routes now have **Append / Edit** modes (toggle by left-clicking air). Edit mode supports wheel selection, replacement/removal, and expected-material hints when the AE pattern and sequenced-assembly recipe can be resolved.
+3. Partial supply failures now roll back where possible; timeouts, refill/pending retries, auto-route limits, and notice radius are server-configurable.
+4. Mechanical Package Patterns with the same recipe but different saved routes now dispatch across idle, non-overlapping assembly lines instead of repeatedly selecting one route.
+5. Each Parallel Card provides 4 job slots by default: 0 / 1 / 2 cards allow 1 / 4 / 8 concurrent jobs; capacity per card is server-configurable.
+6. Cancelling an AE craft now clears stale missing-refill notices from Package Distributors.
+7. Kinetic Pattern Providers now support fluid primary outputs and recover fluid products/byproducts.
+8. Smart batching now covers mixers and basin feeds, allowing large fluid orders to refill in full batches.
+
+### 中文
+
+1. 机器连接器 / 机械样板转换器 / 机械封包样板支持 `G` 自动路线；可选同高度 L 形走廊。
+2. 有序路线新增 **追加 / 编辑** 模式（左键空气切换）。编辑模式支持滚轮选点、替换/删除，并在能解析 AE 样板与序列组装配方时显示预期材料。
+3. 供料中途失败会尽量回滚；超时、补刷/挂起重试、自动路线限制与提示半径可服务端配置。
+4. 同配方、不同已保存路线的机械封包样板会分派到空闲且互不重叠的装配线，不再反复选中同一路线。
+5. 并行卡默认每张提供 4 个作业位：0 / 1 / 2 张对应 1 / 4 / 8 并行；每张容量可由服务端配置。
+6. AE 取消合成后，封包分发器会清掉残留缺料提示。
+7. 动力样板供应器支持流体主产物，并回收流体产物/副产物。
+8. 智能批量覆盖搅拌机/工作盆，大额流体订单可整批补满。
+
 ## 2026-07-03
+
+### English
 
 - Reworked the Mechanical Pattern Converter screen to use AE2's ME Pattern Provider main-panel layout, with nine input pattern slots, nine matching output slots, AE2 pattern-slot placeholder icons on both rows, and an AE2 blocking-mode-off styled conversion button between the rows.
 - Changed the Mechanical Pattern Converter to batch-convert up to nine encoded patterns at once. Each input slot writes to the matching output slot, preserves existing output slots, consumes one input pattern, and keeps support for rewriting existing Mechanical Package Patterns while preserving their original AE2 encoded pattern.
@@ -26,7 +52,7 @@
 - Added missing NeoForge configuration-screen translations and Chinese tooltips for the server config entries, including the missing-refill warning interval option.
 - Changed Package Distributor blocks, including Basic and Advanced variants, to use a two-block-tall non-occluding shape so their model behaves as an incomplete/tall block in selection and collision.
 
-## 2026-07-03 中文
+### 中文
 
 - 将机械样板转换器界面重做为 AE2 ME 样板供应器的主面板布局：上方九格输入样板槽、下方九格对应输出槽，两行槽位都绘制 AE2 样板槽底图，并在两行中间放置 AE2 阻挡模式关闭样式的转换按钮。
 - 机械样板转换器现在可一次批量转换最多九张已编码样板。每个输入槽只写入对应输出槽，不覆盖已有输出，每次消耗一张输入样板，并继续支持把已有机械封包样板重新写入路线且保留原 AE2 已编码样板。
@@ -54,6 +80,8 @@
 
 ## 2026-07-01
 
+### English
+
 - Added Re-constructed Wands and Modular Routers 8205099 as local runtime dependencies for development and in-game testing.
 - Improved Machine Linker route highlighting with a Modular Routers-style translucent fill and thick through-block outline while keeping start/middle/end route colors.
 - Added Machine Linker success/error/selection sounds derived from Modular Routers sound assets, with bundled attribution notices for the MIT project and the original Freesound licenses.
@@ -66,7 +94,7 @@
 - Added a Machine Linker crafting recipe using any AE2 quartz wrench and a Create Precision Mechanism.
 - Changed Package Distributor, Basic Package Distributor, and Advanced Package Distributor sequenced-assembly transitional items to use their own item models directly.
 
-## 2026-07-01 中文
+### 中文
 
 - 将 Re-constructed Wands 和 Modular Routers 8205099 加入本地运行时依赖，用于开发环境和游戏内测试。
 - 改进机器链接器路线高亮，改为类似 Modular Routers 的半透明填充和穿墙粗轮廓，同时保留路线起点/中段/终点颜色。
@@ -82,6 +110,8 @@
 
 ## 2026-06-30
 
+### English
+
 - Changed Kinetic Pattern Provider Parallel Card capacity to 16 matching machines per card, for up to 16 machines with one card and 32 with two cards.
 - Replaced the distributor crafting recipes with sequenced-assembly recipes: Package Distributor now uses reusable AE2 inscriber presses on a gold plate; Basic Package Distributor upgrades a Package Distributor with a Precision Mechanism, lava, water, and pressing; Advanced Package Distributor upgrades a Basic Package Distributor with a Sturdy Sheet, a normally consumed Certus Quartz Crystal step, cutting, pressing, lava, and an 80% success result pool using Create's precision-mechanism scrap weights.
 - Removed the old Package Distributor fluid/cutting/pressing test recipes and the old direct crafting recipes for Basic/Advanced Package Distributors.
@@ -92,7 +122,7 @@
 - Updated Chinese guide and in-game diagnostics to use the localized Create machine names 机械手 and 注液器 instead of raw Deployer/Spout labels.
 - Added AE2 GuideME pages and item-index mappings for all Create Package blocks/items, enabling the hold-G item help prompt and direct guide navigation without runtime ticking or mixins.
 
-## 2026-06-30 中文
+### 中文
 
 - 将动力样板供应器的并行卡容量改为每张卡 16 台同类型机器：1 张最多 16 台，2 张最多 32 台。
 - 重写分发器制作配方为序列组装：封包分发器使用金板和不消耗的 AE2 压印模板；基础封包分发器使用封包分发器、精密构件、熔岩、水和冲压；高级封包分发器使用基础封包分发器、坚固板、正常消耗的赛特斯水晶步骤、动力锯、冲压、熔岩，并使用 80% 成功率和 Create 精密构件同权重废料结果池。
@@ -105,6 +135,8 @@
 - 为机械动力封包全部方块/物品加入 AE2 GuideME 指南页面和物品索引映射，现在物品 tooltip 会出现按住 G 查看帮助，并可直接跳转到对应介绍页；该支持仅使用静态资源，不增加运行时 tick 或 mixin。
 
 ## 2026-06-26
+
+### English
 
 - Changed Kinetic Pattern Provider Smart Doubling to be an explicit per-provider setting that defaults off for newly placed providers, with goggles/Jade showing that provider's current state.
 - Restored Kinetic Pattern Provider Smart Doubling to the immediate capacity-simulation behavior: matching active-job requests are accepted only while the target can currently simulate the next input set, without keeping an internal pending dispatch queue.
@@ -175,7 +207,7 @@
 - Added low-overhead runtime behavior: no world scanning, no mixins or reflection; the distributor only touches linked block positions and only wakes its AE2 grid ticker while a job is active.
 - Added conservative safety checks for incomplete lines, ambiguous recipes, same input/output depot links, unused pattern inputs, and output recovery timeouts.
 
-## 2026-06-26 中文
+### 中文
 
 - 将动力样板供应器“智能翻倍”改为每个供应器独立保存的设置，新放置供应器默认关闭，护目镜/Jade 会显示当前供应器自己的开关状态。
 - 将动力样板供应器“智能翻倍”恢复为立即容量模拟模式：同一活动作业只有在目标当前能模拟接收下一份输入时才继续接单，不再保留内部待投料队列。

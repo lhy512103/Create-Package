@@ -6,6 +6,7 @@ import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.distributor.LinkedMachines;
 import com.lhy.createpackage.content.pattern.MachineRouteData;
 import com.lhy.createpackage.content.pattern.MachineRouteTooltip;
+import com.lhy.createpackage.content.route.RouteTools;
 import com.lhy.createpackage.registry.ModComponents;
 import com.lhy.createpackage.registry.ModMenuTypes;
 
@@ -49,6 +50,11 @@ public class MechanicalPatternConverterItem extends Item {
             return InteractionResult.sidedSuccess(level.isClientSide());
         }
 
+        // Edit-mode mark edits are handled client-side via RouteMarkEditPayload.
+        if (RouteTools.isEditMode(stack)) {
+            return InteractionResult.sidedSuccess(level.isClientSide());
+        }
+
         if (!level.isClientSide()) {
             MachineRouteData route = route(stack);
             if (player.isShiftKeyDown()) {
@@ -57,6 +63,8 @@ public class MechanicalPatternConverterItem extends Item {
                     msg(player, "not_marked");
                 } else {
                     setRoute(stack, updated);
+                    RouteTools.setCursor(stack,
+                            RouteTools.clampCursor(RouteTools.getCursor(stack), updated.positions().size()));
                     msg(player, "unmarked", clicked.getX(), clicked.getY(), clicked.getZ(),
                             updated.positions().size());
                 }
@@ -66,6 +74,9 @@ public class MechanicalPatternConverterItem extends Item {
                     msg(player, "already_marked");
                 } else {
                     setRoute(stack, updated);
+                    // Keep any existing selection only if still valid; do not force-select the new end.
+                    RouteTools.setCursor(stack,
+                            RouteTools.clampCursor(RouteTools.getCursor(stack), updated.positions().size()));
                     msg(player, "marked", clicked.getX(), clicked.getY(), clicked.getZ(),
                             updated.positions().size());
                 }
@@ -83,6 +94,7 @@ public class MechanicalPatternConverterItem extends Item {
         if (player.isShiftKeyDown()) {
             if (!level.isClientSide()) {
                 stack.remove(ModComponents.MECHANICAL_ROUTE.get());
+                RouteTools.setCursor(stack, -1);
                 msg(player, "cleared");
             }
             return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
@@ -121,9 +133,38 @@ public class MechanicalPatternConverterItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         MachineRouteData route = route(stack);
-        MachineRouteTooltip.addRouteLines(tooltip, context.level(), route.positions(), flag.hasShiftDown());
-        tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.held_highlight_marked")
+        int cursor = RouteTools.clampCursor(RouteTools.getCursor(stack), route.positions().size());
+        RouteTools.Mode mode = RouteTools.getMode(stack);
+        tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.mode",
+                RouteTools.modeLabel(mode).copy().withStyle(
+                        mode == RouteTools.Mode.EDIT ? ChatFormatting.YELLOW : ChatFormatting.GREEN))
+                .withStyle(ChatFormatting.GRAY));
+        MachineRouteTooltip.addRouteLines(tooltip, context.level(), route.positions(), flag.hasShiftDown(), cursor);
+        if (mode == RouteTools.Mode.EDIT && cursor >= 0 && cursor < route.positions().size()) {
+            BlockPos pos = route.positions().get(cursor);
+            tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.selected_mark",
+                    cursor + 1,
+                    Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.role."
+                            + roleKey(context.level(), pos)),
+                    pos.getX(), pos.getY(), pos.getZ()).withStyle(ChatFormatting.YELLOW));
+        }
+        tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.guide_hint")
                 .withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.translatable(KEY_PREFIX + "tooltip.usage").withStyle(ChatFormatting.DARK_GRAY));
+    }
+
+    private static String roleKey(Level level, BlockPos pos) {
+        if (level == null) {
+            return "unknown";
+        }
+        return switch (LinkedMachines.roleOf(level, pos)) {
+            case DEPOT -> "depot";
+            case DEPLOYER -> "deployer";
+            case SPOUT -> "spout";
+            case PRESS -> "press";
+            case MIXER -> "mixer";
+            case SAW -> "saw";
+            case BASIN -> "basin";
+            default -> "unknown";
+        };
     }
 }

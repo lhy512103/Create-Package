@@ -16,6 +16,11 @@ public final class MachineRouteTooltip {
     private static final int DEFAULT_VISIBLE_LINKS = 8;
 
     public static void addRouteLines(List<Component> tooltip, Level level, List<BlockPos> route, boolean expanded) {
+        addRouteLines(tooltip, level, route, expanded, -1);
+    }
+
+    public static void addRouteLines(List<Component> tooltip, Level level, List<BlockPos> route, boolean expanded,
+            int selectedIndex) {
         tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.count", route.size())
                 .withStyle(route.isEmpty() ? ChatFormatting.GRAY : ChatFormatting.GREEN));
         if (route.isEmpty()) {
@@ -32,7 +37,7 @@ public final class MachineRouteTooltip {
             BlockPos pos = route.get(i);
             tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.entry",
                     i + 1, blockName(level, pos), pos.getX(), pos.getY(), pos.getZ())
-                    .withStyle(ChatFormatting.GRAY));
+                    .withStyle(i == selectedIndex ? ChatFormatting.YELLOW : ChatFormatting.GRAY));
         }
         if (route.size() > visible) {
             tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.more",

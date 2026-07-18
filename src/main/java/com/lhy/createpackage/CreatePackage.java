@@ -10,6 +10,10 @@ import com.lhy.createpackage.registry.ModCreativeTabs;
 import com.lhy.createpackage.registry.ModItems;
 import com.lhy.createpackage.registry.ModMenuTypes;
 import com.lhy.createpackage.registry.ModSounds;
+import com.lhy.createpackage.network.AutoRouteSearchPayload;
+import com.lhy.createpackage.network.RouteCursorScrollPayload;
+import com.lhy.createpackage.network.RouteMarkEditPayload;
+import com.lhy.createpackage.network.RouteModeTogglePayload;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
 import com.lhy.createpackage.integration.ae2.MechanicalPackagePatternEncodingCompat;
 import com.mojang.logging.LogUtils;
@@ -21,6 +25,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 import appeng.api.upgrades.Upgrades;
 import appeng.blockentity.AEBaseBlockEntity;
@@ -40,6 +45,7 @@ public class CreatePackage {
 
     public CreatePackage(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(CreatePackage::registerPayloads);
 
         // Register all deferred registers to the mod event bus.
         ModBlocks.BLOCKS.register(modEventBus);
@@ -80,5 +86,21 @@ public class CreatePackage {
                 com.lhy.createpackage.integration.ftbultimine.FtbUltimineCompat.register();
             }
         });
+    }
+
+    private static void registerPayloads(RegisterPayloadHandlersEvent event) {
+        event.registrar("1")
+                .playToServer(AutoRouteSearchPayload.TYPE, AutoRouteSearchPayload.STREAM_CODEC,
+                        AutoRouteSearchPayload::handle)
+                .playToServer(RouteCursorScrollPayload.TYPE, RouteCursorScrollPayload.STREAM_CODEC,
+                        RouteCursorScrollPayload::handle)
+                .playToServer(RouteMarkEditPayload.TYPE, RouteMarkEditPayload.STREAM_CODEC,
+                        RouteMarkEditPayload::handle)
+                .playToServer(RouteModeTogglePayload.TYPE, RouteModeTogglePayload.STREAM_CODEC,
+                        RouteModeTogglePayload::handle);
+    }
+
+    public static net.minecraft.resources.ResourceLocation id(String path) {
+        return net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MODID, path);
     }
 }

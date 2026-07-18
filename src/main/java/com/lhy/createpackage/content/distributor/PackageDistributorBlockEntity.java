@@ -16,10 +16,17 @@ import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 
 import com.lhy.createpackage.Config;
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.content.crafting.ActionList;
+import com.lhy.createpackage.content.crafting.AssemblyPlanner;
+import com.lhy.createpackage.content.crafting.FailureDiagnostics;
+import com.lhy.createpackage.content.crafting.InventoryAccess;
+import com.lhy.createpackage.content.crafting.NetworkIO;
+import com.lhy.createpackage.content.crafting.PatternStacks;
+import com.lhy.createpackage.content.crafting.SupplyAction;
+import com.lhy.createpackage.content.crafting.SupplyActions;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternData;
 import com.lhy.createpackage.content.pattern.RoutedMechanicalPackagePatternDetails;
 import com.lhy.createpackage.content.recipe.AssemblyPlan;
-import com.lhy.createpackage.content.recipe.AssemblyRecipeMatcher;
 import com.lhy.createpackage.registry.ModBlockEntities;
 import com.lhy.createpackage.registry.ModItems;
 
@@ -44,7 +51,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -55,6 +61,7 @@ import appeng.api.crafting.IPatternDetails;
 import appeng.api.implementations.blockentities.ICraftingMachine;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.networking.GridFlags;
+import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.security.IActionHost;
@@ -88,11 +95,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     private static final String NBT_JOB = "job";
     private static final String NBT_JOBS = "jobs";
     private static final String NBT_LAST_STATUS = "lastStatus";
-    private static final int MAX_JOB_TICKS = 20 * 60 * 10;
-    private static final int ROUND_OUTPUT_TIMEOUT_TICKS = 20 * 60;
-    private static final int REFILL_RETRY_TICKS = 20 * 5;
+    private static final int DEFAULT_MAX_JOB_TICKS = 20 * 60 * 10;
+    private static final int DEFAULT_ROUND_OUTPUT_TIMEOUT_TICKS = 20 * 60;
+    private static final int DEFAULT_REFILL_RETRY_TICKS = 20 * 5;
     private static final int MAX_TOOLTIP_LINKS = 12;
-    private static final int MISSING_REFILL_NOTICE_RADIUS = 64;
     private static final Map<UUID, Long> ENCODER_LOGIN_NOTICE_GENERATIONS = new ConcurrentHashMap<>();
 
     /**
@@ -104,6 +110,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     private final MachineSource actionSource = new MachineSource(this);
 
     private final List<DistributionJob> activeJobs = new ArrayList<>();
+    private final FailureDiagnostics diagnostics = new FailureDiagnostics();
     private String lastStatusKey = "ready";
     private boolean aeNodePresent;
     private boolean aePowered;
@@ -286,6 +293,28 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return removed;
     }
 
+    /**
+     * Replaces the linked machine at {@code index}. No-op when the index is invalid, the position is
+     * already present at another index, or the value is unchanged.
+     */
+    public boolean replaceLinkedMachine(int index, BlockPos pos) {
+        if (index < 0 || index >= linkedMachines.size()) {
+            return false;
+        }
+        BlockPos immutable = pos.immutable();
+        int existing = linkedMachines.indexOf(immutable);
+        if (existing >= 0 && existing != index) {
+            return false;
+        }
+        if (linkedMachines.get(index).equals(immutable)) {
+            return false;
+        }
+        linkedMachines.set(index, immutable);
+        clearLastStatus();
+        saveAndSync();
+        return true;
+    }
+
     /** Clears all links. Returns the number of machines that were unlinked. */
     public int clearLinks() {
         int count = linkedMachines.size();
@@ -295,6 +324,18 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             saveAndSync();
         }
         return count;
+    }
+
+    public boolean replaceAutoRoute(List<BlockPos> positions) {
+        List<BlockPos> normalized = positions.stream().map(BlockPos::immutable).toList();
+        if (linkedMachines.equals(normalized)) {
+            return false;
+        }
+        linkedMachines.clear();
+        linkedMachines.addAll(normalized);
+        clearLastStatus();
+        saveAndSync();
+        return true;
     }
 
     @Override
@@ -314,6 +355,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             data.put(NBT_JOB, activeJobs.get(0).write(registries));
         }
         data.putString(NBT_LAST_STATUS, lastStatusKey);
+        diagnostics.write(data);
     }
 
     @Override
@@ -339,6 +381,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             }
         }
         lastStatusKey = data.contains(NBT_LAST_STATUS) ? data.getString(NBT_LAST_STATUS) : "ready";
+        diagnostics.read(data);
     }
 
     @Override
@@ -489,39 +532,54 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return false;
         }
 
-        PlanContext context = createPlan(patternDetails, inputs, route);
-        if (context == null) {
+        NetworkIO network = networkIO();
+        AssemblyPlanner.Plan context = AssemblyPlanner.create(level, network, patternDetails, inputs, route);
+        if (!context.isSuccess()) {
+            rememberStatus(context.statusKey());
+            rememberFailure(context.statusKey(), context.failureDetail(), route, -1);
+            if (context.failureDetail() != null && Config.debugLoggingEnabled()) {
+                CreatePackage.LOGGER.warn("[Distributor @ {}] plan failed status={} detail={}",
+                        getBlockPos(), context.statusKey(), context.failureDetail());
+            }
             return false;
         }
 
         if (!context.simulate()) {
             rememberStatus("simulate_failed");
+            rememberFailure("simulate_failed", "simulate rejected route", route, -1);
             rememberFailureRoute(route);
             return false;
         }
 
-        if (!context.execute()) {
-            CreatePackage.LOGGER.warn("[Distributor @ {}] simulated plan but execution failed; refusing pattern",
-                    getBlockPos());
+        ActionList.Result executed = context.execute();
+        if (!executed.success()) {
+            CreatePackage.LOGGER.warn("[Distributor @ {}] simulated plan but execution failed at action #{} ({}); refusing pattern",
+                    getBlockPos(), executed.failedIndex(), executed.failedAction());
             rememberStatus("execute_failed");
+            rememberFailure("execute_failed",
+                    "action #" + executed.failedIndex() + " " + executed.failedAction(), route, -1);
             rememberFailureRoute(route);
             return false;
         }
 
+        List<AssemblyPlanner.PendingSupply> pending = new ArrayList<>(context.pendingSupplies());
         DistributionJob job = new DistributionJob(context.recipeId(), context.primaryOutputKey(),
                 context.primaryOutputAmount(), context.inputPos(), context.outputPos(), context.transitionalItemKey(),
-                context.sequenceLength(), context.loops(), context.refillInputs(), context.pendingSupplies(),
+                context.sequenceLength(), context.loops(), context.refillInputs(), pending,
                 patternEncoder(patternDetails), route);
         job.roundsStarted = 1;
         activeJobs.add(job);
-        consumeInputs(inputs);
+        PatternStacks.consumeInputs(inputs);
         lastStatusKey = "working";
+        diagnostics.clear();
         saveAndSync();
         wakeTicker();
 
-        CreatePackage.LOGGER.info("[Distributor @ {}] accepted recipe {} waiting for {} x{} at {}",
-                getBlockPos(), context.recipeId(), context.primaryOutputKey(), context.primaryOutputAmount(),
-                context.outputPos());
+        if (Config.debugLoggingEnabled()) {
+            CreatePackage.LOGGER.info("[Distributor @ {}] accepted recipe {} waiting for {} x{} at {}",
+                    getBlockPos(), context.recipeId(), context.primaryOutputKey(), context.primaryOutputAmount(),
+                    context.outputPos());
+        }
         return true;
     }
 
@@ -550,207 +608,51 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
     }
 
-    private PlanContext createPlan(IPatternDetails patternDetails, KeyCounter[] inputs, List<BlockPos> route) {
-        var patternInputs = flattenInputs(inputs);
-        var primary = patternDetails.getPrimaryOutput();
-        if (primary == null || !(primary.what() instanceof AEItemKey primaryOutputKey)) {
-            rememberStatus("no_primary_output");
-            return null;
-        }
-
-        ItemStack primaryOutput = primaryOutputKey.toStack((int) Math.min(primary.amount(), Integer.MAX_VALUE));
-        var candidates = AssemblyRecipeMatcher.findCandidates(level, primaryOutput, itemInputs(patternInputs));
-        if (candidates.size() != 1) {
-            if (candidates.size() > 1) {
-                CreatePackage.LOGGER.warn("[Distributor @ {}] ambiguous sequenced assembly recipes for {}: {}",
-                        getBlockPos(), primaryOutput,
-                        candidates.stream().map(AssemblyRecipeMatcher.Match::id).toList());
-                rememberStatus("ambiguous_recipe");
-            } else {
-                rememberStatus("no_matching_recipe");
-            }
-            return null;
-        }
-
-        var match = candidates.get(0);
-        AssemblyPlan plan = AssemblyPlan.of(match.recipe());
-        AEItemKey transitionalItemKey = AEItemKey.of(match.recipe().getTransitionalItem());
-        if (transitionalItemKey == null) {
-            rememberStatus("no_matching_recipe");
-            return null;
-        }
-        LinkedMachines machines = LinkedMachines.resolve(level, route);
-
-        var inputPos = machines.inputDepot();
-        var outputPos = machines.outputDepot();
-        if (inputPos == null || outputPos == null) {
-            CreatePackage.LOGGER.warn("[Distributor @ {}] needs linked input and output depot/belt", getBlockPos());
-            rememberStatus("missing_io");
-            return null;
-        }
-        if (inputPos.equals(outputPos)) {
-            CreatePackage.LOGGER.warn("[Distributor @ {}] input and output depot/belt must be different", getBlockPos());
-            rememberStatus("same_io");
-            return null;
-        }
-
-        var inputStack = takeMatchingItem(patternInputs, plan.baseInput(), 1);
-        if (inputStack.isEmpty()) {
-            CreatePackage.LOGGER.warn("[Distributor @ {}] missing base input for {}", getBlockPos(), match.id());
-            rememberStatus("missing_base");
-            return null;
-        }
-
-        var returnActions = new ArrayList<SupplyAction>();
-        var actions = new ArrayList<SupplyAction>();
-        var pendingSupplies = new ArrayList<PendingSupply>();
-        var refillInputs = new ArrayList<GenericStack>();
-        if (!scheduleItemSupply(inputPos, inputStack, actions, pendingSupplies)) {
-            rememberStatus("simulate_failed");
-            return null;
-        }
-        addRefillInput(refillInputs, inputStack);
-
-        var deployers = machines.withRole(LinkedMachines.Role.DEPLOYER);
-        var spouts = machines.withRole(LinkedMachines.Role.SPOUT);
-        int deployIdx = 0;
-        int fillIdx = 0;
-        for (AssemblyPlan.Step step : plan.consumingSteps()) {
-            switch (step.type()) {
-                case DEPLOY -> {
-                    if (deployIdx >= deployers.size()) {
-                        rememberStatus("missing_deployer");
-                        return null;
-                    }
-                    BlockPos deployer = deployers.get(deployIdx).pos();
-                    long existing = countMatchingItem(deployer, step.heldItem());
-                    if (step.keepHeld()) {
-                        if (existing <= 0) {
-                            ItemStack held = takeMatchingItem(patternInputs, step.heldItem(), 1);
-                            boolean supplied = false;
-                            if (held.isEmpty()) {
-                                NetworkItemStack networkHeld = findNetworkItem(step.heldItem(), 1);
-                                if (networkHeld != null) {
-                                    actions.add(new NetworkItemSupplyAction(deployer, networkHeld.key(),
-                                            networkHeld.stack()));
-                                    supplied = true;
-                                }
-                            } else {
-                                if (!scheduleItemSupply(deployer, held, actions, pendingSupplies)) {
-                                    rememberStatus("simulate_failed");
-                                    return null;
-                                }
-                                supplied = true;
-                            }
-                            if (!supplied) {
-                                rememberStatus("missing_deployer_item");
-                                return null;
-                            }
-                        }
-                        returnAllMatchingInputs(patternInputs, step.heldItem(), returnActions);
-                    } else {
-                        long amount = plan.loops();
-                        long availableInput = countMatchingInput(patternInputs, step.heldItem());
-                        if (availableInput + existing < amount) {
-                            rememberStatus("missing_deployer_item");
-                            return null;
-                        }
-                        long supplyAmount = availableInput > 0 ? Math.min(availableInput, amount) : 0;
-                        if (supplyAmount > 0) {
-                            ItemStack held = takeMatchingItem(patternInputs, step.heldItem(), supplyAmount);
-                            if (held.isEmpty()) {
-                                rememberStatus("missing_deployer_item");
-                                return null;
-                            }
-                            if (!scheduleItemSupply(deployer, held, actions, pendingSupplies)) {
-                                rememberStatus("simulate_failed");
-                                return null;
-                            }
-                        }
-                        ItemStack refill = exampleItemStack(step.heldItem(), amount);
-                        if (refill.isEmpty()) {
-                            rememberStatus("missing_deployer_item");
-                            return null;
-                        }
-                        addRefillInput(refillInputs, refill);
-                    }
-                    deployIdx++;
-                }
-                case FILL -> {
-                    if (fillIdx >= spouts.size()) {
-                        rememberStatus("missing_spout");
-                        return null;
-                    }
-                    long amount = (long) plan.loops() * step.fluid().amount();
-                    BlockPos spout = spouts.get(fillIdx).pos();
-                    long availableInput = countMatchingInput(patternInputs, step.fluid());
-                    long existing = countMatchingFluid(spout, step.fluid());
-                    if (availableInput + existing < amount) {
-                        rememberStatus("missing_spout_fluid");
-                        return null;
-                    }
-                    long supplyAmount = availableInput > 0 ? Math.min(availableInput, amount) : 0;
-                    if (supplyAmount > 0) {
-                        FluidStack fluid = takeMatchingFluid(patternInputs, step.fluid(), supplyAmount);
-                        if (fluid.isEmpty()) {
-                            rememberStatus("missing_spout_fluid");
-                            return null;
-                        }
-                        if (!scheduleFluidSupply(spout, fluid, actions, pendingSupplies)) {
-                            rememberStatus("simulate_failed");
-                            return null;
-                        }
-                    }
-                    FluidStack refill = exampleFluidStack(step.fluid(), amount);
-                    if (refill.isEmpty()) {
-                        rememberStatus("missing_spout_fluid");
-                        return null;
-                    }
-                    addRefillInput(refillInputs, refill);
-                    fillIdx++;
-                }
-                default -> {
-                }
-            }
-        }
-
-        if (!patternInputs.isEmpty()) {
-            CreatePackage.LOGGER.warn("[Distributor @ {}] pattern has unused input(s): {}", getBlockPos(),
-                    patternInputs);
-            rememberStatus("unused_inputs");
-            return null;
-        }
-
-        var allActions = new ArrayList<SupplyAction>(returnActions.size() + actions.size());
-        allActions.addAll(returnActions);
-        allActions.addAll(actions);
-        return new PlanContext(match.id(), primaryOutputKey, primary.amount(), inputPos, outputPos,
-                transitionalItemKey, plan.steps().size(), plan.loops(), allActions, pendingSupplies, refillInputs);
-    }
-
     protected final boolean tickDistributorJob() {
         if (activeJobs.isEmpty() || level == null || level.isClientSide()) {
             return false;
         }
 
         boolean didWork = false;
-        boolean completed = false;
+        boolean finished = false;
         for (int i = 0; i < activeJobs.size(); i++) {
             DistributionJob job = activeJobs.get(i);
+            if (isCraftingJobNoLongerWaiting(job)) {
+                clearMissingRefillInput(job);
+                returnPendingSupplies(job);
+                if (Config.debugLoggingEnabled()) {
+                    CreatePackage.LOGGER.info("[Distributor @ {}] cancelled recipe {} (AE no longer waiting for {})",
+                            getBlockPos(), job.recipeId, job.primaryOutput);
+                }
+                activeJobs.remove(i--);
+                lastStatusKey = activeJobs.isEmpty() ? "cancelled" : "working";
+                finished = true;
+                didWork = true;
+                continue;
+            }
             didWork = tickJob(job) || didWork;
             if (job.primaryRemaining <= 0) {
+                clearMissingRefillInput(job);
                 returnPendingSupplies(job);
-                CreatePackage.LOGGER.info("[Distributor @ {}] completed recipe {}", getBlockPos(), job.recipeId);
+                if (Config.debugLoggingEnabled()) CreatePackage.LOGGER.info("[Distributor @ {}] completed recipe {}", getBlockPos(), job.recipeId);
                 activeJobs.remove(i--);
-                completed = true;
+                lastStatusKey = activeJobs.isEmpty() ? "completed" : "working";
+                finished = true;
             }
         }
-        if (completed) {
-            lastStatusKey = activeJobs.isEmpty() ? "completed" : "working";
+        if (finished) {
             saveAndSync();
             didWork = true;
         }
         return didWork;
+    }
+
+    private boolean isCraftingJobNoLongerWaiting(DistributionJob job) {
+        if (job.ticks < 20) {
+            return false;
+        }
+        IGrid grid = getMainNode().getGrid();
+        return grid != null && grid.getCraftingService().getRequestedAmount(job.primaryOutput) <= 0;
     }
 
     private boolean tickJob(DistributionJob job) {
@@ -769,13 +671,14 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             didWork = retryRefillRound(job) || didWork;
         } else if (!waitingForReflow && !waitingForTargetSpace && job.pendingSupplies.isEmpty()
                 && job.awaitingFinalOutput && !job.roundHasOutput
+                && Config.enableProbabilisticEmptyRefill()
                 && job.roundTicks > emptyOutputRefillTimeoutTicks()) {
             CreatePackage.LOGGER.warn("[Distributor @ {}] no output appeared for recipe {} after {} ticks; treating "
                     + "this round as an empty probability result", getBlockPos(), job.recipeId,
                     job.roundTicks);
             didWork = startRefillRound(job, "empty_output") || didWork;
         }
-        if (job.ticks > MAX_JOB_TICKS) {
+        if (job.ticks > Config.distributorMaxJobTicks()) {
             CreatePackage.LOGGER.warn("[Distributor @ {}] timed out waiting for {} x{} from recipe {}",
                     getBlockPos(), job.primaryOutput, job.primaryRemaining, job.recipeId);
             job.ticks = 0;
@@ -797,7 +700,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         boolean didWork = false;
         boolean blocked = false;
         for (int i = 0; i < job.pendingSupplies.size(); i++) {
-            PendingSupply supply = job.pendingSupplies.get(i);
+            AssemblyPlanner.PendingSupply supply = job.pendingSupplies.get(i);
             long inserted = insertPendingSupply(supply);
             if (inserted <= 0) {
                 blocked = true;
@@ -824,7 +727,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return didWork;
     }
 
-    private long insertPendingSupply(PendingSupply supply) {
+    private long insertPendingSupply(AssemblyPlanner.PendingSupply supply) {
         GenericStack stack = supply.stack();
         if (stack.what() instanceof AEItemKey itemKey) {
             int amount = (int) Math.min(stack.amount(), Integer.MAX_VALUE);
@@ -844,14 +747,14 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private void returnPendingSupplies(DistributionJob job) {
-        for (PendingSupply supply : job.pendingSupplies) {
+        for (AssemblyPlanner.PendingSupply supply : job.pendingSupplies) {
             insertIntoNetwork(supply.stack().what(), supply.stack().amount(), Actionable.MODULATE);
         }
         job.pendingSupplies.clear();
     }
 
     private boolean retryRefillRound(DistributionJob job) {
-        if (job.roundTicks % REFILL_RETRY_TICKS != 0) {
+        if (job.roundTicks % Config.refillRetryTicks() != 0) {
             return false;
         }
         return startRefillRound(job, job.statusKey);
@@ -991,41 +894,21 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return assembly.step() >= job.sequenceLength * (job.loops - 1);
     }
 
+    private NetworkIO networkIO() {
+        return new NetworkIO(getMainNode().getGrid(), actionSource);
+    }
+
     private long insertIntoNetwork(AEKey what, long amount, Actionable mode) {
-        var grid = getMainNode().getGrid();
-        if (grid == null) {
-            return 0;
-        }
-        return grid.getStorageService().getInventory().insert(what, amount, mode, actionSource);
+        return networkIO().insert(what, amount, mode);
     }
 
     private long extractFromNetwork(AEKey what, long amount, Actionable mode) {
-        var grid = getMainNode().getGrid();
-        if (grid == null) {
-            return 0;
-        }
-        return grid.getStorageService().getInventory().extract(what, amount, mode, actionSource);
+        return networkIO().extract(what, amount, mode);
     }
 
     @Nullable
-    private NetworkItemStack findNetworkItem(net.minecraft.world.item.crafting.Ingredient ingredient, long amount) {
-        if (ingredient == null || amount <= 0 || amount > Integer.MAX_VALUE) {
-            return null;
-        }
-        var grid = getMainNode().getGrid();
-        if (grid == null) {
-            return null;
-        }
-        for (var entry : grid.getStorageService().getCachedInventory()) {
-            if (entry.getLongValue() < amount || !(entry.getKey() instanceof AEItemKey itemKey)) {
-                continue;
-            }
-            ItemStack stack = itemKey.toStack((int) amount);
-            if (ingredient.test(stack)) {
-                return new NetworkItemStack(itemKey, stack);
-            }
-        }
-        return null;
+    private NetworkIO.NetworkItemStack findNetworkItem(net.minecraft.world.item.crafting.Ingredient ingredient, long amount) {
+        return networkIO().findItem(ingredient, amount);
     }
 
     private boolean startRefillRound(DistributionJob job, String reason) {
@@ -1078,13 +961,16 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             }
         }
 
-        if (!context.execute()) {
-            CreatePackage.LOGGER.warn("[Distributor @ {}] refill insertion failed after extraction for recipe {}",
-                    getBlockPos(), job.recipeId);
+        ActionList.Result refillExecuted = context.execute();
+        if (!refillExecuted.success()) {
+            CreatePackage.LOGGER.warn("[Distributor @ {}] refill insertion failed after extraction for recipe {} at action #{} ({})",
+                    getBlockPos(), job.recipeId, refillExecuted.failedIndex(), refillExecuted.failedAction());
             for (GenericStack input : context.inputs()) {
                 insertIntoNetwork(input.what(), input.amount(), Actionable.MODULATE);
             }
             rememberJobStatus(job, "refill_target_full");
+            rememberFailure("refill_target_full",
+                    "action #" + refillExecuted.failedIndex() + " " + refillExecuted.failedAction(), job.route, -1);
             return false;
         }
 
@@ -1150,7 +1036,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
 
         if (!delivered) {
-            double radiusSq = MISSING_REFILL_NOTICE_RADIUS * MISSING_REFILL_NOTICE_RADIUS;
+            double radiusSq = Config.missingRefillNoticeRadius() * Config.missingRefillNoticeRadius();
             for (ServerPlayer player : serverLevel.players()) {
                 if (player.distanceToSqr(getBlockPos().getCenter()) <= radiusSq) {
                     player.sendSystemMessage(missingRefillMessage(job, missing, serverLevel, player));
@@ -1210,7 +1096,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private static int missingRefillNoticeIntervalTicks() {
-        return Config.MISSING_REFILL_NOTICE_INTERVAL_SECONDS.get() * 20;
+        return Config.missingRefillNoticeIntervalSeconds(30) * 20;
     }
 
     @Nullable
@@ -1235,7 +1121,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         List<GenericStack> remaining = copyStacks(refillInputs);
         List<SupplyAction> actions = new ArrayList<>();
-        List<PendingSupply> pendingSupplies = new ArrayList<>();
+        List<AssemblyPlanner.PendingSupply> pendingSupplies = new ArrayList<>();
         List<GenericStack> inputs = new ArrayList<>();
         ItemStack inputStack = takeMatchingItem(remaining, plan.baseInput(), 1);
         if (inputStack.isEmpty()) {
@@ -1262,7 +1148,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                     BlockPos deployer = deployers.get(deployIdx).pos();
                     if (step.keepHeld()) {
                         if (countMatchingItem(deployer, step.heldItem()) <= 0) {
-                            NetworkItemStack held = findNetworkItem(step.heldItem(), 1);
+                            NetworkIO.NetworkItemStack held = findNetworkItem(step.heldItem(), 1);
                             if (held == null) {
                                 rememberJobStatus(job, "missing_deployer_item");
                                 return null;
@@ -1323,192 +1209,57 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private IItemHandler itemHandler(BlockPos pos) {
-        if (level == null || !level.isLoaded(pos)) {
-            return null;
-        }
-        IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
-        if (handler != null) {
-            return handler;
-        }
-        for (Direction direction : Direction.values()) {
-            handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, direction);
-            if (handler != null) {
-                return handler;
-            }
-        }
-        return null;
+        return InventoryAccess.itemHandler(level, pos);
     }
 
     private boolean canInsertAll(BlockPos target, ItemStack stack) {
-        return insertItem(target, stack, true).isEmpty();
+        return InventoryAccess.canInsertAll(level, target, stack);
     }
 
     private boolean scheduleItemSupply(BlockPos target, ItemStack stack, List<SupplyAction> actions,
-            List<PendingSupply> pendingSupplies) {
-        if (stack.isEmpty()) {
-            return true;
-        }
-        AEItemKey key = AEItemKey.of(stack);
-        if (key == null) {
-            return false;
-        }
-
-        int accepted = acceptedItemAmount(target, stack);
-        if (accepted <= 0 && !itemTargetCouldEventuallyAccept(target, stack)) {
-            return false;
-        }
-        if (accepted > 0) {
-            actions.add(new ItemSupplyAction(target, stack.copyWithCount(accepted)));
-        }
-        int pending = stack.getCount() - accepted;
-        if (pending > 0) {
-            pendingSupplies.add(new PendingSupply(target, new GenericStack(key, pending)));
-        }
-        return true;
-    }
-
-    private int acceptedItemAmount(BlockPos target, ItemStack stack) {
-        ItemStack remaining = insertItem(target, stack, true);
-        return stack.getCount() - remaining.getCount();
-    }
-
-    private boolean itemTargetCouldEventuallyAccept(BlockPos target, ItemStack stack) {
-        IItemHandler handler = itemHandler(target);
-        if (handler == null) {
-            return false;
-        }
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack stored = handler.getStackInSlot(slot);
-            if (stored.isEmpty() || ItemStack.isSameItemSameComponents(stored, stack)) {
-                return true;
-            }
-        }
-        return false;
+            List<AssemblyPlanner.PendingSupply> pendingSupplies) {
+        return AssemblyPlanner.scheduleItemSupply(level, target, stack, actions, pendingSupplies);
     }
 
     private boolean scheduleFluidSupply(BlockPos target, FluidStack stack, List<SupplyAction> actions,
-            List<PendingSupply> pendingSupplies) {
-        if (stack.isEmpty()) {
-            return true;
-        }
-        AEFluidKey key = AEFluidKey.of(stack);
-        if (key == null) {
-            return false;
-        }
-
-        int accepted = acceptedFluidAmount(target, stack);
-        if (accepted <= 0 && !fluidTargetCouldEventuallyAccept(target, stack)) {
-            return false;
-        }
-        if (accepted > 0) {
-            actions.add(new FluidSupplyAction(target, stack.copyWithAmount(accepted)));
-        }
-        long pending = (long) stack.getAmount() - accepted;
-        if (pending > 0) {
-            pendingSupplies.add(new PendingSupply(target, new GenericStack(key, pending)));
-        }
-        return true;
-    }
-
-    private int acceptedFluidAmount(BlockPos target, FluidStack stack) {
-        IFluidHandler handler = fluidHandler(target);
-        if (handler == null) {
-            return 0;
-        }
-        return handler.fill(stack.copy(), IFluidHandler.FluidAction.SIMULATE);
-    }
-
-    private boolean fluidTargetCouldEventuallyAccept(BlockPos target, FluidStack stack) {
-        IFluidHandler handler = fluidHandler(target);
-        if (handler == null) {
-            return false;
-        }
-        AEFluidKey key = AEFluidKey.of(stack);
-        for (int tank = 0; tank < handler.getTanks(); tank++) {
-            if (!handler.isFluidValid(tank, stack)) {
-                continue;
-            }
-            FluidStack stored = handler.getFluidInTank(tank);
-            if (stored.isEmpty() || key.equals(AEFluidKey.of(stored))) {
-                return true;
-            }
-        }
-        return false;
+            List<AssemblyPlanner.PendingSupply> pendingSupplies) {
+        return AssemblyPlanner.scheduleFluidSupply(level, target, stack, actions, pendingSupplies);
     }
 
     private ItemStack insertItem(BlockPos target, ItemStack stack, boolean simulate) {
-        IItemHandler handler = itemHandler(target);
-        if (handler == null) {
-            return stack.copy();
-        }
-        return insertIntoHandler(handler, stack, simulate);
+        return InventoryAccess.insertItem(level, target, stack, simulate);
     }
 
     private ItemStack insertIntoHandler(IItemHandler handler, ItemStack stack, boolean simulate) {
-        ItemStack remaining = stack.copy();
-        for (int slot = 0; slot < handler.getSlots() && !remaining.isEmpty(); slot++) {
-            remaining = handler.insertItem(slot, remaining, simulate);
-        }
-        return remaining;
+        return InventoryAccess.insertIntoHandler(handler, stack, simulate);
     }
 
     private long countMatchingItem(BlockPos pos, net.minecraft.world.item.crafting.Ingredient ingredient) {
-        IItemHandler handler = itemHandler(pos);
-        if (handler == null || ingredient == null) {
-            return 0;
-        }
-        long amount = 0;
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            ItemStack stack = handler.getStackInSlot(slot);
-            if (ingredient.test(stack)) {
-                amount += stack.getCount();
-            }
-        }
-        return amount;
+        return InventoryAccess.countMatchingItem(level, pos, ingredient);
     }
 
     private long countMatchingFluid(BlockPos pos,
             net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient) {
-        IFluidHandler handler = fluidHandler(pos);
-        if (handler == null || ingredient == null) {
-            return 0;
-        }
-        long amount = 0;
-        for (int tank = 0; tank < handler.getTanks(); tank++) {
-            FluidStack stack = handler.getFluidInTank(tank);
-            if (ingredient.ingredient().test(stack)) {
-                amount += stack.getAmount();
-            }
-        }
-        return amount;
+        return InventoryAccess.countMatchingFluid(level, pos, ingredient);
     }
 
     private IFluidHandler fluidHandler(BlockPos pos) {
-        if (level == null || !level.isLoaded(pos)) {
-            return null;
-        }
-        for (Direction direction : Direction.values()) {
-            IFluidHandler handler = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, direction);
-            if (handler != null) {
-                return handler;
-            }
-        }
-        return level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null);
+        return InventoryAccess.fluidHandler(level, pos);
     }
 
     protected final boolean hasDistributorJob() {
         return !activeJobs.isEmpty();
     }
 
-    private boolean routeOverlapsActiveJob(List<BlockPos> route) {
+    protected final boolean routeOverlapsActiveJob(List<BlockPos> route) {
         if (route.isEmpty() || activeJobs.isEmpty()) {
             return false;
         }
+        // Any shared route position represents a shared inventory or processing machine.
+        // Keep that resource exclusive; only fully disjoint assembly lines may run in parallel.
         for (DistributionJob job : activeJobs) {
-            for (BlockPos pos : route) {
-                if (job.route.contains(pos)) {
-                    return true;
-                }
+            if (!java.util.Collections.disjoint(route, job.route)) {
+                return true;
             }
         }
         return false;
@@ -1571,6 +1322,16 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     protected void rememberFailureRoute(List<BlockPos> route) {
+        rememberFailure(lastStatusKey, null, route, -1);
+    }
+
+    protected void rememberFailure(String statusKey, @Nullable String detail, List<BlockPos> route, int patternSlot) {
+        diagnostics.remember(statusKey, detail, route, patternSlot);
+        saveAndSync();
+    }
+
+    public FailureDiagnostics getDiagnostics() {
+        return diagnostics;
     }
 
     protected void saveAndSync() {
@@ -1595,12 +1356,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return new AeStatus(aeNodePresent, aePowered, aeChannel, aeActive);
     }
 
+    private record AeStatus(boolean nodePresent, boolean powered, boolean channel, boolean active) {
+    }
+
     private static int emptyOutputRefillTimeoutTicks() {
-        try {
-            return Config.EMPTY_OUTPUT_REFILL_TIMEOUT_TICKS.get();
-        } catch (IllegalStateException ignored) {
-            return ROUND_OUTPUT_TIMEOUT_TICKS;
-        }
+        return Config.emptyOutputRefillTimeoutTicks(DEFAULT_ROUND_OUTPUT_TIMEOUT_TICKS);
     }
 
     // === Create goggles ===
@@ -1724,6 +1484,10 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             }
             case DEPLOYER -> "deployer";
             case SPOUT -> "spout";
+            case PRESS -> "press";
+            case MIXER -> "mixer";
+            case SAW -> "saw";
+            case BASIN -> "basin";
             case UNKNOWN -> "unknown";
         };
     }
@@ -1785,317 +1549,39 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private static void addRefillInput(List<GenericStack> inputs, ItemStack stack) {
-        AEItemKey key = AEItemKey.of(stack);
-        if (key != null) {
-            addRefillInput(inputs, new GenericStack(key, stack.getCount()));
-        }
+        PatternStacks.addRefillInput(inputs, stack);
     }
 
     private static void addRefillInput(List<GenericStack> inputs, FluidStack stack) {
-        AEFluidKey key = AEFluidKey.of(stack);
-        if (key != null) {
-            addRefillInput(inputs, new GenericStack(key, stack.getAmount()));
-        }
+        PatternStacks.addRefillInput(inputs, stack);
     }
 
     private static void addRefillInput(List<GenericStack> inputs, GenericStack stack) {
-        for (int i = 0; i < inputs.size(); i++) {
-            GenericStack existing = inputs.get(i);
-            if (existing.what().equals(stack.what())) {
-                inputs.set(i, new GenericStack(existing.what(), existing.amount() + stack.amount()));
-                return;
-            }
-        }
-        inputs.add(stack);
+        PatternStacks.addRefillInput(inputs, stack);
     }
 
     private static List<GenericStack> copyStacks(List<GenericStack> inputs) {
-        return new ArrayList<>(inputs);
-    }
-
-    private static ItemStack exampleItemStack(net.minecraft.world.item.crafting.Ingredient ingredient, long amount) {
-        if (ingredient == null || amount <= 0 || amount > Integer.MAX_VALUE) {
-            return ItemStack.EMPTY;
-        }
-        ItemStack[] items = ingredient.getItems();
-        if (items.length == 0) {
-            return ItemStack.EMPTY;
-        }
-        ItemStack stack = items[0].copy();
-        stack.setCount((int) amount);
-        return stack;
-    }
-
-    private static FluidStack exampleFluidStack(
-            net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient, long amount) {
-        if (ingredient == null || amount <= 0 || amount > Integer.MAX_VALUE) {
-            return FluidStack.EMPTY;
-        }
-        FluidStack[] fluids = ingredient.getFluids();
-        if (fluids.length == 0) {
-            return FluidStack.EMPTY;
-        }
-        return fluids[0].copyWithAmount((int) amount);
-    }
-
-    private static List<GenericStack> flattenInputs(KeyCounter[] inputs) {
-        var result = new ArrayList<GenericStack>();
-        for (KeyCounter counter : inputs) {
-            for (var entry : counter) {
-                if (entry.getLongValue() > 0) {
-                    addRefillInput(result, new GenericStack(entry.getKey(), entry.getLongValue()));
-                }
-            }
-        }
-        return result;
-    }
-
-    private static List<ItemStack> itemInputs(List<GenericStack> inputs) {
-        var result = new ArrayList<ItemStack>();
-        for (GenericStack input : inputs) {
-            if (input.what() instanceof AEItemKey itemKey) {
-                result.add(itemKey.toStack((int) Math.min(input.amount(), Integer.MAX_VALUE)));
-            }
-        }
-        return result;
-    }
-
-    private static long countMatchingInput(List<GenericStack> inputs,
-            net.minecraft.world.item.crafting.Ingredient ingredient) {
-        if (ingredient == null) {
-            return 0;
-        }
-        long amount = 0;
-        for (GenericStack input : inputs) {
-            if (input.what() instanceof AEItemKey itemKey && ingredient.test(itemKey.toStack(1))) {
-                amount += input.amount();
-            }
-        }
-        return amount;
-    }
-
-    private static long countMatchingInput(List<GenericStack> inputs,
-            net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient) {
-        if (ingredient == null) {
-            return 0;
-        }
-        long amount = 0;
-        for (GenericStack input : inputs) {
-            if (input.what() instanceof AEFluidKey fluidKey) {
-                FluidStack stack = fluidKey.toStack((int) Math.min(input.amount(), Integer.MAX_VALUE));
-                if (ingredient.ingredient().test(stack)) {
-                    amount += input.amount();
-                }
-            }
-        }
-        return amount;
+        return PatternStacks.copyStacks(inputs);
     }
 
     private static ItemStack takeMatchingItem(List<GenericStack> inputs,
             net.minecraft.world.item.crafting.Ingredient ingredient, long amount) {
-        if (ingredient == null || amount <= 0 || amount > Integer.MAX_VALUE) {
-            return ItemStack.EMPTY;
-        }
-        for (int i = 0; i < inputs.size(); i++) {
-            GenericStack input = inputs.get(i);
-            if (input.what() instanceof AEItemKey itemKey && input.amount() >= amount) {
-                ItemStack stack = itemKey.toStack((int) amount);
-                if (ingredient.test(stack)) {
-                    removeAmount(inputs, i, amount);
-                    return stack;
-                }
-            }
-        }
-        return ItemStack.EMPTY;
-    }
-
-    private void returnAllMatchingInputs(List<GenericStack> inputs,
-            net.minecraft.world.item.crafting.Ingredient ingredient, List<SupplyAction> actions) {
-        if (ingredient == null) {
-            return;
-        }
-        for (int i = inputs.size() - 1; i >= 0; i--) {
-            GenericStack input = inputs.get(i);
-            if (input.what() instanceof AEItemKey itemKey && ingredient.test(itemKey.toStack(1))) {
-                actions.add(new NetworkReturnAction(input));
-                inputs.remove(i);
-            }
-        }
+        return PatternStacks.takeMatchingItem(inputs, ingredient, amount);
     }
 
     private static FluidStack takeMatchingFluid(List<GenericStack> inputs,
             net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient, long amount) {
-        if (ingredient == null || amount <= 0 || amount > Integer.MAX_VALUE) {
-            return FluidStack.EMPTY;
-        }
-        for (int i = 0; i < inputs.size(); i++) {
-            GenericStack input = inputs.get(i);
-            if (input.what() instanceof AEFluidKey fluidKey && input.amount() >= amount) {
-                FluidStack stack = fluidKey.toStack((int) amount);
-                if (ingredient.ingredient().test(stack)) {
-                    removeAmount(inputs, i, amount);
-                    return stack;
-                }
-            }
-        }
-        return FluidStack.EMPTY;
+        return PatternStacks.takeMatchingFluid(inputs, ingredient, amount);
     }
 
-    private static void removeAmount(List<GenericStack> inputs, int index, long amount) {
-        GenericStack old = inputs.get(index);
-        long remaining = old.amount() - amount;
-        if (remaining <= 0) {
-            inputs.remove(index);
-        } else {
-            inputs.set(index, new GenericStack(old.what(), remaining));
-        }
-    }
-
-    private static void consumeInputs(KeyCounter[] inputs) {
-        for (KeyCounter counter : inputs) {
-            counter.clear();
-        }
-    }
-
-    private record PlanContext(
-            ResourceLocation recipeId,
-            AEItemKey primaryOutputKey,
-            long primaryOutputAmount,
-            BlockPos inputPos,
-            BlockPos outputPos,
-            AEItemKey transitionalItemKey,
-            int sequenceLength,
-            int loops,
-            List<SupplyAction> actions,
-            List<PendingSupply> pendingSupplies,
-            List<GenericStack> refillInputs) {
-
-        boolean simulate() {
-            return actions.stream().allMatch(action -> action.perform(true));
-        }
-
-        boolean execute() {
-            return actions.stream().allMatch(action -> action.perform(false));
-        }
-    }
-
-    private record RefillContext(List<SupplyAction> actions, List<PendingSupply> pendingSupplies,
+    private record RefillContext(List<SupplyAction> actions, List<AssemblyPlanner.PendingSupply> pendingSupplies,
             List<GenericStack> inputs) {
         boolean simulate() {
-            return actions.stream().allMatch(action -> action.perform(true));
+            return new ActionList(actions).simulate();
         }
 
-        boolean execute() {
-            return actions.stream().allMatch(action -> action.perform(false));
-        }
-    }
-
-    private interface SupplyAction {
-        boolean perform(boolean simulate);
-    }
-
-    private record AeStatus(boolean nodePresent, boolean powered, boolean channel, boolean active) {
-    }
-
-    private record NetworkItemStack(AEItemKey key, ItemStack stack) {
-    }
-
-    private record PendingSupply(BlockPos target, GenericStack stack) {
-        private PendingSupply {
-            target = target.immutable();
-            Objects.requireNonNull(stack);
-        }
-
-        private PendingSupply withAmount(long amount) {
-            return new PendingSupply(target, new GenericStack(stack.what(), amount));
-        }
-    }
-
-    private final class ItemSupplyAction implements SupplyAction {
-        private final BlockPos target;
-        private final ItemStack stack;
-
-        private ItemSupplyAction(BlockPos target, ItemStack stack) {
-            this.target = target;
-            this.stack = stack.copy();
-        }
-
-        @Override
-        public boolean perform(boolean simulate) {
-            return insertItem(target, stack, simulate).isEmpty();
-        }
-    }
-
-    private final class NetworkItemSupplyAction implements SupplyAction {
-        private final BlockPos target;
-        private final AEItemKey key;
-        private final ItemStack stack;
-
-        private NetworkItemSupplyAction(BlockPos target, AEItemKey key, ItemStack stack) {
-            this.target = target;
-            this.key = key;
-            this.stack = stack.copy();
-        }
-
-        @Override
-        public boolean perform(boolean simulate) {
-            long amount = stack.getCount();
-            if (extractFromNetwork(key, amount, Actionable.SIMULATE) < amount) {
-                return false;
-            }
-            if (!canInsertAll(target, stack)) {
-                return false;
-            }
-            if (simulate) {
-                return true;
-            }
-            long extracted = extractFromNetwork(key, amount, Actionable.MODULATE);
-            if (extracted < amount) {
-                if (extracted > 0) {
-                    insertIntoNetwork(key, extracted, Actionable.MODULATE);
-                }
-                return false;
-            }
-            ItemStack remaining = insertItem(target, stack, false);
-            if (!remaining.isEmpty()) {
-                insertIntoNetwork(key, remaining.getCount(), Actionable.MODULATE);
-                return false;
-            }
-            return true;
-        }
-    }
-
-    private final class NetworkReturnAction implements SupplyAction {
-        private final GenericStack stack;
-
-        private NetworkReturnAction(GenericStack stack) {
-            this.stack = stack;
-        }
-
-        @Override
-        public boolean perform(boolean simulate) {
-            var mode = simulate ? Actionable.SIMULATE : Actionable.MODULATE;
-            return insertIntoNetwork(stack.what(), stack.amount(), mode) >= stack.amount();
-        }
-    }
-
-    private final class FluidSupplyAction implements SupplyAction {
-        private final BlockPos target;
-        private final FluidStack stack;
-
-        private FluidSupplyAction(BlockPos target, FluidStack stack) {
-            this.target = target;
-            this.stack = stack.copy();
-        }
-
-        @Override
-        public boolean perform(boolean simulate) {
-            IFluidHandler handler = fluidHandler(target);
-            if (handler == null) {
-                return false;
-            }
-            var action = simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE;
-            return handler.fill(stack.copy(), action) >= stack.getAmount();
+        ActionList.Result execute() {
+            return new ActionList(actions).execute();
         }
     }
 
@@ -2136,7 +1622,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private final int sequenceLength;
         private final int loops;
         private final List<GenericStack> refillInputs;
-        private final List<PendingSupply> pendingSupplies;
+        private final List<AssemblyPlanner.PendingSupply> pendingSupplies;
         @Nullable
         private final MechanicalPackagePatternData.PatternEncoder encoder;
         private final List<BlockPos> route;
@@ -2153,7 +1639,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         private DistributionJob(ResourceLocation recipeId, AEItemKey primaryOutput, long primaryRemaining,
                 BlockPos inputPos, BlockPos outputPos, AEItemKey transitionalItem, int sequenceLength, int loops,
-                List<GenericStack> refillInputs, List<PendingSupply> pendingSupplies,
+                List<GenericStack> refillInputs, List<AssemblyPlanner.PendingSupply> pendingSupplies,
                 @Nullable MechanicalPackagePatternData.PatternEncoder encoder, List<BlockPos> route) {
             this.recipeId = Objects.requireNonNull(recipeId);
             this.primaryOutput = Objects.requireNonNull(primaryOutput);
@@ -2217,7 +1703,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 tag.put(NBT_MISSING_REFILL_INPUT, GenericStack.writeTag(registries, missingRefillInput));
             }
             ListTag pendingList = new ListTag();
-            for (PendingSupply supply : pendingSupplies) {
+            for (AssemblyPlanner.PendingSupply supply : pendingSupplies) {
                 CompoundTag supplyTag = new CompoundTag();
                 supplyTag.putLong(NBT_PENDING_TARGET, supply.target().asLong());
                 supplyTag.put(NBT_PENDING_KEY, supply.stack().what().toTagGeneric(registries));
@@ -2255,14 +1741,14 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                     refillInputs.add(new GenericStack(key, amount));
                 }
             }
-            List<PendingSupply> pendingSupplies = new ArrayList<>();
+            List<AssemblyPlanner.PendingSupply> pendingSupplies = new ArrayList<>();
             ListTag pendingList = tag.getList(NBT_PENDING_SUPPLIES, Tag.TAG_COMPOUND);
             for (int i = 0; i < pendingList.size(); i++) {
                 CompoundTag supplyTag = pendingList.getCompound(i);
                 AEKey key = AEKey.fromTagGeneric(registries, supplyTag.getCompound(NBT_PENDING_KEY));
                 long amount = supplyTag.getLong(NBT_PENDING_AMOUNT);
                 if (key != null && amount > 0) {
-                    pendingSupplies.add(new PendingSupply(BlockPos.of(supplyTag.getLong(NBT_PENDING_TARGET)),
+                    pendingSupplies.add(new AssemblyPlanner.PendingSupply(BlockPos.of(supplyTag.getLong(NBT_PENDING_TARGET)),
                             new GenericStack(key, amount)));
                 }
             }

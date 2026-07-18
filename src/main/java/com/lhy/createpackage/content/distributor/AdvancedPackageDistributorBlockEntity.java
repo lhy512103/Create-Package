@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.lhy.createpackage.Config;
 import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.compat.ExtendedAePlusCompat;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternDetails;
@@ -70,6 +71,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     private final CombinedTicker combinedTicker = new CombinedTicker();
     private int visibleMechanicalPackagePatternCount;
     private int visibleParallelCards;
+    private int nextEquivalentRouteIndex;
     private List<BlockPos> lastFailureRoute = List.of();
     private int lastFailureSlot = -1;
 
@@ -175,7 +177,8 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
 
     @Override
     public int getMaxActiveJobs() {
-        return 1 << getParallelCardCount();
+        int cards = getParallelCardCount();
+        return cards == 0 ? 1 : cards * Config.advancedDistributorParallelCardCapacity();
     }
 
     public int getParallelCardCount() {
@@ -345,7 +348,20 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     protected void rememberFailureRoute(List<BlockPos> route) {
         lastFailureRoute = route.stream().map(BlockPos::immutable).toList();
         lastFailureSlot = findPatternSlotForRoute(route);
-        saveAndSync();
+        super.rememberFailure(getStatusKey(), null, lastFailureRoute, lastFailureSlot);
+    }
+
+    @Override
+    protected void rememberFailure(String statusKey, @Nullable String detail, List<BlockPos> route, int patternSlot) {
+        if (route != null && !route.isEmpty()) {
+            lastFailureRoute = route.stream().map(BlockPos::immutable).toList();
+        }
+        if (patternSlot >= 0) {
+            lastFailureSlot = patternSlot;
+        } else if (route != null && !route.isEmpty()) {
+            lastFailureSlot = findPatternSlotForRoute(route);
+        }
+        super.rememberFailure(statusKey, detail, lastFailureRoute, lastFailureSlot);
     }
 
     private int findPatternSlotForRoute(List<BlockPos> route) {
@@ -387,12 +403,35 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
                 rememberStatus("invalid_mechanical_pattern");
                 return false;
             }
-            boolean accepted = AdvancedPackageDistributorBlockEntity.this.pushPattern(
-                    mechanical, inputHolder, Direction.UP, mechanical.route());
-            if (accepted) {
-                resetCraftingLock();
+            List<RoutedMechanicalPackagePatternDetails> candidates = getAvailablePatterns().stream()
+                    .filter(RoutedMechanicalPackagePatternDetails.class::isInstance)
+                    .map(RoutedMechanicalPackagePatternDetails.class::cast)
+                    .filter(candidate -> candidate.delegate().getDefinition()
+                            .equals(mechanical.delegate().getDefinition()))
+                    .toList();
+            if (candidates.isEmpty()) {
+                return false;
             }
-            return accepted;
+
+            // AE2 fixes one equivalent pattern into a crafting plan. Without routing here, every
+            // repeated craft is pushed back to that pattern's route, so the other copies never run.
+            // Select an idle equivalent route locally and rotate the starting point for fairness.
+            int start = Math.floorMod(nextEquivalentRouteIndex, candidates.size());
+            for (int offset = 0; offset < candidates.size(); offset++) {
+                int index = (start + offset) % candidates.size();
+                RoutedMechanicalPackagePatternDetails candidate = candidates.get(index);
+                if (routeOverlapsActiveJob(candidate.route())) {
+                    continue;
+                }
+                boolean accepted = AdvancedPackageDistributorBlockEntity.this.pushPattern(
+                        candidate, inputHolder, Direction.UP, candidate.route());
+                if (accepted) {
+                    nextEquivalentRouteIndex = (index + 1) % candidates.size();
+                    resetCraftingLock();
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override

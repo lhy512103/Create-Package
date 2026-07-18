@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+
+import com.lhy.createpackage.content.crafting.CreateMachineIds;
 
 /**
  * Resolves a distributor's linked block positions into typed Create machine roles, in link order.
@@ -22,6 +23,10 @@ public final class LinkedMachines {
         DEPOT,     // depot or belt — item carrier; first one is the input, last is the output
         DEPLOYER,
         SPOUT,
+        PRESS,
+        MIXER,
+        SAW,
+        BASIN,
         UNKNOWN
     }
 
@@ -41,24 +46,31 @@ public final class LinkedMachines {
         return result;
     }
 
-    private static final ResourceLocation ID_DEPLOYER = ResourceLocation.fromNamespaceAndPath("create", "deployer");
-    private static final ResourceLocation ID_SPOUT = ResourceLocation.fromNamespaceAndPath("create", "spout");
-    private static final ResourceLocation ID_DEPOT = ResourceLocation.fromNamespaceAndPath("create", "depot");
-    private static final ResourceLocation ID_BELT = ResourceLocation.fromNamespaceAndPath("create", "belt");
-
     public static Role roleOf(Level level, BlockPos pos) {
         if (!level.isLoaded(pos)) {
             return Role.UNKNOWN;
         }
         BlockState state = level.getBlockState(pos);
-        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-        if (ID_DEPLOYER.equals(id)) {
+        ResourceLocation id = CreateMachineIds.idOf(state);
+        if (CreateMachineIds.isDeployer(id)) {
             return Role.DEPLOYER;
         }
-        if (ID_SPOUT.equals(id)) {
+        if (CreateMachineIds.isSpout(id)) {
             return Role.SPOUT;
         }
-        if (ID_DEPOT.equals(id) || ID_BELT.equals(id)) {
+        if (CreateMachineIds.isMechanicalPress(id)) {
+            return Role.PRESS;
+        }
+        if (CreateMachineIds.isMechanicalMixer(id)) {
+            return Role.MIXER;
+        }
+        if (CreateMachineIds.isMechanicalSaw(id)) {
+            return Role.SAW;
+        }
+        if (CreateMachineIds.isBasin(id)) {
+            return Role.BASIN;
+        }
+        if (CreateMachineIds.isDepotCarrier(id)) {
             return Role.DEPOT;
         }
         return Role.UNKNOWN;

@@ -6,6 +6,7 @@ import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
 import com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity;
 import com.lhy.createpackage.content.pattern.MachineRouteData;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternData;
+import com.lhy.createpackage.content.route.RouteTools;
 import com.lhy.createpackage.registry.ModComponents;
 import com.lhy.createpackage.registry.ModItems;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -29,6 +30,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 public final class MechanicalPackagePatternHighlighter {
     private static final double BOX_INFLATE = 0.01;
+    private static final double SELECTED_INFLATE = 0.035;
     private static final double MAX_RENDER_DISTANCE_SQR = 128.0 * 128.0;
 
     public static void render(RenderLevelStageEvent event) {
@@ -43,8 +45,8 @@ public final class MechanicalPackagePatternHighlighter {
             return;
         }
 
-        List<BlockPos> route = heldRoute(level, player.getMainHandItem(), player.getOffhandItem());
-        if (route.isEmpty()) {
+        HeldRoute held = heldRoute(level, player.getMainHandItem(), player.getOffhandItem());
+        if (held.route().isEmpty()) {
             return;
         }
 
@@ -61,22 +63,23 @@ public final class MechanicalPackagePatternHighlighter {
         RenderSystem.disableCull();
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         BufferBuilder fill = null;
-        for (int i = 0; i < route.size(); i++) {
-            BlockPos pos = route.get(i);
+        for (int i = 0; i < held.route().size(); i++) {
+            BlockPos pos = held.route().get(i);
             if (!level.isLoaded(pos) || pos.distToCenterSqr(cameraPos) > MAX_RENDER_DISTANCE_SQR) {
                 continue;
             }
+            boolean selected = i == held.selectedIndex();
             boolean first = i == 0;
-            boolean last = i == route.size() - 1;
-            float red = last ? 1.0f : first ? 0.2f : 0.1f;
-            float green = last ? 0.55f : first ? 0.45f : 0.65f;
-            float blue = last ? 0.05f : first ? 1.0f : 0.25f;
-            AABB box = new AABB(pos).inflate(BOX_INFLATE);
+            boolean last = i == held.route().size() - 1;
+            float red = selected ? 1.0f : last ? 1.0f : first ? 0.2f : 0.1f;
+            float green = selected ? 0.9f : last ? 0.55f : first ? 0.45f : 0.65f;
+            float blue = selected ? 0.15f : last ? 0.05f : first ? 1.0f : 0.25f;
+            AABB box = new AABB(pos).inflate(selected ? SELECTED_INFLATE : BOX_INFLATE);
             if (fill == null) {
                 fill = Tesselator.getInstance()
                         .begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
             }
-            renderFilledBox(poseStack, fill, box, red, green, blue, last ? 0.42f : 0.30f);
+            renderFilledBox(poseStack, fill, box, red, green, blue, selected ? 0.55f : last ? 0.42f : 0.30f);
             LevelRenderer.renderLineBox(poseStack, lines, box, red, green, blue, 1.0f);
         }
         if (fill != null) {
@@ -124,38 +127,56 @@ public final class MechanicalPackagePatternHighlighter {
                 .setColor(red, green, blue, alpha);
     }
 
-    private static List<BlockPos> heldRoute(Level level, ItemStack mainHand, ItemStack offHand) {
-        List<BlockPos> mainRoute = routeFrom(level, mainHand);
-        if (!mainRoute.isEmpty()) {
+    private static HeldRoute heldRoute(Level level, ItemStack mainHand, ItemStack offHand) {
+        HeldRoute mainRoute = routeFrom(level, mainHand);
+        if (!mainRoute.route().isEmpty()) {
             return mainRoute;
         }
         return routeFrom(level, offHand);
     }
 
-    private static List<BlockPos> routeFrom(Level level, ItemStack stack) {
+    private static HeldRoute routeFrom(Level level, ItemStack stack) {
         if (stack.is(ModItems.MECHANICAL_PACKAGE_PATTERN.get())) {
             MechanicalPackagePatternData data = MechanicalPackagePatternData.from(stack);
-            return data == null ? List.of() : data.route();
+            if (data == null) {
+                return HeldRoute.empty();
+            }
+            int selected = RouteTools.clampCursor(RouteTools.getCursor(stack), data.route().size());
+            return new HeldRoute(data.route(), selected);
         }
         if (stack.is(ModItems.MECHANICAL_PATTERN_CONVERTER.get())) {
             MachineRouteData data = stack.get(ModComponents.MECHANICAL_ROUTE.get());
-            return data == null ? List.of() : data.positions();
+            if (data == null) {
+                return HeldRoute.empty();
+            }
+            int selected = RouteTools.clampCursor(RouteTools.getCursor(stack), data.positions().size());
+            return new HeldRoute(data.positions(), selected);
         }
         if (stack.is(ModItems.MACHINE_LINKER.get())) {
             GlobalPos distributorPos = stack.get(ModComponents.LINKED_DISTRIBUTOR.get());
             if (distributorPos == null || !level.dimension().equals(distributorPos.dimension())
                     || !level.isLoaded(distributorPos.pos())) {
-                return List.of();
+                return HeldRoute.empty();
             }
             if (level.getBlockEntity(distributorPos.pos()) instanceof PackageDistributorBlockEntity distributor
                     && distributor.usesStoredMachineLinks()) {
-                return distributor.getLinkedMachines();
+                List<BlockPos> route = distributor.getLinkedMachines();
+                int selected = RouteTools.clampCursor(RouteTools.getCursor(stack), route.size());
+                return new HeldRoute(route, selected);
             }
             if (level.getBlockEntity(distributorPos.pos()) instanceof KineticPatternProviderBlockEntity provider) {
-                return provider.getLinkedMachines();
+                // Parallel machine set: highlight links, but never ordered-route selection.
+                return new HeldRoute(provider.getLinkedMachines(), -1);
             }
+            return HeldRoute.empty();
         }
-        return List.of();
+        return HeldRoute.empty();
+    }
+
+    private record HeldRoute(List<BlockPos> route, int selectedIndex) {
+        private static HeldRoute empty() {
+            return new HeldRoute(List.of(), -1);
+        }
     }
 
     private MechanicalPackagePatternHighlighter() {}

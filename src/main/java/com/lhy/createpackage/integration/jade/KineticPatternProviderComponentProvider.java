@@ -37,6 +37,10 @@ public final class KineticPatternProviderComponentProvider implements IBlockComp
         for (Component line : provider.jobLines()) {
             tooltip.add(line.copy().withStyle(ChatFormatting.AQUA));
         }
+        for (Component line : provider.getDiagnostics()
+                .tooltipLines("tooltip." + CreatePackage.MODID + ".kinetic_pattern_provider")) {
+            tooltip.add(line.copy().withStyle(ChatFormatting.RED));
+        }
     }
 
     @Override

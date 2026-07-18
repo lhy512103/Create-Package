@@ -42,4 +42,30 @@ public record MachineRouteData(List<BlockPos> positions) {
         copy.remove(pos);
         return new MachineRouteData(copy);
     }
+
+    public MachineRouteData withRemovedAt(int index) {
+        if (index < 0 || index >= positions.size()) {
+            return this;
+        }
+        var copy = new java.util.ArrayList<>(positions);
+        copy.remove(index);
+        return new MachineRouteData(copy);
+    }
+
+    public MachineRouteData withReplaced(int index, BlockPos pos) {
+        if (index < 0 || index >= positions.size()) {
+            return this;
+        }
+        BlockPos immutable = pos.immutable();
+        if (positions.get(index).equals(immutable)) {
+            return this;
+        }
+        int existing = positions.indexOf(immutable);
+        if (existing >= 0 && existing != index) {
+            return this;
+        }
+        var copy = new java.util.ArrayList<>(positions);
+        copy.set(index, immutable);
+        return new MachineRouteData(copy);
+    }
 }

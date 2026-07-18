@@ -45,6 +45,10 @@ public final class PackageDistributorComponentProvider implements IBlockComponen
         for (Component line : distributor.getMissingRefillLines()) {
             tooltip.add(line);
         }
+        for (Component line : distributor.getDiagnostics()
+                .tooltipLines("tooltip." + CreatePackage.MODID + ".package_distributor")) {
+            tooltip.add(line.copy().withStyle(ChatFormatting.RED));
+        }
 
         if (distributor instanceof com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity advanced) {
             tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.parallel_cards",
