@@ -13,7 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
-import net.neoforged.neoforge.network.PacketDistributor;
+import appeng.core.sync.network.NetworkHandler;
 
 import appeng.api.client.AEKeyRendering;
 import appeng.api.config.LockCraftingMode;
@@ -32,8 +32,7 @@ import appeng.client.gui.widgets.ToggleButton;
 import appeng.client.gui.widgets.UpgradesPanel;
 import appeng.core.localization.GuiText;
 import appeng.core.localization.InGameTooltip;
-import appeng.core.network.ServerboundPacket;
-import appeng.core.network.serverbound.ConfigButtonPacket;
+import appeng.core.sync.packets.ConfigButtonPacket;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import appeng.menu.implementations.PatternProviderMenu;
 import appeng.menu.SlotSemantics;
@@ -108,8 +107,7 @@ public class CreatePackagePatternProviderScreen<C extends PatternProviderMenu> e
 
     private void selectNextPatternProviderMode() {
         boolean backwards = isHandlingRightClick();
-        ServerboundPacket message = new ConfigButtonPacket(Settings.PATTERN_ACCESS_TERMINAL, backwards);
-        PacketDistributor.sendToServer(message);
+        NetworkHandler.instance().sendToServer(new ConfigButtonPacket(Settings.PATTERN_ACCESS_TERMINAL, backwards));
     }
 
     private static final class LockReason implements ICompositeWidget {

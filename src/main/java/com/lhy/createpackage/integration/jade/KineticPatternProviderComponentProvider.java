@@ -16,7 +16,7 @@ public final class KineticPatternProviderComponentProvider implements IBlockComp
     public static final KineticPatternProviderComponentProvider INSTANCE =
             new KineticPatternProviderComponentProvider();
 
-    private static final ResourceLocation UID = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation UID = new ResourceLocation(
             CreatePackage.MODID, "kinetic_pattern_provider");
 
     private KineticPatternProviderComponentProvider() {}

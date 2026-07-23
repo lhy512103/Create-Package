@@ -8,10 +8,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.items.IItemHandler;
 
 /**
  * Capability-facing inventory helpers shared by package distributors and kinetic providers.
@@ -25,15 +26,13 @@ public final class InventoryAccess {
         if (level == null || !level.isLoaded(pos)) {
             return null;
         }
-        IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
-        if (handler != null) {
-            return handler;
-        }
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (blockEntity == null) return null;
+        IItemHandler handler = blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, null).orElse(null);
+        if (handler != null) return handler;
         for (Direction direction : Direction.values()) {
-            handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, direction);
-            if (handler != null) {
-                return handler;
-            }
+            handler = blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, direction).orElse(null);
+            if (handler != null) return handler;
         }
         return null;
     }
@@ -43,13 +42,13 @@ public final class InventoryAccess {
         if (level == null || !level.isLoaded(pos)) {
             return null;
         }
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (blockEntity == null) return null;
         for (Direction direction : Direction.values()) {
-            IFluidHandler handler = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, direction);
-            if (handler != null) {
-                return handler;
-            }
+            IFluidHandler handler = blockEntity.getCapability(ForgeCapabilities.FLUID_HANDLER, direction).orElse(null);
+            if (handler != null) return handler;
         }
-        return level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null);
+        return blockEntity.getCapability(ForgeCapabilities.FLUID_HANDLER, null).orElse(null);
     }
 
     public static ItemStack insertItem(@Nullable Level level, BlockPos target, ItemStack stack, boolean simulate) {
@@ -76,7 +75,7 @@ public final class InventoryAccess {
         int remaining = amount;
         for (int slot = 0; slot < handler.getSlots() && remaining > 0; slot++) {
             ItemStack present = handler.getStackInSlot(slot);
-            if (present.isEmpty() || !ItemStack.isSameItemSameComponents(present, match)) {
+            if (present.isEmpty() || !ItemStack.isSameItemSameTags(present, match)) {
                 continue;
             }
             ItemStack extracted = handler.extractItem(slot, remaining, simulate);
@@ -109,7 +108,7 @@ public final class InventoryAccess {
         }
         for (int slot = 0; slot < handler.getSlots(); slot++) {
             ItemStack stored = handler.getStackInSlot(slot);
-            if (stored.isEmpty() || ItemStack.isSameItemSameComponents(stored, stack)) {
+            if (stored.isEmpty() || ItemStack.isSameItemSameTags(stored, stack)) {
                 return true;
             }
         }
@@ -164,7 +163,7 @@ public final class InventoryAccess {
         if (handler == null || match == null || match.isEmpty() || amount <= 0) {
             return FluidStack.EMPTY;
         }
-        FluidStack request = match.copyWithAmount(amount);
+        FluidStack request = new FluidStack(match, amount);
         return handler.drain(request, simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
     }
 
@@ -182,7 +181,7 @@ public final class InventoryAccess {
     }
 
     public static long countMatchingFluid(@Nullable Level level, BlockPos pos,
-            net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient) {
+            com.simibubi.create.foundation.fluid.FluidIngredient ingredient) {
         IFluidHandler handler = fluidHandler(level, pos);
         if (handler == null || ingredient == null) {
             return 0;
@@ -190,7 +189,7 @@ public final class InventoryAccess {
         long amount = 0;
         for (int tank = 0; tank < handler.getTanks(); tank++) {
             FluidStack stack = handler.getFluidInTank(tank);
-            if (ingredient.ingredient().test(stack)) {
+            if (ingredient.test(stack)) {
                 amount += stack.getAmount();
             }
         }

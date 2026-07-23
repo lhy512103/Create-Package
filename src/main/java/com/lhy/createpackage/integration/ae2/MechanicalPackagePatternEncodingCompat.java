@@ -17,14 +17,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.event.entity.player.PlayerContainerEvent;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.minecraftforge.event.entity.player.PlayerContainerEvent;
+import net.minecraftforge.event.TickEvent;
 
 public final class MechanicalPackagePatternEncodingCompat {
     private static final Map<UUID, RememberedRoute> REMEMBERED_ROUTES = new HashMap<>();
 
-    public static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        if (event.player.level().isClientSide() || !(event.player instanceof ServerPlayer player)) {
             return;
         }
         if (!(player.containerMenu instanceof PatternEncodingTermMenu menu)) {
@@ -82,8 +83,7 @@ public final class MechanicalPackagePatternEncodingCompat {
 
     private static ItemStack wrap(ItemStack encodedPattern, List<BlockPos> route, ServerPlayer player) {
         ItemStack result = new ItemStack(ModItems.MECHANICAL_PACKAGE_PATTERN.get());
-        result.set(ModComponents.MECHANICAL_PACKAGE_PATTERN.get(),
-                new MechanicalPackagePatternData(encodedPattern.copyWithCount(1), route,
+        ModComponents.setMechanicalPattern(result, new MechanicalPackagePatternData(encodedPattern.copyWithCount(1), route,
                         java.util.Optional.of(MechanicalPackagePatternData.PatternEncoder.of(player))));
         return result;
     }

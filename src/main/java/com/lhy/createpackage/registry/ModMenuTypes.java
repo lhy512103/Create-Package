@@ -13,45 +13,45 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.MenuType;
-import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraftforge.common.extensions.IForgeMenuType;
+import net.minecraftforge.registries.RegistryObject;
+import net.minecraftforge.registries.DeferredRegister;
 
-import appeng.menu.implementations.MenuTypeBuilder;
+
 
 public final class ModMenuTypes {
     public static final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(Registries.MENU, CreatePackage.MODID);
 
-    public static final DeferredHolder<MenuType<?>, MenuType<MechanicalPatternConverterMenu>> MECHANICAL_PATTERN_CONVERTER =
+    public static final RegistryObject<MenuType<MechanicalPatternConverterMenu>> MECHANICAL_PATTERN_CONVERTER =
             MENUS.register("mechanical_pattern_converter",
-                    () -> IMenuTypeExtension.create(MechanicalPatternConverterMenu::fromNetwork));
+                    () -> IForgeMenuType.create(MechanicalPatternConverterMenu::fromNetwork));
 
-    public static final DeferredHolder<MenuType<?>, MenuType<BasicPackageDistributorMenu>> BASIC_PACKAGE_DISTRIBUTOR =
+    public static final RegistryObject<MenuType<BasicPackageDistributorMenu>> BASIC_PACKAGE_DISTRIBUTOR =
             MENUS.register("basic_package_distributor",
-                    () -> MenuTypeBuilder
+                    () -> ModMenuTypeBuilder
                             .create(BasicPackageDistributorMenu::new, BasicPackageDistributorBlockEntity.class)
                             .withMenuTitle(host -> Component.translatable(
                                     "block." + CreatePackage.MODID + ".basic_package_distributor"))
-                            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+                            .buildUnregistered(new ResourceLocation(
                                     CreatePackage.MODID, "basic_package_distributor")));
 
-    public static final DeferredHolder<MenuType<?>, MenuType<AdvancedPackageDistributorMenu>> ADVANCED_PACKAGE_DISTRIBUTOR =
+    public static final RegistryObject<MenuType<AdvancedPackageDistributorMenu>> ADVANCED_PACKAGE_DISTRIBUTOR =
             MENUS.register("advanced_package_distributor",
-                    () -> MenuTypeBuilder
+                    () -> ModMenuTypeBuilder
                             .create(AdvancedPackageDistributorMenu::new, AdvancedPackageDistributorBlockEntity.class)
                             .withMenuTitle(host -> Component.translatable(
                                     "block." + CreatePackage.MODID + ".advanced_package_distributor"))
-                            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+                            .buildUnregistered(new ResourceLocation(
                                     CreatePackage.MODID, "advanced_package_distributor")));
 
-    public static final DeferredHolder<MenuType<?>, MenuType<KineticPatternProviderMenu>> KINETIC_PATTERN_PROVIDER =
+    public static final RegistryObject<MenuType<KineticPatternProviderMenu>> KINETIC_PATTERN_PROVIDER =
             MENUS.register("kinetic_pattern_provider",
-                    () -> MenuTypeBuilder
+                    () -> ModMenuTypeBuilder
                             .create(KineticPatternProviderMenu::new, KineticPatternProviderBlockEntity.class)
                             .withMenuTitle(host -> Component.translatable(
                                     "block." + CreatePackage.MODID + ".kinetic_pattern_provider"))
-                            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+                            .buildUnregistered(new ResourceLocation(
                                     CreatePackage.MODID, "kinetic_pattern_provider")));
 
     private ModMenuTypes() {}

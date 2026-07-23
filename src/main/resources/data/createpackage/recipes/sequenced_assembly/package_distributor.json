@@ -1,0 +1,85 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "tag": "forge:plates/gold"
+  },
+  "loops": 3,
+  "results": [
+    {
+      "item": "createpackage:package_distributor"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "keep_held_item": true,
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "ae2:silicon_press"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "keep_held_item": true,
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "ae2:logic_processor_press"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "keep_held_item": true,
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "ae2:engineering_processor_press"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "keep_held_item": true,
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "ae2:calculation_processor_press"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    }
+  ],
+  "transitionalItem": {
+    "item": "createpackage:incomplete_package_distributor"
+  }
+}

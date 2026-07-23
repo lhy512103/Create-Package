@@ -1,14 +1,11 @@
 package com.lhy.createpackage.content.kinetic;
 
-import com.mojang.serialization.MapCodec;
-
 import com.lhy.createpackage.registry.ModItems;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -29,18 +26,12 @@ import appeng.util.InteractionUtil;
 import appeng.util.Platform;
 
 public class KineticPatternProviderBlock extends BaseEntityBlock {
-    public static final MapCodec<KineticPatternProviderBlock> CODEC = simpleCodec(KineticPatternProviderBlock::new);
     public static final EnumProperty<PushDirection> PUSH_DIRECTION = EnumProperty.create("push_direction",
             PushDirection.class);
 
     public KineticPatternProviderBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(PUSH_DIRECTION, PushDirection.ALL));
-    }
-
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
     }
 
     @Override
@@ -54,21 +45,24 @@ public class KineticPatternProviderBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack heldItem, BlockState state, Level level, BlockPos pos,
-            Player player, InteractionHand hand, BlockHitResult hit) {
-        if (heldItem.is(ModItems.MACHINE_LINKER.get())) {
-            return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
-        }
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
+            InteractionHand hand, BlockHitResult hit) {
+        ItemStack heldItem = player.getItemInHand(hand);
+        if (heldItem.is(ModItems.MACHINE_LINKER.get())) return InteractionResult.PASS;
         if (!InteractionUtil.isInAlternateUseMode(player) && InteractionUtil.canWrenchRotate(heldItem)) {
             setSide(level, pos, hit.getDirection());
-            return ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return InteractionResult.sidedSuccess(level.isClientSide());
         }
-        return super.useItemOn(heldItem, state, level, pos, player, hand, hit);
+        if (level.getBlockEntity(pos) instanceof PatternProviderLogicHost host) {
+            if (!level.isClientSide()) host.openMenu(player, MenuLocators.forBlockEntity(host.getBlockEntity()));
+            return InteractionResult.sidedSuccess(level.isClientSide());
+        }
+        return InteractionResult.PASS;
     }
 
     public void setSide(Level level, BlockPos pos, Direction facing) {
@@ -97,17 +91,5 @@ public class KineticPatternProviderBlock extends BaseEntityBlock {
         if (!WrenchHook.isDisassembling()) {
             super.spawnDestroyParticles(level, player, pos, state);
         }
-    }
-
-    @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
-            BlockHitResult hitResult) {
-        if (level.getBlockEntity(pos) instanceof PatternProviderLogicHost host) {
-            if (!level.isClientSide()) {
-                host.openMenu(player, MenuLocators.forBlockEntity(host.getBlockEntity()));
-            }
-            return InteractionResult.sidedSuccess(level.isClientSide());
-        }
-        return InteractionResult.PASS;
     }
 }

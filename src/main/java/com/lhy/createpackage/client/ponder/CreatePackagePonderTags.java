@@ -33,6 +33,6 @@ public final class CreatePackagePonderTags {
     }
 
     private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(CreatePackage.MODID, path);
+        return new ResourceLocation(CreatePackage.MODID, path);
     }
 }

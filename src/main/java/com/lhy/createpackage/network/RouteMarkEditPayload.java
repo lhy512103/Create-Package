@@ -2,6 +2,7 @@ package com.lhy.createpackage.network;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.distributor.LinkedMachines;
@@ -12,14 +13,11 @@ import com.lhy.createpackage.registry.ModComponents;
 import com.lhy.createpackage.registry.ModItems;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
  * Handles a right-click on a route-markable block.
@@ -28,23 +26,21 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * That is important because sneaking right-click on <em>air</em> has tool-specific clear behavior,
  * while sneaking right-click on a machine must only remove that clicked route mark.
  */
-public record RouteMarkEditPayload(BlockPos pos, boolean sneaking) implements CustomPacketPayload {
-    public static final Type<RouteMarkEditPayload> TYPE =
-            new Type<>(CreatePackage.id("route_mark_edit"));
+public record RouteMarkEditPayload(BlockPos pos, boolean sneaking) {
+    public static void encode(RouteMarkEditPayload payload, FriendlyByteBuf buffer) {
+        buffer.writeBlockPos(payload.pos);
+        buffer.writeBoolean(payload.sneaking);
+    }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, RouteMarkEditPayload> STREAM_CODEC =
-            StreamCodec.composite(
-                    BlockPos.STREAM_CODEC,
-                    RouteMarkEditPayload::pos,
-                    ByteBufCodecs.BOOL,
-                    RouteMarkEditPayload::sneaking,
-                    RouteMarkEditPayload::new);
+    public static RouteMarkEditPayload decode(FriendlyByteBuf buffer) {
+        return new RouteMarkEditPayload(buffer.readBlockPos(), buffer.readBoolean());
+    }
 
-    public static void handle(RouteMarkEditPayload payload, IPayloadContext context) {
+    public static void handle(RouteMarkEditPayload payload, Supplier<NetworkEvent.Context> supplier) {
+        NetworkEvent.Context context = supplier.get();
         context.enqueueWork(() -> {
-            if (!(context.player() instanceof ServerPlayer player)) {
-                return;
-            }
+            ServerPlayer player = context.getSender();
+            if (player == null) return;
             ItemStack tool = RouteTools.heldRouteTool(player);
             if (tool == null) {
                 return;
@@ -57,6 +53,7 @@ public record RouteMarkEditPayload(BlockPos pos, boolean sneaking) implements Cu
                 handleLinkerEdit(player, tool, payload.pos(), payload.sneaking());
             }
         });
+        context.setPacketHandled(true);
     }
 
     private static void handleConverter(ServerPlayer player, ItemStack tool, BlockPos pos, boolean sneaking) {
@@ -64,7 +61,7 @@ public record RouteMarkEditPayload(BlockPos pos, boolean sneaking) implements Cu
             converterMessage(player, "not_markable");
             return;
         }
-        MachineRouteData route = tool.get(ModComponents.MECHANICAL_ROUTE.get());
+        MachineRouteData route = ModComponents.getMechanicalRoute(tool);
         route = route == null ? new MachineRouteData(List.of()) : route;
 
         if (!RouteTools.isEditMode(tool)) {
@@ -170,9 +167,9 @@ public record RouteMarkEditPayload(BlockPos pos, boolean sneaking) implements Cu
 
     private static void writeConverterRoute(ItemStack tool, MachineRouteData route) {
         if (route.isEmpty()) {
-            tool.remove(ModComponents.MECHANICAL_ROUTE.get());
+            ModComponents.clearMechanicalRoute(tool);
         } else {
-            tool.set(ModComponents.MECHANICAL_ROUTE.get(), route);
+            ModComponents.setMechanicalRoute(tool, route);
         }
     }
 
@@ -198,8 +195,5 @@ public record RouteMarkEditPayload(BlockPos pos, boolean sneaking) implements Cu
                 "message." + CreatePackage.MODID + "." + key, args), true);
     }
 
-    @Override
-    public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
-    }
+
 }

@@ -1,67 +1,67 @@
 package com.lhy.createpackage;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 /**
  * Server config for Create Package behavior.
  */
 public class Config {
-    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
-    public static final ModConfigSpec.BooleanValue ENABLE_DEBUG_LOGGING = BUILDER
+    public static final ForgeConfigSpec.BooleanValue ENABLE_DEBUG_LOGGING = BUILDER
             .comment("Log detailed distributor / crafting bridge activity for debugging.")
             .define("enableDebugLogging", false);
 
-    public static final ModConfigSpec.IntValue EMPTY_OUTPUT_REFILL_TIMEOUT_TICKS = BUILDER
+    public static final ForgeConfigSpec.IntValue EMPTY_OUTPUT_REFILL_TIMEOUT_TICKS = BUILDER
             .comment("How long a package distributor waits after starting a sequenced-assembly round before treating "
                     + "no output as an empty probability result and attempting a refill.")
             .defineInRange("emptyOutputRefillTimeoutTicks", 20 * 60, 20, 20 * 60 * 30);
 
-    public static final ModConfigSpec.IntValue MISSING_REFILL_NOTICE_INTERVAL_SECONDS = BUILDER
+    public static final ForgeConfigSpec.IntValue MISSING_REFILL_NOTICE_INTERVAL_SECONDS = BUILDER
             .comment("How often package distributors resend chat warnings while a probabilistic refill is missing "
                     + "materials from AE storage.")
             .defineInRange("missingRefillNoticeIntervalSeconds", 30, 1, 60 * 30);
 
-    public static final ModConfigSpec.IntValue ADVANCED_DISTRIBUTOR_PARALLEL_CARD_CAPACITY = BUILDER
+    public static final ForgeConfigSpec.IntValue ADVANCED_DISTRIBUTOR_PARALLEL_CARD_CAPACITY = BUILDER
             .comment("Number of active jobs provided by each Parallel Card in an Advanced Package Distributor.")
             .defineInRange("advancedDistributorParallelCardCapacity", 4, 1, 64);
 
-    public static final ModConfigSpec.IntValue DISTRIBUTOR_MAX_JOB_TICKS = BUILDER
+    public static final ForgeConfigSpec.IntValue DISTRIBUTOR_MAX_JOB_TICKS = BUILDER
             .comment("Hard timeout for one package-distributor craft job before it is marked timed out.")
             .defineInRange("distributorMaxJobTicks", 20 * 60 * 10, 20 * 30, 20 * 60 * 60);
 
-    public static final ModConfigSpec.IntValue KINETIC_MAX_JOB_TICKS = BUILDER
+    public static final ForgeConfigSpec.IntValue KINETIC_MAX_JOB_TICKS = BUILDER
             .comment("Hard timeout for one kinetic pattern provider craft job before it is marked timed out.")
             .defineInRange("kineticMaxJobTicks", 20 * 60 * 5, 20 * 30, 20 * 60 * 60);
 
-    public static final ModConfigSpec.IntValue REFILL_RETRY_TICKS = BUILDER
+    public static final ForgeConfigSpec.IntValue REFILL_RETRY_TICKS = BUILDER
             .comment("How often craft bridges retry a blocked probabilistic refill while waiting for materials or "
                     + "target space.")
             .defineInRange("refillRetryTicks", 20 * 5, 5, 20 * 60);
 
-    public static final ModConfigSpec.IntValue PENDING_DISPATCH_RETRY_TICKS = BUILDER
+    public static final ForgeConfigSpec.IntValue PENDING_DISPATCH_RETRY_TICKS = BUILDER
             .comment("How often kinetic pattern providers retry a pending smart-batch dispatch.")
             .defineInRange("pendingDispatchRetryTicks", 5, 1, 20 * 30);
 
-    public static final ModConfigSpec.IntValue MISSING_REFILL_NOTICE_RADIUS = BUILDER
+    public static final ForgeConfigSpec.IntValue MISSING_REFILL_NOTICE_RADIUS = BUILDER
             .comment("Chat notice radius around a package distributor that is missing refill materials.")
             .defineInRange("missingRefillNoticeRadius", 64, 8, 256);
 
-    public static final ModConfigSpec.IntValue AUTO_ROUTE_MAX_LENGTH = BUILDER
+    public static final ForgeConfigSpec.IntValue AUTO_ROUTE_MAX_LENGTH = BUILDER
             .comment("Maximum Manhattan length of the straight corridor scanned by G-key auto-route.")
             .defineInRange("autoRouteMaxLength", 512, 8, 2048);
 
-    public static final ModConfigSpec.BooleanValue AUTO_ROUTE_ALLOW_L_SHAPED = BUILDER
+    public static final ForgeConfigSpec.BooleanValue AUTO_ROUTE_ALLOW_L_SHAPED = BUILDER
             .comment("Allow G-key auto-route to rebuild one-bend (L-shaped) same-Y corridors when a pure straight "
                     + "path is unavailable.")
             .define("autoRouteAllowLShaped", true);
 
-    public static final ModConfigSpec.BooleanValue ENABLE_PROBABILISTIC_EMPTY_REFILL = BUILDER
+    public static final ForgeConfigSpec.BooleanValue ENABLE_PROBABILISTIC_EMPTY_REFILL = BUILDER
             .comment("When enabled, craft bridges treat a full empty-output timeout as a failed probability roll and "
                     + "attempt a refill round.")
             .define("enableProbabilisticEmptyRefill", true);
 
-    static final ModConfigSpec SPEC = BUILDER.build();
+    static final ForgeConfigSpec SPEC = BUILDER.build();
 
     private Config() {
     }
@@ -114,7 +114,7 @@ public class Config {
         return safeBool(ENABLE_DEBUG_LOGGING, false);
     }
 
-    private static int safeInt(ModConfigSpec.IntValue value, int fallback) {
+    private static int safeInt(ForgeConfigSpec.IntValue value, int fallback) {
         try {
             return value.get();
         } catch (IllegalStateException ignored) {
@@ -122,7 +122,7 @@ public class Config {
         }
     }
 
-    private static boolean safeBool(ModConfigSpec.BooleanValue value, boolean fallback) {
+    private static boolean safeBool(ForgeConfigSpec.BooleanValue value, boolean fallback) {
         try {
             return value.get();
         } catch (IllegalStateException ignored) {

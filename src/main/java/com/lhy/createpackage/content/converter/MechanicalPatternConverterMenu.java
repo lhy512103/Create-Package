@@ -10,7 +10,7 @@ import com.lhy.createpackage.registry.ModMenuTypes;
 
 import appeng.api.crafting.PatternDetailsHelper;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -32,7 +32,7 @@ public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
     private final SimpleContainer container = new SimpleContainer(INTERNAL_SLOT_COUNT);
 
     public static MechanicalPatternConverterMenu fromNetwork(int windowId, Inventory inventory,
-            RegistryFriendlyByteBuf buffer) {
+            FriendlyByteBuf buffer) {
         boolean mainHand = buffer.readBoolean();
         return new MechanicalPatternConverterMenu(ModMenuTypes.MECHANICAL_PATTERN_CONVERTER.get(), windowId,
                 inventory, mainHand ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
@@ -98,8 +98,7 @@ public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
                 continue;
             }
             ItemStack result = new ItemStack(ModItems.MECHANICAL_PACKAGE_PATTERN.get());
-            result.set(ModComponents.MECHANICAL_PACKAGE_PATTERN.get(),
-                    new MechanicalPackagePatternData(originalPattern, route,
+            ModComponents.setMechanicalPattern(result, new MechanicalPackagePatternData(originalPattern, route,
                             java.util.Optional.of(MechanicalPackagePatternData.PatternEncoder.of(player))));
 
             input.shrink(1);
@@ -127,7 +126,7 @@ public class MechanicalPatternConverterMenu extends AbstractContainerMenu {
     }
 
     private List<net.minecraft.core.BlockPos> routeFromConverter(Player player) {
-        MachineRouteData route = player.getItemInHand(hand).get(ModComponents.MECHANICAL_ROUTE.get());
+        MachineRouteData route = ModComponents.getMechanicalRoute(player.getItemInHand(hand));
         return route == null ? List.of() : route.positions();
     }
 

@@ -30,7 +30,7 @@ public final class CreateMachineIds {
     }
 
     public static ResourceLocation create(String path) {
-        return ResourceLocation.fromNamespaceAndPath("create", path);
+        return new ResourceLocation("create", path);
     }
 
     @Nullable

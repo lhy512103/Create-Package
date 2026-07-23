@@ -1,85 +1,57 @@
 package com.lhy.createpackage;
 
 import org.slf4j.Logger;
-
-import com.lhy.createpackage.registry.ModBlockEntities;
-import com.lhy.createpackage.registry.ModBlocks;
-import com.lhy.createpackage.registry.ModCapabilities;
-import com.lhy.createpackage.registry.ModComponents;
-import com.lhy.createpackage.registry.ModCreativeTabs;
-import com.lhy.createpackage.registry.ModItems;
-import com.lhy.createpackage.registry.ModMenuTypes;
-import com.lhy.createpackage.registry.ModSounds;
-import com.lhy.createpackage.network.AutoRouteSearchPayload;
-import com.lhy.createpackage.network.RouteCursorScrollPayload;
-import com.lhy.createpackage.network.RouteMarkEditPayload;
-import com.lhy.createpackage.network.RouteModeTogglePayload;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
 import com.lhy.createpackage.integration.ae2.MechanicalPackagePatternEncodingCompat;
+import com.lhy.createpackage.network.ModNetwork;
+import com.lhy.createpackage.registry.*;
 import com.mojang.logging.LogUtils;
-
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-
 import appeng.api.upgrades.Upgrades;
 import appeng.blockentity.AEBaseBlockEntity;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 
-/**
- * Create Package — adds AE2 autocrafting support for Create's sequenced assembly.
- *
- * <p>A "package distributor" block sits next to an AE2 pattern provider, exposes the
- * {@code CRAFTING_MACHINE} capability to receive a whole pattern's inputs at once, then
- * distributes each ingredient to the linked Create machines (depot / deployers / spouts)
- * following the sequenced-assembly recipe steps, and returns the result to the network.
- */
 @Mod(CreatePackage.MODID)
 public class CreatePackage {
     public static final String MODID = "createpackage";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public CreatePackage(IEventBus modEventBus, ModContainer modContainer) {
+    public CreatePackage() {
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::commonSetup);
-        modEventBus.addListener(CreatePackage::registerPayloads);
-
-        // Register all deferred registers to the mod event bus.
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
-        ModComponents.DATA_COMPONENTS.register(modEventBus);
         ModMenuTypes.MENUS.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
         ModSounds.SOUND_EVENTS.register(modEventBus);
 
-        // Register AE2 capabilities for our block entities.
-        modEventBus.addListener(ModCapabilities::register);
-        NeoForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onPlayerTick);
-        NeoForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onContainerClose);
-        NeoForge.EVENT_BUS.addListener(PackageDistributorBlockEntity::onPlayerLoggedIn);
+        MinecraftForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onPlayerTick);
+        MinecraftForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onContainerClose);
+        MinecraftForge.EVENT_BUS.addListener(PackageDistributorBlockEntity::onPlayerLoggedIn);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC);
 
-        // Register server-side behavior config.
-        modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            CreatePackageClient.init(modEventBus);
+        }
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            AEBaseBlockEntity.registerBlockEntityItem(
-                    ModBlockEntities.PACKAGE_DISTRIBUTOR.get(),
-                    ModItems.PACKAGE_DISTRIBUTOR.get());
-            AEBaseBlockEntity.registerBlockEntityItem(
-                    ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get(),
-                    ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
-            AEBaseBlockEntity.registerBlockEntityItem(
-                    ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
-                    ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
-            AEBaseBlockEntity.registerBlockEntityItem(
-                    ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(),
-                    ModItems.KINETIC_PATTERN_PROVIDER.get());
+            ModNetwork.register();
+            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.PACKAGE_DISTRIBUTOR.get(), ModItems.PACKAGE_DISTRIBUTOR.get());
+            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get(), ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
+            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
+            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(), ModItems.KINETIC_PATTERN_PROVIDER.get());
             Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(), 2);
             Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.KINETIC_PATTERN_PROVIDER.get(), 2);
             if (ModList.get().isLoaded("ftbultimine")) {
@@ -88,19 +60,5 @@ public class CreatePackage {
         });
     }
 
-    private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        event.registrar("1")
-                .playToServer(AutoRouteSearchPayload.TYPE, AutoRouteSearchPayload.STREAM_CODEC,
-                        AutoRouteSearchPayload::handle)
-                .playToServer(RouteCursorScrollPayload.TYPE, RouteCursorScrollPayload.STREAM_CODEC,
-                        RouteCursorScrollPayload::handle)
-                .playToServer(RouteMarkEditPayload.TYPE, RouteMarkEditPayload.STREAM_CODEC,
-                        RouteMarkEditPayload::handle)
-                .playToServer(RouteModeTogglePayload.TYPE, RouteModeTogglePayload.STREAM_CODEC,
-                        RouteModeTogglePayload::handle);
-    }
-
-    public static net.minecraft.resources.ResourceLocation id(String path) {
-        return net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MODID, path);
-    }
+    public static ResourceLocation id(String path) { return new ResourceLocation(MODID, path); }
 }

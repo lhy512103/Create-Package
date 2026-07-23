@@ -1,0 +1,30 @@
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { name = 'Parchment'; url = 'https://maven.parchmentmc.org/' }
+    maven { name = 'GTCEu'; url = 'https://maven.gtceu.com' }
+    maven { name = 'FirstDarkDev'; url = 'https://maven.firstdark.dev/snapshots/' }
+    maven { name = 'Registrate'; url = 'https://maven.tterrag.com/' }
+    maven { name = 'BlameJared'; url = 'https://maven.blamejared.com/' }
+    maven { name = 'Curios'; url = 'https://maven.theillusivec4.top/' }
+    maven { name = 'CurseMaven'; url = 'https://cursemaven.com/'; content { includeGroup 'curse.maven' } }
+    maven { name = 'TerraformersMC'; url = 'https://maven.terraformersmc.com/' }
+    maven { name = 'KotlinForForge'; url = 'https://thedarkcolour.github.io/KotlinForForge/' }
+    maven { name = 'Architectury'; url = 'https://maven.architectury.dev/' }
+    maven { name = 'ModMaven'; url = 'https://modmaven.dev/' }
+    maven { name = 'Latvian'; url = 'https://maven.latvian.dev/releases' }
+    maven { name = 'Saps'; url = 'https://maven.saps.dev/minecraft' }
+    maven { name = 'Progwml6'; url = 'https://dvs1.progwml6.com/files/maven/' }
+    maven { name = 'ResourcefulBees'; url = 'https://maven.resourcefulbees.com/repository/maven-public/' }
+    maven { name = 'ModdingX'; url = 'https://maven.moddingx.org/' }
+    maven { name = 'JitPack'; url = 'https://jitpack.io' }
+    maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven'; content { includeGroup 'maven.modrinth' } }
+    maven { name = 'Resourceful'; url = 'https://maven.teamresourceful.com/repository/maven-public/' }
+    maven { name = 'Rover656'; url = 'https://maven.rover656.dev/releases' }
+    maven { name = 'GuideME Snapshots'; url = 'https://central.sonatype.com/repository/maven-snapshots/' }
+    maven { name = 'Create'; url = 'https://maven.createmod.net' }
+    maven { name = 'GeckoLib'; url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+}
+
+
+

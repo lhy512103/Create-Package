@@ -83,7 +83,7 @@ public final class MechanicalPackagePatternDetails implements RoutedMechanicalPa
     }
 
     @Override
-    public List<GenericStack> getOutputs() {
+    public GenericStack[] getOutputs() {
         return delegate.getOutputs();
     }
 

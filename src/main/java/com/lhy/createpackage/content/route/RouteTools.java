@@ -80,7 +80,7 @@ public final class RouteTools {
     }
 
     public static Mode getMode(ItemStack stack) {
-        Boolean edit = stack.get(ModComponents.ROUTE_EDIT_MODE.get());
+        Boolean edit = ModComponents.getRouteEditMode(stack);
         return edit != null && edit ? Mode.EDIT : Mode.APPEND;
     }
 
@@ -90,9 +90,9 @@ public final class RouteTools {
 
     public static void setMode(ItemStack stack, Mode mode) {
         if (mode == Mode.EDIT) {
-            stack.set(ModComponents.ROUTE_EDIT_MODE.get(), true);
+            ModComponents.setRouteEditMode(stack, true);
         } else {
-            stack.remove(ModComponents.ROUTE_EDIT_MODE.get());
+            ModComponents.clearRouteEditMode(stack);
         }
     }
 
@@ -112,15 +112,15 @@ public final class RouteTools {
     }
 
     public static int getCursor(ItemStack stack) {
-        Integer cursor = stack.get(ModComponents.ROUTE_CURSOR.get());
+        Integer cursor = ModComponents.getRouteCursor(stack);
         return cursor == null ? -1 : cursor;
     }
 
     public static void setCursor(ItemStack stack, int cursor) {
         if (cursor < 0) {
-            stack.remove(ModComponents.ROUTE_CURSOR.get());
+            ModComponents.clearRouteCursor(stack);
         } else {
-            stack.set(ModComponents.ROUTE_CURSOR.get(), cursor);
+            ModComponents.setRouteCursor(stack, cursor);
         }
     }
 
@@ -144,7 +144,7 @@ public final class RouteTools {
 
     public static List<BlockPos> routePositions(ItemStack stack) {
         if (stack.is(ModItems.MECHANICAL_PATTERN_CONVERTER.get())) {
-            MachineRouteData route = stack.get(ModComponents.MECHANICAL_ROUTE.get());
+            MachineRouteData route = ModComponents.getMechanicalRoute(stack);
             return route == null ? List.of() : route.positions();
         }
         if (stack.is(ModItems.MECHANICAL_PACKAGE_PATTERN.get())) {
@@ -169,7 +169,7 @@ public final class RouteTools {
 
     @Nullable
     public static PackageDistributorBlockEntity resolveOrderedLinkerDistributor(Level level, ItemStack stack) {
-        GlobalPos selected = stack.get(ModComponents.LINKED_DISTRIBUTOR.get());
+        GlobalPos selected = ModComponents.getLinkedDistributor(stack);
         if (selected == null || level == null || !selected.dimension().equals(level.dimension())
                 || !level.isLoaded(selected.pos())) {
             return null;
@@ -183,9 +183,9 @@ public final class RouteTools {
 
     public static void writeConverterRoute(ItemStack stack, List<BlockPos> positions) {
         if (positions.isEmpty()) {
-            stack.remove(ModComponents.MECHANICAL_ROUTE.get());
+            ModComponents.clearMechanicalRoute(stack);
         } else {
-            stack.set(ModComponents.MECHANICAL_ROUTE.get(), new MachineRouteData(positions));
+            ModComponents.setMechanicalRoute(stack, new MachineRouteData(positions));
         }
         setCursor(stack, clampCursor(getCursor(stack), positions.size()));
     }
@@ -195,8 +195,7 @@ public final class RouteTools {
         if (data == null || data.encodedPattern().isEmpty()) {
             return false;
         }
-        stack.set(ModComponents.MECHANICAL_PACKAGE_PATTERN.get(),
-                new MechanicalPackagePatternData(data.encodedPattern(), positions, data.encoder()));
+        ModComponents.setMechanicalPattern(stack, new MechanicalPackagePatternData(data.encodedPattern(), positions, data.encoder()));
         setCursor(stack, clampCursor(getCursor(stack), positions.size()));
         return true;
     }
@@ -204,7 +203,7 @@ public final class RouteTools {
     public static boolean replaceOrderedMark(Player player, ItemStack stack, BlockPos pos) {
         int cursor = getCursor(stack);
         if (stack.is(ModItems.MECHANICAL_PATTERN_CONVERTER.get())) {
-            MachineRouteData current = stack.get(ModComponents.MECHANICAL_ROUTE.get());
+            MachineRouteData current = ModComponents.getMechanicalRoute(stack);
             if (current == null) {
                 return false;
             }
@@ -266,7 +265,7 @@ public final class RouteTools {
     public static boolean removeSelectedOrderedMark(Player player, ItemStack stack) {
         int cursor = getCursor(stack);
         if (stack.is(ModItems.MECHANICAL_PATTERN_CONVERTER.get())) {
-            MachineRouteData current = stack.get(ModComponents.MECHANICAL_ROUTE.get());
+            MachineRouteData current = ModComponents.getMechanicalRoute(stack);
             if (current == null) {
                 return false;
             }

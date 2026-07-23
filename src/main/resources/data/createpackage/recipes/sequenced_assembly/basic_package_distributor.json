@@ -1,0 +1,82 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "createpackage:package_distributor"
+  },
+  "loops": 1,
+  "results": [
+    {
+      "item": "createpackage:basic_package_distributor"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "create:precision_mechanism"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "amount": 1000,
+          "fluid": "minecraft:lava",
+          "nbt": {}
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "amount": 1000,
+          "fluid": "minecraft:water",
+          "nbt": {}
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    }
+  ],
+  "transitionalItem": {
+    "item": "createpackage:incomplete_package_distributor"
+  }
+}

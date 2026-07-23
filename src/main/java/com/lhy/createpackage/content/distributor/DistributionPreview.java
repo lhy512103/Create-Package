@@ -79,7 +79,7 @@ public final class DistributionPreview {
                 }
                 case FILL -> {
                     var target = fillIdx < spouts.size() ? spouts.get(fillIdx).pos() : null;
-                    int perLoop = step.fluid() != null ? step.fluid().amount() : 0;
+                    int perLoop = step.fluid() != null ? step.fluid().getRequiredAmount() : 0;
                     logger.info("    FILL x{} ({}mB/loop) -> spout {}", plan.loops(), perLoop, target);
                     fillIdx++;
                 }

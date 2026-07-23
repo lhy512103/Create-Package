@@ -21,7 +21,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidStack;
 
 /**
  * Builds a sequenced-assembly supply plan for package distributors.
@@ -231,7 +231,7 @@ public final class AssemblyPlanner {
         if (fillIdx >= spouts.size()) {
             return Optional.of(Plan.failure("missing_spout"));
         }
-        long amount = (long) loops * step.fluid().amount();
+        long amount = (long) loops * step.fluid().getRequiredAmount();
         BlockPos spout = spouts.get(fillIdx).pos();
         long availableInput = PatternStacks.countMatchingInput(patternInputs, step.fluid());
         long existing = InventoryAccess.countMatchingFluid(level, spout, step.fluid());
@@ -293,7 +293,7 @@ public final class AssemblyPlanner {
             return false;
         }
         if (accepted > 0) {
-            actions.add(SupplyActions.insertFluid(level, target, stack.copyWithAmount(accepted)));
+            actions.add(SupplyActions.insertFluid(level, target, new FluidStack(stack, accepted)));
         }
         long pending = (long) stack.getAmount() - accepted;
         if (pending > 0) {

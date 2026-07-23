@@ -26,7 +26,7 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
 
 public final class MechanicalPackagePatternHighlighter {
     private static final double BOX_INFLATE = 0.01;
@@ -76,14 +76,14 @@ public final class MechanicalPackagePatternHighlighter {
             float blue = selected ? 0.15f : last ? 0.05f : first ? 1.0f : 0.25f;
             AABB box = new AABB(pos).inflate(selected ? SELECTED_INFLATE : BOX_INFLATE);
             if (fill == null) {
-                fill = Tesselator.getInstance()
-                        .begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+                fill = Tesselator.getInstance().getBuilder();
+                fill.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
             }
             renderFilledBox(poseStack, fill, box, red, green, blue, selected ? 0.55f : last ? 0.42f : 0.30f);
             LevelRenderer.renderLineBox(poseStack, lines, box, red, green, blue, 1.0f);
         }
         if (fill != null) {
-            BufferUploader.drawWithShader(fill.buildOrThrow());
+            BufferUploader.drawWithShader(fill.end());
         }
         RenderSystem.enableCull();
         RenderSystem.enableDepthTest();
@@ -123,8 +123,9 @@ public final class MechanicalPackagePatternHighlighter {
     private static void addVertex(VertexConsumer consumer, org.joml.Matrix4f pose,
             double x, double y, double z, float red, float green, float blue, float alpha,
             int normalX, int normalY, int normalZ) {
-        consumer.addVertex(pose, (float) x, (float) y, (float) z)
-                .setColor(red, green, blue, alpha);
+        consumer.vertex(pose, (float) x, (float) y, (float) z)
+                .color(red, green, blue, alpha)
+                .endVertex();
     }
 
     private static HeldRoute heldRoute(Level level, ItemStack mainHand, ItemStack offHand) {
@@ -145,7 +146,7 @@ public final class MechanicalPackagePatternHighlighter {
             return new HeldRoute(data.route(), selected);
         }
         if (stack.is(ModItems.MECHANICAL_PATTERN_CONVERTER.get())) {
-            MachineRouteData data = stack.get(ModComponents.MECHANICAL_ROUTE.get());
+            MachineRouteData data = ModComponents.getMechanicalRoute(stack);
             if (data == null) {
                 return HeldRoute.empty();
             }
@@ -153,7 +154,7 @@ public final class MechanicalPackagePatternHighlighter {
             return new HeldRoute(data.positions(), selected);
         }
         if (stack.is(ModItems.MACHINE_LINKER.get())) {
-            GlobalPos distributorPos = stack.get(ModComponents.LINKED_DISTRIBUTOR.get());
+            GlobalPos distributorPos = ModComponents.getLinkedDistributor(stack);
             if (distributorPos == null || !level.dimension().equals(distributorPos.dimension())
                     || !level.isLoaded(distributorPos.pos())) {
                 return HeldRoute.empty();

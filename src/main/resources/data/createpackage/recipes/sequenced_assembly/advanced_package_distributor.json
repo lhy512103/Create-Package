@@ -1,0 +1,125 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "createpackage:basic_package_distributor"
+  },
+  "loops": 5,
+  "results": [
+    {
+      "chance": 120.0,
+      "item": "createpackage:advanced_package_distributor"
+    },
+    {
+      "chance": 8.0,
+      "item": "create:golden_sheet"
+    },
+    {
+      "chance": 8.0,
+      "item": "create:andesite_alloy"
+    },
+    {
+      "chance": 5.0,
+      "item": "create:cogwheel"
+    },
+    {
+      "chance": 3.0,
+      "item": "minecraft:gold_nugget"
+    },
+    {
+      "chance": 2.0,
+      "item": "create:shaft"
+    },
+    {
+      "chance": 2.0,
+      "item": "create:crushed_raw_gold"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:clock"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "create:sturdy_sheet"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "ae2:certus_quartz_crystal"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    },
+    {
+      "type": "create:filling",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "amount": 500,
+          "fluid": "minecraft:lava",
+          "nbt": {}
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_package_distributor"
+        }
+      ]
+    }
+  ],
+  "transitionalItem": {
+    "item": "createpackage:incomplete_package_distributor"
+  }
+}

@@ -34,11 +34,9 @@ import com.simibubi.create.foundation.blockEntity.behaviour.filtering.FilteringB
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
@@ -47,10 +45,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.util.LazyOptional;
 
 import appeng.api.config.Actionable;
 import appeng.api.config.LockCraftingMode;
@@ -67,7 +66,6 @@ import appeng.api.networking.ticking.IGridTickable;
 import appeng.api.networking.ticking.TickRateModulation;
 import appeng.api.networking.ticking.TickingRequest;
 import appeng.api.orientation.BlockOrientation;
-import appeng.api.ids.AEComponents;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
@@ -78,16 +76,16 @@ import appeng.api.upgrades.IUpgradeInventory;
 import appeng.api.upgrades.UpgradeInventories;
 import appeng.api.util.AECableType;
 import appeng.block.crafting.PushDirection;
-import appeng.blockentity.grid.AENetworkedBlockEntity;
+import appeng.blockentity.grid.AENetworkBlockEntity;
 import appeng.helpers.patternprovider.PatternProviderLogic;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import appeng.me.helpers.MachineSource;
 import appeng.menu.ISubMenu;
 import appeng.menu.MenuOpener;
-import appeng.menu.locator.MenuHostLocator;
+import appeng.menu.locator.MenuLocator;
 import appeng.util.SettingsFrom;
 
-public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
+public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         implements PatternProviderLogicHost, IGridTickable, IHaveGoggleInformation, IUpgradeableObject {
     private static final String NBT_JOB = "kineticJob";
     private static final String NBT_JOBS = "kineticJobs";
@@ -144,11 +142,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
-        logic.writeToNBT(data, registries);
+    public void saveAdditional(CompoundTag data) {
+        super.saveAdditional(data);
+        logic.writeToNBT(data);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
-        upgrades.writeToNBT(data, NBT_UPGRADES, registries);
+        upgrades.writeToNBT(data, NBT_UPGRADES);
         data.putString(NBT_STATUS, lastStatusKey);
         data.putBoolean(NBT_SMART_DOUBLING, smartDoubling);
         long[] linked = new long[linkedMachines.size()];
@@ -159,7 +157,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         if (!activeJobs.isEmpty()) {
             net.minecraft.nbt.ListTag jobs = new net.minecraft.nbt.ListTag();
             for (KineticJob job : activeJobs) {
-                jobs.add(job.write(registries));
+                jobs.add(job.write());
             }
             data.put(NBT_JOBS, jobs);
         }
@@ -167,12 +165,12 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(CompoundTag data) {
+        super.loadTag(data);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
-        logic.readFromNBT(data, registries);
+        logic.readFromNBT(data);
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
-        upgrades.readFromNBT(data, NBT_UPGRADES, registries);
+        upgrades.readFromNBT(data, NBT_UPGRADES);
         lastStatusKey = data.contains(NBT_STATUS) ? data.getString(NBT_STATUS) : "ready";
         smartDoubling = data.contains(NBT_SMART_DOUBLING) && data.getBoolean(NBT_SMART_DOUBLING);
         linkedMachines.clear();
@@ -183,13 +181,13 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         if (data.contains(NBT_JOBS)) {
             var jobs = data.getList(NBT_JOBS, net.minecraft.nbt.Tag.TAG_COMPOUND);
             for (int i = 0; i < jobs.size(); i++) {
-                KineticJob job = KineticJob.read(jobs.getCompound(i), registries);
+                KineticJob job = KineticJob.read(jobs.getCompound(i));
                 if (job != null) {
                     activeJobs.add(job);
                 }
             }
         } else if (data.contains(NBT_JOB)) {
-            KineticJob job = KineticJob.read(data.getCompound(NBT_JOB), registries);
+            KineticJob job = KineticJob.read(data.getCompound(NBT_JOB));
             if (job != null) {
                 activeJobs.add(job);
             }
@@ -198,7 +196,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    protected void writeToStream(RegistryFriendlyByteBuf data) {
+    protected void writeToStream(FriendlyByteBuf data) {
         super.writeToStream(data);
         AeStatus status = currentAeStatus();
         data.writeBoolean(status.nodePresent());
@@ -224,7 +222,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    protected boolean readFromStream(RegistryFriendlyByteBuf data) {
+    protected boolean readFromStream(FriendlyByteBuf data) {
         boolean changed = super.readFromStream(data);
         boolean streamedNode = data.readBoolean();
         boolean streamedPowered = data.readBoolean();
@@ -335,6 +333,15 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
+    public <T> LazyOptional<T> getCapability(Capability<T> capability, @Nullable Direction side) {
+        LazyOptional<T> logicCapability = logic.getCapability(capability);
+        if (logicCapability.isPresent()) {
+            return logicCapability;
+        }
+        return super.getCapability(capability, side);
+    }
+
+    @Override
     public PatternProviderLogic getLogic() {
         return logic;
     }
@@ -409,11 +416,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     @Override
     public ItemStack getMainMenuIcon() {
-        return ModItems.KINETIC_PATTERN_PROVIDER.toStack();
+        return new ItemStack(ModItems.KINETIC_PATTERN_PROVIDER.get());
     }
 
     @Override
-    public void openMenu(Player player, MenuHostLocator locator) {
+    public void openMenu(Player player, MenuLocator locator) {
         MenuOpener.open(ModMenuTypes.KINETIC_PATTERN_PROVIDER.get(), player, locator);
     }
 
@@ -423,31 +430,33 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void exportSettings(SettingsFrom mode, DataComponentMap.Builder builder, @Nullable Player player) {
+    public void exportSettings(SettingsFrom mode, CompoundTag builder, @Nullable Player player) {
         super.exportSettings(mode, builder, player);
         if (mode == SettingsFrom.MEMORY_CARD) {
             logic.exportSettings(builder);
-            builder.set(AEComponents.EXPORTED_PUSH_DIRECTION, getPushDirection());
+            builder.putByte("push_direction", (byte) getPushDirection().ordinal());
         }
     }
 
     @Override
-    public void importSettings(SettingsFrom mode, DataComponentMap input, @Nullable Player player) {
+    public void importSettings(SettingsFrom mode, CompoundTag input, @Nullable Player player) {
         super.importSettings(mode, input, player);
         if (mode == SettingsFrom.MEMORY_CARD) {
             logic.importSettings(input, player);
-            PushDirection pushDirection = input.get(AEComponents.EXPORTED_PUSH_DIRECTION);
-            if (pushDirection != null && level != null) {
-                level.setBlockAndUpdate(getBlockPos(),
-                        getBlockState().setValue(KineticPatternProviderBlock.PUSH_DIRECTION, pushDirection));
-                updateGridConnectableSides();
+            if (input.contains("push_direction", net.minecraft.nbt.Tag.TAG_BYTE) && level != null) {
+                int ordinal = input.getByte("push_direction");
+                if (ordinal >= 0 && ordinal < PushDirection.values().length) {
+                    level.setBlockAndUpdate(getBlockPos(), getBlockState().setValue(
+                            KineticPatternProviderBlock.PUSH_DIRECTION, PushDirection.values()[ordinal]));
+                    updateGridConnectableSides();
+                }
             }
         }
     }
 
     @Override
     public TickingRequest getTickingRequest(IGridNode node) {
-        return new TickingRequest(5, 20, activeJobs.isEmpty() && !hasReturnInventoryWork());
+        return new TickingRequest(5, 20, activeJobs.isEmpty() && !hasReturnInventoryWork(), true);
     }
 
     @Override
@@ -755,7 +764,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 if (isMachineBusy(machinePos)) {
                     continue;
                 }
-                MachinePlanFactory.Plan plan = createPlanAt(machinePos, primaryOutput, outputAmount, patternDetails.getOutputs(), inputs);
+                MachinePlanFactory.Plan plan = createPlanAt(machinePos, primaryOutput, outputAmount, java.util.Arrays.asList(patternDetails.getOutputs()), inputs);
                 if (plan != null && plan.simulate()) {
                     return new DispatchTarget(null, plan, false);
                 }
@@ -860,7 +869,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         if (!Objects.equals(patternDetails.getDefinition(), job.patternDefinition)) {
             return null;
         }
-        MachinePlanFactory.Plan plan = createPlanAt(job.machinePos, job.primaryOutput, outputAmount, patternDetails.getOutputs(), inputs);
+        MachinePlanFactory.Plan plan = createPlanAt(job.machinePos, job.primaryOutput, outputAmount, java.util.Arrays.asList(patternDetails.getOutputs()), inputs);
         if (plan == null
                 || !Objects.equals(plan.outputPos(), job.outputPos)
                 || !Objects.equals(plan.machineRole(), job.machineRole)
@@ -1524,7 +1533,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                     continue;
                 }
                 int extractAmount = (int) Math.min(accepted, availableAmount);
-                FluidStack extracted = fluidHandler.drain(available.copyWithAmount(extractAmount),
+                FluidStack extracted = fluidHandler.drain(new FluidStack(available, extractAmount),
                         IFluidHandler.FluidAction.EXECUTE);
                 if (extracted.isEmpty()) {
                     continue;
@@ -2077,11 +2086,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             return !pendingDispatches.isEmpty();
         }
 
-        private CompoundTag write(HolderLookup.Provider registries) {
+        private CompoundTag write() {
             CompoundTag tag = new CompoundTag();
-            tag.put(NBT_PRIMARY, primaryOutput.toTagGeneric(registries));
+            tag.put(NBT_PRIMARY, primaryOutput.toTagGeneric());
             if (patternDefinition != null) {
-                tag.put(NBT_DEFINITION, patternDefinition.toTag(registries));
+                tag.put(NBT_DEFINITION, patternDefinition.toTag());
             }
             tag.putLong(NBT_REMAINING, remaining);
             tag.putLong(NBT_MACHINE, machinePos.asLong());
@@ -2094,15 +2103,15 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             tag.putBoolean(NBT_ROUND_HAS_OUTPUT, roundHasOutput);
             tag.putString(NBT_JOB_STATUS, statusKey);
             tag.putBoolean(NBT_COLLECT_UNEXPECTED_OUTPUTS, collectUnexpectedOutputs);
-            tag.put(NBT_PATTERN_OUTPUTS, writeStackList(registries, patternOutputs));
-            tag.put(NBT_REFILL_INPUTS, writeStackList(registries, refillInputs));
+            tag.put(NBT_PATTERN_OUTPUTS, writeStackList(patternOutputs));
+            tag.put(NBT_REFILL_INPUTS, writeStackList(refillInputs));
             tag.putInt(NBT_PENDING_DISPATCH_TICKS, pendingDispatchTicks);
             if (!pendingDispatches.isEmpty()) {
                 net.minecraft.nbt.ListTag pendingTags = new net.minecraft.nbt.ListTag();
                 for (PendingDispatch pending : pendingDispatches) {
                     CompoundTag pendingTag = new CompoundTag();
                     pendingTag.putLong(NBT_PENDING_OUTPUT, pending.outputAmount());
-                    pendingTag.put(NBT_PENDING_INPUTS, writeStackList(registries, pending.inputs()));
+                    pendingTag.put(NBT_PENDING_INPUTS, writeStackList(pending.inputs()));
                     pendingTags.add(pendingTag);
                 }
                 tag.put(NBT_PENDING_DISPATCHES, pendingTags);
@@ -2111,19 +2120,19 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
 
         @Nullable
-        private static KineticJob read(CompoundTag tag, HolderLookup.Provider registries) {
+        private static KineticJob read(CompoundTag tag) {
             CompoundTag primaryTag = tag.getCompound(NBT_PRIMARY);
-            AEKey primary = AEKey.fromTagGeneric(registries, primaryTag);
+            AEKey primary = AEKey.fromTagGeneric(primaryTag);
             if (primary == null) {
-                primary = AEItemKey.fromTag(registries, primaryTag);
+                primary = AEItemKey.fromTag(primaryTag);
             }
             if (primary == null) {
                 return null;
             }
-            List<GenericStack> outputs = readStackList(tag, registries, NBT_PATTERN_OUTPUTS);
-            List<GenericStack> refillInputs = readStackList(tag, registries, NBT_REFILL_INPUTS);
+            List<GenericStack> outputs = readStackList(tag, NBT_PATTERN_OUTPUTS);
+            List<GenericStack> refillInputs = readStackList(tag, NBT_REFILL_INPUTS);
             AEItemKey definition = tag.contains(NBT_DEFINITION)
-                    ? AEItemKey.fromTag(registries, tag.getCompound(NBT_DEFINITION))
+                    ? AEItemKey.fromTag(tag.getCompound(NBT_DEFINITION))
                     : (primary instanceof AEItemKey itemKey ? itemKey : null);
             KineticJob job = new KineticJob(primary, definition, tag.getLong(NBT_REMAINING),
                     BlockPos.of(tag.getLong(NBT_MACHINE)),
@@ -2143,7 +2152,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             for (int i = 0; i < pendingTags.size(); i++) {
                 CompoundTag pendingTag = pendingTags.getCompound(i);
                 long outputAmount = pendingTag.getLong(NBT_PENDING_OUTPUT);
-                List<GenericStack> pendingInputs = readStackList(pendingTag, registries, NBT_PENDING_INPUTS);
+                List<GenericStack> pendingInputs = readStackList(pendingTag, NBT_PENDING_INPUTS);
                 if (outputAmount > 0 && !pendingInputs.isEmpty()) {
                     job.pendingDispatches.add(new PendingDispatch(outputAmount, pendingInputs));
                 }
@@ -2151,21 +2160,21 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             return job;
         }
 
-        private static net.minecraft.nbt.ListTag writeStackList(HolderLookup.Provider registries,
+        private static net.minecraft.nbt.ListTag writeStackList(
                 List<GenericStack> stacks) {
             net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
             for (GenericStack stack : stacks) {
-                list.add(GenericStack.writeTag(registries, stack));
+                list.add(GenericStack.writeTag(stack));
             }
             return list;
         }
 
-        private static List<GenericStack> readStackList(CompoundTag tag, HolderLookup.Provider registries,
+        private static List<GenericStack> readStackList(CompoundTag tag,
                 String key) {
             List<GenericStack> stacks = new ArrayList<>();
             var stackTags = tag.getList(key, net.minecraft.nbt.Tag.TAG_COMPOUND);
             for (int i = 0; i < stackTags.size(); i++) {
-                GenericStack stack = GenericStack.readTag(registries, stackTags.getCompound(i));
+                GenericStack stack = GenericStack.readTag(stackTags.getCompound(i));
                 if (stack != null) {
                     stacks.add(stack);
                 }
@@ -2219,3 +2228,4 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
     }
 }
+

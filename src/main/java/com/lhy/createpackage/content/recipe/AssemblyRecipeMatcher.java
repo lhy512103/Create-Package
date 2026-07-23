@@ -8,10 +8,9 @@ import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
+import net.minecraftforge.fluids.FluidStack;
+import com.simibubi.create.foundation.fluid.FluidIngredient;
 
 /**
  * Resolves which {@link SequencedAssemblyRecipe} an AE2 pattern corresponds to.
@@ -47,17 +46,16 @@ public final class AssemblyRecipeMatcher {
             return result;
         }
 
-        List<RecipeHolder<SequencedAssemblyRecipe>> all =
+        List<SequencedAssemblyRecipe> all =
                 level.getRecipeManager().getAllRecipesFor(AllRecipeTypes.SEQUENCED_ASSEMBLY.getType());
 
         Match best = null;
         int bestScore = Integer.MIN_VALUE;
         boolean tie = false;
 
-        for (RecipeHolder<SequencedAssemblyRecipe> holder : all) {
-            SequencedAssemblyRecipe recipe = holder.value();
+        for (SequencedAssemblyRecipe recipe : all) {
             ItemStack out = recipe.getResultItem(level.registryAccess());
-            if (!ItemStack.isSameItemSameComponents(out, primaryOutput)) {
+            if (!ItemStack.isSameItemSameTags(out, primaryOutput)) {
                 continue;
             }
             if (!patternInputs.isEmpty() && !baseInputMatches(recipe, patternInputs)) {
@@ -69,13 +67,13 @@ public final class AssemblyRecipeMatcher {
             }
             if (score > bestScore) {
                 bestScore = score;
-                best = new Match(holder.id(), recipe);
+                best = new Match(recipe.getId(), recipe);
                 tie = false;
                 result.clear();
                 result.add(best);
             } else if (score == bestScore) {
                 tie = true;
-                result.add(new Match(holder.id(), recipe));
+                result.add(new Match(recipe.getId(), recipe));
             }
         }
         if (!tie && best != null) {
@@ -143,9 +141,9 @@ public final class AssemblyRecipeMatcher {
         return false;
     }
 
-    private static boolean matchesFluid(SizedFluidIngredient ingredient, List<FluidStack> patternFluids) {
+    private static boolean matchesFluid(FluidIngredient ingredient, List<FluidStack> patternFluids) {
         for (FluidStack fluid : patternFluids) {
-            if (ingredient.ingredient().test(fluid)) {
+            if (ingredient.test(fluid)) {
                 return true;
             }
         }

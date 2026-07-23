@@ -79,8 +79,7 @@ public class MechanicalPatternConverterScreen extends AbstractContainerScreen<Me
         graphics.drawString(font, playerInventoryTitle, 8, inventoryLabelY, 0x404040, false);
     }
 
-    @Override
-    protected void renderSlotHighlight(GuiGraphics graphics, Slot slot, int mouseX, int mouseY, float partialTick) {
+    private void renderSlotHighlightCompat(GuiGraphics graphics, Slot slot, int mouseX, int mouseY, float partialTick) {
         if (!slot.isHighlightable()) {
             return;
         }
@@ -121,10 +120,9 @@ public class MechanicalPatternConverterScreen extends AbstractContainerScreen<Me
         @Override
         protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             int yOffset = isHovered() ? 1 : 0;
-            Icon background = isHovered() ? Icon.TOOLBAR_BUTTON_BACKGROUND_HOVER : Icon.TOOLBAR_BUTTON_BACKGROUND;
+            Icon background = Icon.TOOLBAR_BUTTON_BACKGROUND;
             background.getBlitter()
                     .dest(getX() - 1, getY() + yOffset, 18, 20)
-                    .zOffset(2)
                     .blit(graphics);
 
             graphics.pose().pushPose();
@@ -132,7 +130,6 @@ public class MechanicalPatternConverterScreen extends AbstractContainerScreen<Me
             graphics.pose().mulPose(Axis.ZP.rotationDegrees(90.0F));
             Icon.ARROW_RIGHT.getBlitter()
                     .dest(-8, -8)
-                    .zOffset(3)
                     .blit(graphics);
             graphics.pose().popPose();
         }

@@ -11,8 +11,6 @@ import com.lhy.createpackage.content.route.RouteMaterialHints;
 import com.lhy.createpackage.content.route.RouteTools;
 import com.lhy.createpackage.registry.ModComponents;
 
-import appeng.api.crafting.EncodedPatternDecoder;
-import appeng.api.crafting.InvalidPatternTooltipStrategy;
 import appeng.crafting.pattern.EncodedPatternItem;
 
 import net.minecraft.ChatFormatting;
@@ -24,13 +22,24 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 
-public class MechanicalPackagePatternItem extends EncodedPatternItem<RoutedMechanicalPackagePatternDetails> {
+public class MechanicalPackagePatternItem extends EncodedPatternItem {
     private static final String KEY_PREFIX = "item." + CreatePackage.MODID + ".mechanical_package_pattern.";
 
-    public MechanicalPackagePatternItem(Properties properties,
-            EncodedPatternDecoder<RoutedMechanicalPackagePatternDetails> decoder,
-            @Nullable InvalidPatternTooltipStrategy invalidPatternTooltip) {
-        super(properties, decoder, invalidPatternTooltip);
+    public MechanicalPackagePatternItem(Properties properties) {
+        super(properties);
+    }
+
+    @Override
+    public @Nullable RoutedMechanicalPackagePatternDetails decode(ItemStack stack,
+            net.minecraft.world.level.Level level, boolean tryRecovery) {
+        var key = appeng.api.stacks.AEItemKey.of(stack);
+        return key == null ? null : MechanicalPackagePatternDetails.decode(key, level);
+    }
+
+    @Override
+    public @Nullable RoutedMechanicalPackagePatternDetails decode(appeng.api.stacks.AEItemKey what,
+            net.minecraft.world.level.Level level) {
+        return MechanicalPackagePatternDetails.decode(what, level);
     }
 
     @Override
@@ -88,16 +97,15 @@ public class MechanicalPackagePatternItem extends EncodedPatternItem<RoutedMecha
                         RouteTools.clampCursor(RouteTools.getCursor(stack), updatedRoute.size()));
                 msg(player, "marked", clicked.getX(), clicked.getY(), clicked.getZ(), updatedRoute.size());
             }
-            stack.set(ModComponents.MECHANICAL_PACKAGE_PATTERN.get(),
-                    new MechanicalPackagePatternData(data.encodedPattern(), updatedRoute, data.encoder()));
+            ModComponents.setMechanicalPattern(stack, new MechanicalPackagePatternData(data.encodedPattern(), updatedRoute, data.encoder()));
         }
         return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lines,
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level level, List<Component> lines,
             TooltipFlag flags) {
-        super.appendHoverText(stack, context, lines, flags);
+        super.appendHoverText(stack, level, lines, flags);
         MechanicalPackagePatternData data = MechanicalPackagePatternData.from(stack);
         if (data != null) {
             data.encoder().ifPresent(encoder -> lines.add(Component.translatable(
@@ -110,9 +118,9 @@ public class MechanicalPackagePatternItem extends EncodedPatternItem<RoutedMecha
                     RouteTools.modeLabel(mode).copy().withStyle(
                             mode == RouteTools.Mode.EDIT ? ChatFormatting.YELLOW : ChatFormatting.GREEN))
                     .withStyle(ChatFormatting.GRAY));
-            MachineRouteTooltip.addRouteLines(lines, context.level(), data.route(), flags.hasShiftDown(), cursor);
+            MachineRouteTooltip.addRouteLines(lines, level, data.route(), net.minecraft.client.gui.screens.Screen.hasShiftDown(), cursor);
             if (mode == RouteTools.Mode.EDIT) {
-                for (Component line : RouteMaterialHints.selectedMaterialLines(context.level(), stack, cursor)) {
+                for (Component line : RouteMaterialHints.selectedMaterialLines(level, stack, cursor)) {
                     lines.add(line.copy().withStyle(ChatFormatting.YELLOW));
                 }
             }

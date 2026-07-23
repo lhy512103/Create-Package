@@ -11,8 +11,8 @@ import appeng.api.stacks.KeyCounter;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
+import net.minecraftforge.fluids.FluidStack;
+import com.simibubi.create.foundation.fluid.FluidIngredient;
 
 /**
  * Pure helpers for reshaping AE2 pattern inputs/outputs.
@@ -84,7 +84,7 @@ public final class PatternStacks {
         return amount;
     }
 
-    public static long countMatchingInput(List<GenericStack> inputs, SizedFluidIngredient ingredient) {
+    public static long countMatchingInput(List<GenericStack> inputs, FluidIngredient ingredient) {
         if (ingredient == null) {
             return 0;
         }
@@ -92,7 +92,7 @@ public final class PatternStacks {
         for (GenericStack input : inputs) {
             if (input.what() instanceof AEFluidKey fluidKey) {
                 FluidStack stack = fluidKey.toStack((int) Math.min(input.amount(), Integer.MAX_VALUE));
-                if (ingredient.ingredient().test(stack)) {
+                if (ingredient.test(stack)) {
                     amount += input.amount();
                 }
             }
@@ -117,7 +117,7 @@ public final class PatternStacks {
         return ItemStack.EMPTY;
     }
 
-    public static FluidStack takeMatchingFluid(List<GenericStack> inputs, SizedFluidIngredient ingredient,
+    public static FluidStack takeMatchingFluid(List<GenericStack> inputs, FluidIngredient ingredient,
             long amount) {
         if (ingredient == null || amount <= 0 || amount > Integer.MAX_VALUE) {
             return FluidStack.EMPTY;
@@ -126,7 +126,7 @@ public final class PatternStacks {
             GenericStack input = inputs.get(i);
             if (input.what() instanceof AEFluidKey fluidKey && input.amount() >= amount) {
                 FluidStack stack = fluidKey.toStack((int) amount);
-                if (ingredient.ingredient().test(stack)) {
+                if (ingredient.test(stack)) {
                     removeAmount(inputs, i, amount);
                     return stack;
                 }
@@ -188,15 +188,15 @@ public final class PatternStacks {
         return stack;
     }
 
-    public static FluidStack exampleFluidStack(SizedFluidIngredient ingredient, long amount) {
+    public static FluidStack exampleFluidStack(FluidIngredient ingredient, long amount) {
         if (ingredient == null || amount <= 0 || amount > Integer.MAX_VALUE) {
             return FluidStack.EMPTY;
         }
-        FluidStack[] stacks = ingredient.getFluids();
-        if (stacks.length == 0) {
+        List<FluidStack> stacks = ingredient.getMatchingFluidStacks();
+        if (stacks.isEmpty()) {
             return FluidStack.EMPTY;
         }
-        FluidStack stack = stacks[0].copy();
+        FluidStack stack = stacks.get(0).copy();
         stack.setAmount((int) amount);
         return stack;
     }
