@@ -23,7 +23,7 @@ public final class PackageDistributorComponentProvider implements IBlockComponen
 
     public static final PackageDistributorComponentProvider INSTANCE = new PackageDistributorComponentProvider();
 
-    private static final ResourceLocation UID = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation UID = new ResourceLocation(
             CreatePackage.MODID, "package_distributor");
     private static final int MAX_LINKS = 12;
 

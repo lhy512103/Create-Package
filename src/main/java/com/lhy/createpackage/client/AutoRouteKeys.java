@@ -11,13 +11,13 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.InputEvent;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.client.settings.KeyConflictContext;
-import net.neoforged.neoforge.common.util.TriState;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.settings.KeyConflictContext;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import com.lhy.createpackage.network.ModNetwork;
 
 /**
  * Client input for route tools:
@@ -40,7 +40,8 @@ public final class AutoRouteKeys {
         event.register(AUTO_ROUTE);
     }
 
-    public static void onClientTick(ClientTickEvent.Post event) {
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.screen != null) {
             while (AUTO_ROUTE.consumeClick()) {
@@ -52,7 +53,7 @@ public final class AutoRouteKeys {
             if (tool == null || !RouteTools.supportsAutoRoute(tool)) {
                 continue;
             }
-            PacketDistributor.sendToServer(new AutoRouteSearchPayload());
+            ModNetwork.sendToServer(new AutoRouteSearchPayload());
         }
     }
 
@@ -62,7 +63,7 @@ public final class AutoRouteKeys {
             return;
         }
         // Always send: server decides whether ordered modes are available for this host.
-        PacketDistributor.sendToServer(new RouteModeTogglePayload());
+        ModNetwork.sendToServer(new RouteModeTogglePayload());
     }
 
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
@@ -76,12 +77,12 @@ public final class AutoRouteKeys {
                 || !RouteTools.isEditMode(tool)) {
             return;
         }
-        double scroll = event.getScrollDeltaY();
+        double scroll = event.getScrollDelta();
         if (scroll == 0.0) {
             return;
         }
         int delta = scroll > 0 ? -1 : 1;
-        PacketDistributor.sendToServer(new RouteCursorScrollPayload(delta));
+        ModNetwork.sendToServer(new RouteCursorScrollPayload(delta));
         event.setCanceled(true);
     }
 
@@ -106,14 +107,14 @@ public final class AutoRouteKeys {
             return;
         }
 
-        PacketDistributor.sendToServer(new RouteMarkEditPayload(event.getPos(), minecraft.player.isShiftKeyDown()));
+        ModNetwork.sendToServer(new RouteMarkEditPayload(event.getPos(), minecraft.player.isShiftKeyDown()));
         // A plain cancellation alone can still let the interaction mapper fall through to the
         // item's air-use path on some clients, which opens the converter GUI. Give the click a
         // successful terminal result as well as blocking both block and item use.
         event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
         event.setCanceled(true);
-        event.setUseItem(TriState.FALSE);
-        event.setUseBlock(TriState.FALSE);
+        event.setUseItem(Event.Result.DENY);
+        event.setUseBlock(Event.Result.DENY);
     }
 
     private AutoRouteKeys() {}

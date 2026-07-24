@@ -21,7 +21,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidStack;
 
 /**
  * Resolves which material a selected mechanical-package-pattern route mark is expected to use.
@@ -117,7 +117,7 @@ public final class RouteMaterialHints {
                 FluidStack fluid = exampleFluid(fills.get(spoutIndex).fluid());
                 if (!fluid.isEmpty()) {
                     return Component.translatable("tooltip." + CreatePackage.MODID + ".route.material.spout_fluid",
-                            fluid.getHoverName(), fluid.getAmount());
+                            fluid.getDisplayName(), fluid.getAmount());
                 }
             }
             return Component.translatable("tooltip." + CreatePackage.MODID + ".route.material.spout");
@@ -210,16 +210,16 @@ public final class RouteMaterialHints {
         return stacks.length == 0 ? ItemStack.EMPTY : stacks[0].copy();
     }
 
-    private static FluidStack exampleFluid(net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient) {
+    private static FluidStack exampleFluid(com.simibubi.create.foundation.fluid.FluidIngredient ingredient) {
         if (ingredient == null) {
             return FluidStack.EMPTY;
         }
-        FluidStack[] stacks = ingredient.getFluids();
-        if (stacks.length == 0) {
+        List<FluidStack> stacks = ingredient.getMatchingFluidStacks();
+        if (stacks.isEmpty()) {
             return FluidStack.EMPTY;
         }
-        FluidStack stack = stacks[0].copy();
-        stack.setAmount(ingredient.amount());
+        FluidStack stack = stacks.get(0).copy();
+        stack.setAmount(ingredient.getRequiredAmount());
         return stack;
     }
 

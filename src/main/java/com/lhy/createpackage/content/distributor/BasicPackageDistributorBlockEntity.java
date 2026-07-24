@@ -13,13 +13,15 @@ import com.lhy.createpackage.registry.ModMenuTypes;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.util.LazyOptional;
 
 import appeng.api.config.LockCraftingMode;
 import appeng.api.crafting.IPatternDetails;
@@ -39,7 +41,7 @@ import appeng.helpers.patternprovider.PatternProviderLogic;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import appeng.menu.ISubMenu;
 import appeng.menu.MenuOpener;
-import appeng.menu.locator.MenuHostLocator;
+import appeng.menu.locator.MenuLocator;
 import appeng.util.SettingsFrom;
 
 /**
@@ -78,17 +80,17 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
-        logic.writeToNBT(data, registries);
+    public void saveAdditional(CompoundTag data) {
+        super.saveAdditional(data);
+        logic.writeToNBT(data);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(CompoundTag data) {
+        super.loadTag(data);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
-        logic.readFromNBT(data, registries);
+        logic.readFromNBT(data);
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
     }
 
@@ -102,6 +104,15 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     public void clearContent() {
         super.clearContent();
         logic.clearContent();
+    }
+
+    @Override
+    public <T> LazyOptional<T> getCapability(Capability<T> capability, @Nullable Direction side) {
+        LazyOptional<T> logicCapability = logic.getCapability(capability);
+        if (logicCapability.isPresent()) {
+            return logicCapability;
+        }
+        return super.getCapability(capability, side);
     }
 
     @Override
@@ -149,11 +160,11 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
 
     @Override
     public ItemStack getMainMenuIcon() {
-        return ModItems.BASIC_PACKAGE_DISTRIBUTOR.toStack();
+        return new ItemStack(ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
     }
 
     @Override
-    public void openMenu(Player player, MenuHostLocator locator) {
+    public void openMenu(Player player, MenuLocator locator) {
         MenuOpener.open(ModMenuTypes.BASIC_PACKAGE_DISTRIBUTOR.get(), player, locator);
     }
 
@@ -163,7 +174,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     }
 
     @Override
-    public void exportSettings(SettingsFrom mode, net.minecraft.core.component.DataComponentMap.Builder builder,
+    public void exportSettings(SettingsFrom mode, CompoundTag builder,
             @Nullable Player player) {
         super.exportSettings(mode, builder, player);
         if (mode == SettingsFrom.MEMORY_CARD) {
@@ -172,7 +183,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     }
 
     @Override
-    public void importSettings(SettingsFrom mode, net.minecraft.core.component.DataComponentMap input,
+    public void importSettings(SettingsFrom mode, CompoundTag input,
             @Nullable Player player) {
         super.importSettings(mode, input, player);
         if (mode == SettingsFrom.MEMORY_CARD) {
@@ -217,7 +228,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     private final class CombinedTicker implements IGridTickable {
         @Override
         public TickingRequest getTickingRequest(IGridNode node) {
-            return new TickingRequest(5, 20, !hasDistributorJob());
+            return new TickingRequest(5, 20, !hasDistributorJob(), true);
         }
 
         @Override

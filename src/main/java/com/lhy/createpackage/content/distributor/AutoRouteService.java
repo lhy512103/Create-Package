@@ -57,7 +57,7 @@ public final class AutoRouteService {
     }
 
     private static Result searchLinker(ServerPlayer player, ItemStack linker) {
-        GlobalPos selected = linker.get(ModComponents.LINKED_DISTRIBUTOR.get());
+        GlobalPos selected = ModComponents.getLinkedDistributor(linker);
         if (selected == null) {
             return new Result(false, MESSAGE_PREFIX + ".no_selection", 0);
         }

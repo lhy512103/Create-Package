@@ -1,6 +1,16 @@
 # Keep repository text files stable across Windows and Linux.
-* text=auto eol=lf
+* text=auto
 
-# Generated files always use LF.
+# Scripts must use platform-appropriate line endings.
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+
+# Generated resources always use LF.
 src/generated/**/.cache/* text eol=lf
 src/generated/**/*.json text eol=lf
+
+# Binary assets.
+*.jar binary
+*.png binary
+*.ogg binary

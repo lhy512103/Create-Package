@@ -1,41 +1,43 @@
-### Gradle ###
-.gradle
+# Gradle / ForgeGradle
+.gradle/
 build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/**/build/
+out/
+bin/
+run/
+eclipse/
 
-### IntelliJ IDEA ###
+# IDE
 .idea/
-*.iws
+.vscode/
+.settings/
+.metadata/
+.classpath
+.project
 *.iml
 *.ipr
-out/
-!**/src/**/out/
+*.iws
+*.launch
 
-.run/
+# Local runtime and generated diagnostics
+logs/
+crash-reports/
+saves/
+*.log
+compile-*.txt
+build-*.txt
+run-client-*.txt
+run-server-*.txt
+errors-*.txt
+parsed-errors-*.txt
+javap-*.txt
+process-resources-*.txt
+runtime-deps-offline.txt
+.codex-publish-dir.txt
 
-### Eclipse ###
-.apt_generated
-.classpath
-.eclipse/
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-!**/src/**/bin/
-
-### VS Code ###
-.vscode/
-
-### Mac OS ###
+# OS files
 .DS_Store
+Thumbs.db
+desktop.ini
 
-### Minecraft Modding ###
-run/
-!**/src/**/run/
-**/src/generated/**/.cache/
-repo/
-!**/src/**/repo/
-临时文件/
+# Forge MDK generated files
+forge*changelog.txt

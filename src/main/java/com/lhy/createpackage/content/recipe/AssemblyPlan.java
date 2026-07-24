@@ -11,7 +11,7 @@ import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 import com.simibubi.create.content.processing.sequenced.SequencedRecipe;
 
 import net.minecraft.world.item.crafting.Ingredient;
-import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
+import com.simibubi.create.foundation.fluid.FluidIngredient;
 
 /**
  * A structured "supply plan" extracted from a {@link SequencedAssemblyRecipe}.
@@ -52,7 +52,7 @@ public record AssemblyPlan(
             StepType type,
             Ingredient heldItem,
             boolean keepHeld,
-            SizedFluidIngredient fluid) {
+            FluidIngredient fluid) {
     }
 
     /**
@@ -62,7 +62,7 @@ public record AssemblyPlan(
     public static AssemblyPlan of(SequencedAssemblyRecipe recipe) {
         List<Step> steps = new ArrayList<>();
         for (SequencedRecipe<?> seq : recipe.getSequence()) {
-            ProcessingRecipe<?, ?> step = seq.getRecipe();
+            ProcessingRecipe<?> step = seq.getRecipe();
             var type = step.getType();
             if (type == AllRecipeTypes.DEPLOYING.getType() && step instanceof ItemApplicationRecipe dep) {
                 steps.add(new Step(StepType.DEPLOY, dep.getRequiredHeldItem(), dep.shouldKeepHeldItem(), null));

@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.simibubi.create.AllDataComponents;
 import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
 
@@ -33,11 +32,10 @@ import com.lhy.createpackage.registry.ModItems;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ClickEvent;
@@ -51,10 +49,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.util.LazyOptional;
 
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
@@ -74,7 +74,8 @@ import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
-import appeng.blockentity.grid.AENetworkedBlockEntity;
+import appeng.blockentity.grid.AENetworkBlockEntity;
+import appeng.capabilities.Capabilities;
 import appeng.me.helpers.MachineSource;
 
 /**
@@ -88,7 +89,7 @@ import appeng.me.helpers.MachineSource;
  * <p>This is the minimal connectivity milestone: it joins the grid and accepts pushes, logging
  * what it receives. Distribution and result recovery are added in later milestones.
  */
-public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
+public class PackageDistributorBlockEntity extends AENetworkBlockEntity
         implements ICraftingMachine, IActionHost, IHaveGoggleInformation {
 
     private static final String NBT_LINKED_MACHINES = "linkedMachines";
@@ -339,8 +340,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
+    public void saveAdditional(CompoundTag data) {
+        super.saveAdditional(data);
         long[] packed = new long[linkedMachines.size()];
         for (int i = 0; i < packed.length; i++) {
             packed[i] = linkedMachines.get(i).asLong();
@@ -349,18 +350,18 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         if (!activeJobs.isEmpty()) {
             ListTag jobs = new ListTag();
             for (DistributionJob job : activeJobs) {
-                jobs.add(job.write(registries));
+                jobs.add(job.write());
             }
             data.put(NBT_JOBS, jobs);
-            data.put(NBT_JOB, activeJobs.get(0).write(registries));
+            data.put(NBT_JOB, activeJobs.get(0).write());
         }
         data.putString(NBT_LAST_STATUS, lastStatusKey);
         diagnostics.write(data);
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(CompoundTag data) {
+        super.loadTag(data);
         linkedMachines.clear();
         for (long packed : data.getLongArray(NBT_LINKED_MACHINES)) {
             linkedMachines.add(BlockPos.of(packed));
@@ -369,13 +370,13 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         if (data.contains(NBT_JOBS, Tag.TAG_LIST)) {
             ListTag jobs = data.getList(NBT_JOBS, Tag.TAG_COMPOUND);
             for (int i = 0; i < jobs.size(); i++) {
-                DistributionJob job = DistributionJob.read(jobs.getCompound(i), registries);
+                DistributionJob job = DistributionJob.read(jobs.getCompound(i));
                 if (job != null) {
                     activeJobs.add(job);
                 }
             }
         } else if (data.contains(NBT_JOB)) {
-            DistributionJob job = DistributionJob.read(data.getCompound(NBT_JOB), registries);
+            DistributionJob job = DistributionJob.read(data.getCompound(NBT_JOB));
             if (job != null) {
                 activeJobs.add(job);
             }
@@ -385,7 +386,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    protected void writeToStream(RegistryFriendlyByteBuf data) {
+    protected void writeToStream(FriendlyByteBuf data) {
         super.writeToStream(data);
         AeStatus aeStatus = currentAeStatus();
         data.writeBoolean(aeStatus.nodePresent());
@@ -425,7 +426,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     @Override
-    protected boolean readFromStream(RegistryFriendlyByteBuf data) {
+    protected boolean readFromStream(FriendlyByteBuf data) {
         boolean changed = super.readFromStream(data);
 
         boolean streamedAeNodePresent = data.readBoolean();
@@ -599,6 +600,18 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     @Override
     public IGridNode getActionableNode() {
         return getMainNode().getNode();
+    }
+
+
+    @Override
+    public <T> LazyOptional<T> getCapability(Capability<T> capability, @Nullable Direction side) {
+        if (capability == Capabilities.CRAFTING_MACHINE) {
+            return Capabilities.CRAFTING_MACHINE.orEmpty(capability, LazyOptional.of(() -> this));
+        }
+        if (capability == Capabilities.IN_WORLD_GRID_NODE_HOST) {
+            return Capabilities.IN_WORLD_GRID_NODE_HOST.orEmpty(capability, LazyOptional.of(() -> this));
+        }
+        return super.getCapability(capability, side);
     }
 
     @Override
@@ -873,25 +886,22 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private boolean isCurrentTransitional(DistributionJob job, ItemStack stack) {
-        if (stack.isEmpty() || !stack.has(AllDataComponents.SEQUENCED_ASSEMBLY)) {
+        if (stack.isEmpty() || !SequencedAssemblyData.has(stack)) {
             return false;
         }
         if (stack.getItem() != job.transitionalItem.getReadOnlyStack().getItem()) {
             return false;
         }
-        SequencedAssemblyRecipe.SequencedAssembly assembly = stack.get(AllDataComponents.SEQUENCED_ASSEMBLY);
-        return assembly != null && assembly.id().equals(job.recipeId);
+        ResourceLocation assemblyId = SequencedAssemblyData.recipeId(stack);
+        return job.recipeId.equals(assemblyId);
     }
 
     private boolean nextPassIsFinal(DistributionJob job, ItemStack stack) {
         if (job.sequenceLength <= 0 || job.loops <= 1) {
             return true;
         }
-        SequencedAssemblyRecipe.SequencedAssembly assembly = stack.get(AllDataComponents.SEQUENCED_ASSEMBLY);
-        if (assembly == null) {
-            return false;
-        }
-        return assembly.step() >= job.sequenceLength * (job.loops - 1);
+        return SequencedAssemblyData.has(stack)
+                && SequencedAssemblyData.step(stack) >= job.sequenceLength * (job.loops - 1);
     }
 
     private NetworkIO networkIO() {
@@ -1106,7 +1116,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return null;
         }
         var recipe = level.getRecipeManager().byKey(job.recipeId);
-        if (recipe.isEmpty() || !(recipe.get().value() instanceof com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe sequenced)) {
+        if (recipe.isEmpty() || !(recipe.get() instanceof com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe sequenced)) {
             rememberJobStatus(job, "no_matching_recipe");
             return null;
         }
@@ -1183,7 +1193,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                         rememberJobStatus(job, "missing_spout");
                         return null;
                     }
-                    long amount = (long) plan.loops() * step.fluid().amount();
+                    long amount = (long) plan.loops() * step.fluid().getRequiredAmount();
                     long existing = countMatchingFluid(spouts.get(fillIdx).pos(), step.fluid());
                     long supplyAmount = Math.max(0, amount - existing);
                     if (supplyAmount > 0) {
@@ -1239,7 +1249,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private long countMatchingFluid(BlockPos pos,
-            net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient) {
+            com.simibubi.create.foundation.fluid.FluidIngredient ingredient) {
         return InventoryAccess.countMatchingFluid(level, pos, ingredient);
     }
 
@@ -1570,7 +1580,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private static FluidStack takeMatchingFluid(List<GenericStack> inputs,
-            net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient ingredient, long amount) {
+            com.simibubi.create.foundation.fluid.FluidIngredient ingredient, long amount) {
         return PatternStacks.takeMatchingFluid(inputs, ingredient, amount);
     }
 
@@ -1669,14 +1679,14 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return "waiting_target_space".equals(statusKey);
         }
 
-        private CompoundTag write(HolderLookup.Provider registries) {
+        private CompoundTag write() {
             CompoundTag tag = new CompoundTag();
             tag.putString(NBT_RECIPE, recipeId.toString());
-            tag.put(NBT_OUTPUT, primaryOutput.toTag(registries));
+            tag.put(NBT_OUTPUT, primaryOutput.toTag());
             tag.putLong(NBT_REMAINING, primaryRemaining);
             tag.putLong(NBT_INPUT_POS, inputPos.asLong());
             tag.putLong(NBT_OUTPUT_POS, outputPos.asLong());
-            tag.put(NBT_TRANSITIONAL, transitionalItem.toTag(registries));
+            tag.put(NBT_TRANSITIONAL, transitionalItem.toTag());
             tag.putInt(NBT_SEQUENCE_LENGTH, sequenceLength);
             tag.putInt(NBT_LOOPS, loops);
             tag.putInt(NBT_TICKS, ticks);
@@ -1688,7 +1698,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             ListTag refillList = new ListTag();
             for (GenericStack input : refillInputs) {
                 CompoundTag inputTag = new CompoundTag();
-                inputTag.put(NBT_REFILL_KEY, input.what().toTagGeneric(registries));
+                inputTag.put(NBT_REFILL_KEY, input.what().toTagGeneric());
                 inputTag.putLong(NBT_REFILL_AMOUNT, input.amount());
                 refillList.add(inputTag);
             }
@@ -1700,13 +1710,13 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 tag.put(NBT_ENCODER, encoderTag);
             }
             if (missingRefillInput != null) {
-                tag.put(NBT_MISSING_REFILL_INPUT, GenericStack.writeTag(registries, missingRefillInput));
+                tag.put(NBT_MISSING_REFILL_INPUT, GenericStack.writeTag(missingRefillInput));
             }
             ListTag pendingList = new ListTag();
             for (AssemblyPlanner.PendingSupply supply : pendingSupplies) {
                 CompoundTag supplyTag = new CompoundTag();
                 supplyTag.putLong(NBT_PENDING_TARGET, supply.target().asLong());
-                supplyTag.put(NBT_PENDING_KEY, supply.stack().what().toTagGeneric(registries));
+                supplyTag.put(NBT_PENDING_KEY, supply.stack().what().toTagGeneric());
                 supplyTag.putLong(NBT_PENDING_AMOUNT, supply.stack().amount());
                 pendingList.add(supplyTag);
             }
@@ -1719,14 +1729,14 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return tag;
         }
 
-        private static DistributionJob read(CompoundTag tag, HolderLookup.Provider registries) {
+        private static DistributionJob read(CompoundTag tag) {
             ResourceLocation recipe = ResourceLocation.parse(tag.getString(NBT_RECIPE));
-            AEItemKey output = AEItemKey.fromTag(registries, tag.getCompound(NBT_OUTPUT));
+            AEItemKey output = AEItemKey.fromTag(tag.getCompound(NBT_OUTPUT));
             if (output == null) {
                 return null;
             }
             AEItemKey transitional = tag.contains(NBT_TRANSITIONAL)
-                    ? AEItemKey.fromTag(registries, tag.getCompound(NBT_TRANSITIONAL))
+                    ? AEItemKey.fromTag(tag.getCompound(NBT_TRANSITIONAL))
                     : output;
             if (transitional == null) {
                 transitional = output;
@@ -1735,7 +1745,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             ListTag refillList = tag.getList(NBT_REFILL_INPUTS, Tag.TAG_COMPOUND);
             for (int i = 0; i < refillList.size(); i++) {
                 CompoundTag inputTag = refillList.getCompound(i);
-                AEKey key = AEKey.fromTagGeneric(registries, inputTag.getCompound(NBT_REFILL_KEY));
+                AEKey key = AEKey.fromTagGeneric(inputTag.getCompound(NBT_REFILL_KEY));
                 long amount = inputTag.getLong(NBT_REFILL_AMOUNT);
                 if (key != null && amount > 0) {
                     refillInputs.add(new GenericStack(key, amount));
@@ -1745,7 +1755,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             ListTag pendingList = tag.getList(NBT_PENDING_SUPPLIES, Tag.TAG_COMPOUND);
             for (int i = 0; i < pendingList.size(); i++) {
                 CompoundTag supplyTag = pendingList.getCompound(i);
-                AEKey key = AEKey.fromTagGeneric(registries, supplyTag.getCompound(NBT_PENDING_KEY));
+                AEKey key = AEKey.fromTagGeneric(supplyTag.getCompound(NBT_PENDING_KEY));
                 long amount = supplyTag.getLong(NBT_PENDING_AMOUNT);
                 if (key != null && amount > 0) {
                     pendingSupplies.add(new AssemblyPlanner.PendingSupply(BlockPos.of(supplyTag.getLong(NBT_PENDING_TARGET)),
@@ -1768,7 +1778,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                     encoder,
                     route);
             if (tag.contains(NBT_MISSING_REFILL_INPUT, Tag.TAG_COMPOUND)) {
-                job.missingRefillInput = GenericStack.readTag(registries, tag.getCompound(NBT_MISSING_REFILL_INPUT));
+                job.missingRefillInput = GenericStack.readTag(tag.getCompound(NBT_MISSING_REFILL_INPUT));
             }
             job.ticks = tag.getInt(NBT_TICKS);
             job.roundTicks = tag.getInt(NBT_ROUND_TICKS);
@@ -1800,7 +1810,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     protected class DistributorTicker implements IGridTickable {
         @Override
         public TickingRequest getTickingRequest(IGridNode node) {
-            return new TickingRequest(5, 20, activeJobs.isEmpty());
+            return new TickingRequest(5, 20, activeJobs.isEmpty(), true);
         }
 
         @Override

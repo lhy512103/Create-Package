@@ -30,7 +30,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.neoforged.neoforge.capabilities.Capabilities;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 
 /**
  * Machine Linker.
@@ -78,12 +78,11 @@ public class MachineLinkerItem extends Item {
             }
             if (player.isShiftKeyDown()) {
                 int cleared = distributor.clearLinks();
-                stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
+                ModComponents.clearLinkedDistributor(stack);
                 msg(player, "cleared", cleared);
                 play(level, clicked, ModSounds.MACHINE_LINKER_SUCCESS.get());
             } else {
-                stack.set(ModComponents.LINKED_DISTRIBUTOR.get(),
-                        GlobalPos.of(level.dimension(), clicked.immutable()));
+                ModComponents.setLinkedDistributor(stack, GlobalPos.of(level.dimension(), clicked.immutable()));
                 msg(player, "selected", clicked.getX(), clicked.getY(), clicked.getZ());
                 play(level, clicked, ModSounds.MACHINE_LINKER_THUD.get());
             }
@@ -94,14 +93,13 @@ public class MachineLinkerItem extends Item {
         if (be instanceof KineticPatternProviderBlockEntity provider) {
             if (player.isShiftKeyDown()) {
                 int cleared = provider.clearLinks();
-                stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
+                ModComponents.clearLinkedDistributor(stack);
                 RouteTools.setCursor(stack, -1);
                 RouteTools.setMode(stack, RouteTools.Mode.APPEND);
                 msg(player, "kinetic_cleared", cleared);
                 play(level, clicked, ModSounds.MACHINE_LINKER_SUCCESS.get());
             } else {
-                stack.set(ModComponents.LINKED_DISTRIBUTOR.get(),
-                        GlobalPos.of(level.dimension(), clicked.immutable()));
+                ModComponents.setLinkedDistributor(stack, GlobalPos.of(level.dimension(), clicked.immutable()));
                 // Kinetic hosts are a parallel set, not an ordered route.
                 RouteTools.setCursor(stack, -1);
                 RouteTools.setMode(stack, RouteTools.Mode.APPEND);
@@ -206,7 +204,7 @@ public class MachineLinkerItem extends Item {
     @Nullable
     private static LinkTarget resolveTarget(Level level, ItemStack stack,
             net.minecraft.world.entity.player.Player player, BlockPos feedbackPos) {
-        GlobalPos selected = stack.get(ModComponents.LINKED_DISTRIBUTOR.get());
+        GlobalPos selected = ModComponents.getLinkedDistributor(stack);
         if (selected == null) {
             msg(player, "no_selection");
             play(level, feedbackPos, ModSounds.MACHINE_LINKER_ERROR.get());
@@ -220,7 +218,7 @@ public class MachineLinkerItem extends Item {
 
         BlockEntity selectedBe = level.getBlockEntity(selected.pos());
         if (selectedBe == null) {
-            stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
+            ModComponents.clearLinkedDistributor(stack);
             msg(player, "selection_gone");
             play(level, feedbackPos, ModSounds.MACHINE_LINKER_ERROR.get());
             return null;
@@ -228,7 +226,7 @@ public class MachineLinkerItem extends Item {
 
         if (selectedBe instanceof PackageDistributorBlockEntity distributor) {
             if (!distributor.usesStoredMachineLinks()) {
-                stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
+                ModComponents.clearLinkedDistributor(stack);
                 msg(player, "pattern_routed_distributor");
                 play(level, feedbackPos, ModSounds.MACHINE_LINKER_ERROR.get());
                 return null;
@@ -240,7 +238,7 @@ public class MachineLinkerItem extends Item {
             return new LinkTarget(level, null, provider);
         }
 
-        stack.remove(ModComponents.LINKED_DISTRIBUTOR.get());
+        ModComponents.clearLinkedDistributor(stack);
         msg(player, "selection_gone");
         play(level, feedbackPos, ModSounds.MACHINE_LINKER_ERROR.get());
         return null;
@@ -281,8 +279,9 @@ public class MachineLinkerItem extends Item {
 
     /** A block is linkable if it exposes an item or fluid handler that we can feed/drain. */
     public static boolean hasLinkableCapability(Level level, BlockPos pos) {
-        return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null) != null
-                || level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null) != null;
+        BlockEntity target = level.getBlockEntity(pos);
+        return target != null && (target.getCapability(ForgeCapabilities.ITEM_HANDLER).isPresent()
+                || target.getCapability(ForgeCapabilities.FLUID_HANDLER).isPresent());
     }
 
     public static boolean isSameKineticMachine(Level level, KineticPatternProviderBlockEntity provider,
@@ -316,8 +315,8 @@ public class MachineLinkerItem extends Item {
             @Nullable KineticPatternProviderBlockEntity provider) {}
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        GlobalPos selected = stack.get(ModComponents.LINKED_DISTRIBUTOR.get());
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level level, List<Component> tooltip, TooltipFlag flag) {
+        GlobalPos selected = ModComponents.getLinkedDistributor(stack);
         if (selected == null) {
             tooltip.add(Component.translatable(KEY_PREFIX + "tooltip.unbound").withStyle(ChatFormatting.GRAY));
         } else {

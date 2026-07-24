@@ -8,9 +8,9 @@ import appeng.api.stacks.GenericStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.capability.IFluidHandler;
+import net.minecraftforge.items.IItemHandler;
 
 /**
  * Concrete {@link SupplyAction} implementations shared by craft bridges.
@@ -128,7 +128,7 @@ public final class SupplyActions {
             if (handler == null) {
                 return;
             }
-            handler.drain(stack.copyWithAmount(inserted), IFluidHandler.FluidAction.EXECUTE);
+            handler.drain(new FluidStack(stack, inserted), IFluidHandler.FluidAction.EXECUTE);
             inserted = 0;
         }
 

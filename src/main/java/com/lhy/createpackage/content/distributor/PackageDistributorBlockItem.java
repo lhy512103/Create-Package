@@ -1,6 +1,5 @@
 package com.lhy.createpackage.content.distributor;
 
-import com.simibubi.create.AllDataComponents;
 
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
@@ -14,7 +13,7 @@ public class PackageDistributorBlockItem extends BlockItem {
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
-        if (context.getItemInHand().has(AllDataComponents.SEQUENCED_ASSEMBLY)) {
+        if (SequencedAssemblyData.has(context.getItemInHand())) {
             return InteractionResult.FAIL;
         }
         return super.useOn(context);

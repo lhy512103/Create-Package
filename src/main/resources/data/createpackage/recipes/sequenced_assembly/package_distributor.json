@@ -1,82 +1,85 @@
 {
   "type": "create:sequenced_assembly",
   "ingredient": {
-    "item": "createpackage:package_distributor"
+    "tag": "forge:plates/gold"
   },
-  "loops": 1,
+  "loops": 3,
   "results": [
     {
-      "id": "createpackage:basic_package_distributor"
+      "item": "createpackage:package_distributor"
     }
   ],
   "sequence": [
     {
       "type": "create:deploying",
+      "keep_held_item": true,
       "ingredients": [
         {
           "item": "createpackage:incomplete_package_distributor"
         },
         {
-          "item": "create:precision_mechanism"
+          "item": "ae2:silicon_press"
         }
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:incomplete_package_distributor"
         }
       ]
     },
     {
-      "type": "create:filling",
+      "type": "create:deploying",
+      "keep_held_item": true,
       "ingredients": [
         {
           "item": "createpackage:incomplete_package_distributor"
         },
         {
-          "type": "neoforge:single",
-          "amount": 1000,
-          "fluid": "minecraft:lava"
+          "item": "ae2:logic_processor_press"
         }
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:incomplete_package_distributor"
         }
       ]
     },
     {
-      "type": "create:filling",
+      "type": "create:deploying",
+      "keep_held_item": true,
       "ingredients": [
         {
           "item": "createpackage:incomplete_package_distributor"
         },
         {
-          "type": "neoforge:single",
-          "amount": 1000,
-          "fluid": "minecraft:water"
+          "item": "ae2:engineering_processor_press"
         }
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:incomplete_package_distributor"
         }
       ]
     },
     {
-      "type": "create:pressing",
+      "type": "create:deploying",
+      "keep_held_item": true,
       "ingredients": [
         {
           "item": "createpackage:incomplete_package_distributor"
+        },
+        {
+          "item": "ae2:calculation_processor_press"
         }
       ],
       "results": [
         {
-          "id": "createpackage:incomplete_package_distributor"
+          "item": "createpackage:incomplete_package_distributor"
         }
       ]
     }
   ],
-  "transitional_item": {
-    "id": "createpackage:incomplete_package_distributor"
+  "transitionalItem": {
+    "item": "createpackage:incomplete_package_distributor"
   }
 }

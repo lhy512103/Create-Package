@@ -14,6 +14,9 @@ import com.lhy.createpackage.registry.ModBlockEntities;
 import com.lhy.createpackage.registry.ModItems;
 import com.lhy.createpackage.registry.ModMenuTypes;
 
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.util.LazyOptional;
+
 import appeng.api.config.LockCraftingMode;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
@@ -35,15 +38,13 @@ import appeng.helpers.patternprovider.PatternProviderLogic;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
 import appeng.menu.ISubMenu;
 import appeng.menu.MenuOpener;
-import appeng.menu.locator.MenuHostLocator;
+import appeng.menu.locator.MenuLocator;
 import appeng.util.SettingsFrom;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -98,11 +99,11 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     }
 
     @Override
-    public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
-        super.saveAdditional(data, registries);
-        logic.writeToNBT(data, registries);
+    public void saveAdditional(CompoundTag data) {
+        super.saveAdditional(data);
+        logic.writeToNBT(data);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
-        upgrades.writeToNBT(data, NBT_UPGRADES, registries);
+        upgrades.writeToNBT(data, NBT_UPGRADES);
         if (!lastFailureRoute.isEmpty()) {
             long[] route = new long[lastFailureRoute.size()];
             for (int i = 0; i < route.length; i++) {
@@ -114,12 +115,12 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     }
 
     @Override
-    public void loadTag(CompoundTag data, HolderLookup.Provider registries) {
-        super.loadTag(data, registries);
+    public void loadTag(CompoundTag data) {
+        super.loadTag(data);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
-        logic.readFromNBT(data, registries);
+        logic.readFromNBT(data);
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
-        upgrades.readFromNBT(data, NBT_UPGRADES, registries);
+        upgrades.readFromNBT(data, NBT_UPGRADES);
         var route = new java.util.ArrayList<BlockPos>();
         for (long packed : data.getLongArray(NBT_LAST_FAILURE_ROUTE)) {
             route.add(BlockPos.of(packed));
@@ -142,6 +143,15 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
         super.clearContent();
         logic.clearContent();
         upgrades.clear();
+    }
+
+    @Override
+    public <T> LazyOptional<T> getCapability(Capability<T> capability, @Nullable Direction side) {
+        LazyOptional<T> logicCapability = logic.getCapability(capability);
+        if (logicCapability.isPresent()) {
+            return logicCapability;
+        }
+        return super.getCapability(capability, side);
     }
 
     @Override
@@ -189,7 +199,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     }
 
     @Override
-    protected void writeToStream(RegistryFriendlyByteBuf data) {
+    protected void writeToStream(FriendlyByteBuf data) {
         super.writeToStream(data);
         data.writeVarInt(countMechanicalPackagePatterns());
         data.writeVarInt(getParallelCardCount());
@@ -201,7 +211,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     }
 
     @Override
-    protected boolean readFromStream(RegistryFriendlyByteBuf data) {
+    protected boolean readFromStream(FriendlyByteBuf data) {
         boolean changed = super.readFromStream(data);
         int streamedCount = data.readVarInt();
         if (visibleMechanicalPackagePatternCount != streamedCount) {
@@ -310,11 +320,11 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
 
     @Override
     public ItemStack getMainMenuIcon() {
-        return ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.toStack();
+        return new ItemStack(ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
     }
 
     @Override
-    public void openMenu(Player player, MenuHostLocator locator) {
+    public void openMenu(Player player, MenuLocator locator) {
         MenuOpener.open(ModMenuTypes.ADVANCED_PACKAGE_DISTRIBUTOR.get(), player, locator);
     }
 
@@ -324,7 +334,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     }
 
     @Override
-    public void exportSettings(SettingsFrom mode, DataComponentMap.Builder builder, @Nullable Player player) {
+    public void exportSettings(SettingsFrom mode, CompoundTag builder, @Nullable Player player) {
         super.exportSettings(mode, builder, player);
         if (mode == SettingsFrom.MEMORY_CARD) {
             logic.exportSettings(builder);
@@ -332,7 +342,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     }
 
     @Override
-    public void importSettings(SettingsFrom mode, DataComponentMap input, @Nullable Player player) {
+    public void importSettings(SettingsFrom mode, CompoundTag input, @Nullable Player player) {
         super.importSettings(mode, input, player);
         if (mode == SettingsFrom.MEMORY_CARD) {
             logic.importSettings(input, player);
@@ -443,7 +453,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     private final class CombinedTicker implements IGridTickable {
         @Override
         public TickingRequest getTickingRequest(IGridNode node) {
-            return new TickingRequest(5, 20, !hasDistributorJob());
+            return new TickingRequest(5, 20, !hasDistributorJob(), true);
         }
 
         @Override

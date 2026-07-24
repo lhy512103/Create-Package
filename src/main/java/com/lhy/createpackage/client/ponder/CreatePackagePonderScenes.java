@@ -365,10 +365,10 @@ public final class CreatePackagePonderScenes {
     }
 
     private static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(CreatePackage.MODID, path);
+        return new ResourceLocation(CreatePackage.MODID, path);
     }
 
     private static ResourceLocation create(String path) {
-        return ResourceLocation.fromNamespaceAndPath("create", path);
+        return new ResourceLocation("create", path);
     }
 }

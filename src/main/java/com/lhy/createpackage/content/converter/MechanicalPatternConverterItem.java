@@ -93,7 +93,7 @@ public class MechanicalPatternConverterItem extends Item {
         }
         if (player.isShiftKeyDown()) {
             if (!level.isClientSide()) {
-                stack.remove(ModComponents.MECHANICAL_ROUTE.get());
+                ModComponents.clearMechanicalRoute(stack);
                 RouteTools.setCursor(stack, -1);
                 msg(player, "cleared");
             }
@@ -104,7 +104,8 @@ public class MechanicalPatternConverterItem extends Item {
                     (id, inv, p) -> new MechanicalPatternConverterMenu(
                             ModMenuTypes.MECHANICAL_PATTERN_CONVERTER.get(), id, inv, hand),
                     Component.translatable("gui." + CreatePackage.MODID + ".mechanical_pattern_converter"));
-            serverPlayer.openMenu(provider, buf -> buf.writeBoolean(hand == InteractionHand.MAIN_HAND));
+            net.minecraftforge.network.NetworkHooks.openScreen(serverPlayer, provider, buf ->
+                    buf.writeBoolean(hand == InteractionHand.MAIN_HAND));
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }
@@ -114,15 +115,15 @@ public class MechanicalPatternConverterItem extends Item {
     }
 
     private static MachineRouteData route(ItemStack stack) {
-        MachineRouteData route = stack.get(ModComponents.MECHANICAL_ROUTE.get());
+        MachineRouteData route = ModComponents.getMechanicalRoute(stack);
         return route == null ? new MachineRouteData(List.of()) : route;
     }
 
     private static void setRoute(ItemStack stack, MachineRouteData route) {
         if (route.isEmpty()) {
-            stack.remove(ModComponents.MECHANICAL_ROUTE.get());
+            ModComponents.clearMechanicalRoute(stack);
         } else {
-            stack.set(ModComponents.MECHANICAL_ROUTE.get(), route);
+            ModComponents.setMechanicalRoute(stack, route);
         }
     }
 
@@ -131,7 +132,7 @@ public class MechanicalPatternConverterItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level level, List<Component> tooltip, TooltipFlag flag) {
         MachineRouteData route = route(stack);
         int cursor = RouteTools.clampCursor(RouteTools.getCursor(stack), route.positions().size());
         RouteTools.Mode mode = RouteTools.getMode(stack);
@@ -139,13 +140,13 @@ public class MechanicalPatternConverterItem extends Item {
                 RouteTools.modeLabel(mode).copy().withStyle(
                         mode == RouteTools.Mode.EDIT ? ChatFormatting.YELLOW : ChatFormatting.GREEN))
                 .withStyle(ChatFormatting.GRAY));
-        MachineRouteTooltip.addRouteLines(tooltip, context.level(), route.positions(), flag.hasShiftDown(), cursor);
+        MachineRouteTooltip.addRouteLines(tooltip, level, route.positions(), net.minecraft.client.gui.screens.Screen.hasShiftDown(), cursor);
         if (mode == RouteTools.Mode.EDIT && cursor >= 0 && cursor < route.positions().size()) {
             BlockPos pos = route.positions().get(cursor);
             tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.selected_mark",
                     cursor + 1,
                     Component.translatable("tooltip." + CreatePackage.MODID + ".package_distributor.role."
-                            + roleKey(context.level(), pos)),
+                            + roleKey(level, pos)),
                     pos.getX(), pos.getY(), pos.getZ()).withStyle(ChatFormatting.YELLOW));
         }
         tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".route.guide_hint")
