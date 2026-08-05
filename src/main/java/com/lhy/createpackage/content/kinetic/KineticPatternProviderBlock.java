@@ -1,5 +1,7 @@
 package com.lhy.createpackage.content.kinetic;
 
+import java.util.function.BiFunction;
+
 import com.mojang.serialization.MapCodec;
 
 import com.lhy.createpackage.registry.ModItems;
@@ -33,8 +35,16 @@ public class KineticPatternProviderBlock extends BaseEntityBlock {
     public static final EnumProperty<PushDirection> PUSH_DIRECTION = EnumProperty.create("push_direction",
             PushDirection.class);
 
+    private final BiFunction<BlockPos, BlockState, BlockEntity> blockEntityFactory;
+
     public KineticPatternProviderBlock(Properties properties) {
+        this(properties, KineticPatternProviderBlockEntity::new);
+    }
+
+    public KineticPatternProviderBlock(Properties properties,
+            BiFunction<BlockPos, BlockState, BlockEntity> blockEntityFactory) {
         super(properties);
+        this.blockEntityFactory = blockEntityFactory;
         registerDefaultState(stateDefinition.any().setValue(PUSH_DIRECTION, PushDirection.ALL));
     }
 
@@ -50,7 +60,7 @@ public class KineticPatternProviderBlock extends BaseEntityBlock {
 
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new KineticPatternProviderBlockEntity(pos, state);
+        return blockEntityFactory.apply(pos, state);
     }
 
     @Override

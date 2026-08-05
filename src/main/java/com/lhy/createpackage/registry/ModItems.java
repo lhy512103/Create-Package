@@ -35,6 +35,9 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> KINETIC_PATTERN_PROVIDER = ITEMS.registerSimpleBlockItem(
             "kinetic_pattern_provider", ModBlocks.KINETIC_PATTERN_PROVIDER, new Item.Properties());
 
+    public static final DeferredItem<BlockItem> EXTENDED_KINETIC_PATTERN_PROVIDER = ITEMS.registerSimpleBlockItem(
+            "extended_kinetic_pattern_provider", ModBlocks.EXTENDED_KINETIC_PATTERN_PROVIDER, new Item.Properties());
+
     public static final DeferredItem<Item> MACHINE_LINKER = ITEMS.registerItem(
             "machine_linker", properties -> new MachineLinkerItem(properties.stacksTo(1)));
 
@@ -52,6 +55,9 @@ public final class ModItems {
 
     public static final DeferredItem<Item> INCOMPLETE_PACKAGE_DISTRIBUTOR = ITEMS.registerSimpleItem(
             "incomplete_package_distributor", new Item.Properties());
+
+    public static final DeferredItem<Item> INCOMPLETE_EXTENDED_KINETIC_PATTERN_PROVIDER = ITEMS.registerSimpleItem(
+            "incomplete_extended_kinetic_pattern_provider", new Item.Properties());
 
     private ModItems() {}
 }

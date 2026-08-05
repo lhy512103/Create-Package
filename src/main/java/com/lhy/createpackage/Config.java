@@ -56,6 +56,11 @@ public class Config {
                     + "path is unavailable.")
             .define("autoRouteAllowLShaped", true);
 
+    public static final ModConfigSpec.IntValue EXTENDED_KINETIC_PROVIDER_PAGE_MULTIPLIER = BUILDER
+            .comment("Number of 36-pattern pages available in an Extended Kinetic Pattern Provider. "
+                    + "Pages containing saved patterns remain accessible after this value is reduced.")
+            .defineInRange("extendedKineticProviderPageMultiplier", 1, 1, 9);
+
     public static final ModConfigSpec.BooleanValue ENABLE_PROBABILISTIC_EMPTY_REFILL = BUILDER
             .comment("When enabled, craft bridges treat a full empty-output timeout as a failed probability roll and "
                     + "attempt a refill round.")
@@ -104,6 +109,10 @@ public class Config {
 
     public static boolean autoRouteAllowLShaped() {
         return safeBool(AUTO_ROUTE_ALLOW_L_SHAPED, true);
+    }
+
+    public static int extendedKineticProviderPageMultiplier() {
+        return safeInt(EXTENDED_KINETIC_PROVIDER_PAGE_MULTIPLIER, 1);
     }
 
     public static boolean enableProbabilisticEmptyRefill() {

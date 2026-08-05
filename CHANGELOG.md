@@ -1,4 +1,26 @@
-# Changelog
+﻿# Changelog
+
+## 2026-07-25
+
+## v0.0.3
+
+### English
+
+1. Added the Extended Kinetic Pattern Provider with configurable 36-slot pages; one page is enabled by default.
+2. Added Kinetic Pattern Provider support for verified machines from Vintage Improvements, Create Metallurgy, Create Bitterballen, Create Confectionery, Create Crafts & Additions, and Create Diesel Generators.
+3. Optimized smart batching to calculate batch sizes from each machine's actual item/fluid capacity and avoid enabling it for incompatible machine types.
+4. Fixed item loss when the AE network can only accept part of an output; remaining products are saved and retried after reload.
+5. Fixed incorrect network-tool slot rendering in the Package Distributor and Kinetic Pattern Provider screens.
+6. Adjusted the Package Distributor collision shape.
+
+### 中文
+
+1. 增加扩展动力样板供应器：支持可配置的 36 槽分页，默认开放 1 页。
+2. 增加动力样板供应器对 Vintage Improvements、Create Metallurgy、Create Bitterballen、Create Confectionery、Create Crafts & Additions 和 Create Diesel Generators 已验证机器的兼容。
+3. 优化智能批量：按不同机器的真实物品/流体容量计算批次，并避免在不适用的机器类型上错误启用。
+4. 修复 AE 网络只能接收部分产物时可能丢失的问题：剩余产物会保存并在重新载入后继续重试。
+5. 修复封包分发器和动力样板供应器界面网络工具槽位显示错误的问题。
+6. 修改封包分发器碰撞箱设定。
 
 ## v0.0.2
 

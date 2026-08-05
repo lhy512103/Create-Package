@@ -1,13 +1,18 @@
 package com.lhy.createpackage.content.crafting;
 
+import org.jetbrains.annotations.Nullable;
+
 import appeng.api.config.Actionable;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -20,11 +25,23 @@ public final class SupplyActions {
     }
 
     public static ItemInsertAction insertItem(Level level, BlockPos target, ItemStack stack) {
-        return new ItemInsertAction(level, target, stack);
+        return new ItemInsertAction(level, target, null, stack);
+    }
+
+    public static ItemInsertAction insertItem(Level level, MachineEndpoint endpoint, ItemStack stack) {
+        return new ItemInsertAction(level, endpoint.pos(), endpoint.side(), stack);
+    }
+
+    public static SupplyAction spawnItemEntity(Level level, BlockPos target, ItemStack stack) {
+        return new ItemEntityInsertAction(level, target, stack);
     }
 
     public static FluidInsertAction insertFluid(Level level, BlockPos target, FluidStack stack) {
-        return new FluidInsertAction(level, target, stack);
+        return new FluidInsertAction(level, target, null, MachineEndpoint.Medium.FLUID, stack);
+    }
+
+    public static FluidInsertAction insertFluid(Level level, MachineEndpoint endpoint, FluidStack stack) {
+        return new FluidInsertAction(level, endpoint.pos(), endpoint.side(), endpoint.medium(), stack);
     }
 
     public static SupplyAction networkItemToTarget(Level level, NetworkIO network, BlockPos target, AEItemKey key,
@@ -39,12 +56,14 @@ public final class SupplyActions {
     public static final class ItemInsertAction implements SupplyAction {
         private final Level level;
         private final BlockPos target;
+        private final Direction side;
         private final ItemStack stack;
         private int inserted;
 
-        private ItemInsertAction(Level level, BlockPos target, ItemStack stack) {
+        private ItemInsertAction(Level level, BlockPos target, Direction side, ItemStack stack) {
             this.level = level;
             this.target = target.immutable();
+            this.side = side;
             this.stack = stack.copy();
         }
 
@@ -52,13 +71,26 @@ public final class SupplyActions {
             return target;
         }
 
+        public Direction side() {
+            return side;
+        }
+
         public ItemStack stack() {
             return stack.copy();
         }
 
+        @Nullable
+        public IItemHandler handler() {
+            return side == null
+                    ? InventoryAccess.itemHandler(level, target)
+                    : InventoryAccess.itemHandler(level, target, side);
+        }
+
         @Override
         public boolean perform(boolean simulate) {
-            ItemStack remaining = InventoryAccess.insertItem(level, target, stack, simulate);
+            ItemStack remaining = side == null
+                    ? InventoryAccess.insertItem(level, target, stack, simulate)
+                    : InventoryAccess.insertItem(level, target, side, stack, simulate);
             int moved = stack.getCount() - remaining.getCount();
             if (!simulate) {
                 inserted = moved;
@@ -67,16 +99,19 @@ public final class SupplyActions {
         }
 
         @Override
-        public void compensate() {
+        public CompensationResult compensate() {
             if (inserted <= 0) {
-                return;
+                return CompensationResult.complete();
             }
-            IItemHandler handler = InventoryAccess.itemHandler(level, target);
+            IItemHandler handler = handler();
             if (handler == null) {
-                return;
+                return CompensationResult.failed("item handler unavailable; " + inserted + " item(s) remain inserted");
             }
-            InventoryAccess.extractMatching(handler, stack, inserted, false);
-            inserted = 0;
+            ItemStack extracted = InventoryAccess.extractMatching(handler, stack, inserted, false);
+            inserted -= extracted.getCount();
+            return inserted == 0
+                    ? CompensationResult.complete()
+                    : CompensationResult.failed(inserted + " item(s) remain inserted");
         }
 
         @Override
@@ -85,20 +120,86 @@ public final class SupplyActions {
         }
     }
 
-    public static final class FluidInsertAction implements SupplyAction {
+    public static final class ItemEntityInsertAction implements SupplyAction {
         private final Level level;
         private final BlockPos target;
-        private final FluidStack stack;
-        private int inserted;
+        private final ItemStack stack;
+        @Nullable
+        private ItemEntity spawned;
 
-        private FluidInsertAction(Level level, BlockPos target, FluidStack stack) {
+        private ItemEntityInsertAction(Level level, BlockPos target, ItemStack stack) {
             this.level = level;
             this.target = target.immutable();
             this.stack = stack.copy();
         }
 
+        public ItemStack stack() {
+            return stack.copy();
+        }
+
+        @Override
+        public boolean perform(boolean simulate) {
+            if (stack.isEmpty() || !level.isLoaded(target)
+                    || !level.getEntitiesOfClass(ItemEntity.class, new AABB(target), entity -> entity.isAlive()).isEmpty()) {
+                return false;
+            }
+            if (simulate) {
+                return true;
+            }
+            ItemEntity entity = new ItemEntity(level, target.getX() + 0.5, target.getY() + 0.1,
+                    target.getZ() + 0.5, stack.copy());
+            if (!level.addFreshEntity(entity)) {
+                return false;
+            }
+            spawned = entity;
+            return true;
+        }
+
+        @Override
+        public CompensationResult compensate() {
+            if (spawned == null) {
+                return CompensationResult.complete();
+            }
+            if (spawned.isAlive()) {
+                spawned.discard();
+            }
+            boolean removed = !spawned.isAlive();
+            if (removed) {
+                spawned = null;
+                return CompensationResult.complete();
+            }
+            return CompensationResult.failed("spawned item entity could not be removed");
+        }
+
+        @Override
+        public String describe() {
+            return "item-entity->" + target.toShortString() + " x" + stack.getCount();
+        }
+    }
+
+    public static final class FluidInsertAction implements SupplyAction {
+        private final Level level;
+        private final BlockPos target;
+        private final Direction side;
+        private final MachineEndpoint.Medium medium;
+        private final FluidStack stack;
+        private int inserted;
+
+        private FluidInsertAction(Level level, BlockPos target, Direction side, MachineEndpoint.Medium medium,
+                FluidStack stack) {
+            this.level = level;
+            this.target = target.immutable();
+            this.side = side;
+            this.medium = medium;
+            this.stack = stack.copy();
+        }
+
         public BlockPos target() {
             return target;
+        }
+
+        public Direction side() {
+            return side;
         }
 
         public FluidStack stack() {
@@ -107,7 +208,7 @@ public final class SupplyActions {
 
         @Override
         public boolean perform(boolean simulate) {
-            IFluidHandler handler = InventoryAccess.fluidHandler(level, target);
+            IFluidHandler handler = handler();
             if (handler == null) {
                 return false;
             }
@@ -120,16 +221,29 @@ public final class SupplyActions {
         }
 
         @Override
-        public void compensate() {
+        public CompensationResult compensate() {
             if (inserted <= 0) {
-                return;
+                return CompensationResult.complete();
             }
-            IFluidHandler handler = InventoryAccess.fluidHandler(level, target);
+            IFluidHandler handler = handler();
             if (handler == null) {
-                return;
+                return CompensationResult.failed("fluid handler unavailable; " + inserted + " mB remain inserted");
             }
-            handler.drain(stack.copyWithAmount(inserted), IFluidHandler.FluidAction.EXECUTE);
-            inserted = 0;
+            FluidStack drained = handler.drain(stack.copyWithAmount(inserted), IFluidHandler.FluidAction.EXECUTE);
+            inserted -= drained.getAmount();
+            return inserted == 0
+                    ? CompensationResult.complete()
+                    : CompensationResult.failed(inserted + " mB remain inserted");
+        }
+
+        @Nullable
+        public IFluidHandler handler() {
+            if (medium == MachineEndpoint.Medium.SMART_FLUID_INPUT) {
+                return InventoryAccess.fluidInputHandler(level, target);
+            }
+            return side == null
+                    ? InventoryAccess.fluidHandler(level, target)
+                    : InventoryAccess.fluidHandler(level, target, side);
         }
 
         @Override
@@ -171,40 +285,33 @@ public final class SupplyActions {
             long extracted = network.extract(key, amount, Actionable.MODULATE);
             extractedFromNetwork = extracted;
             if (extracted < amount) {
-                if (extracted > 0) {
-                    network.insert(key, extracted, Actionable.MODULATE);
-                    extractedFromNetwork = 0;
-                }
                 return false;
             }
             ItemStack remaining = InventoryAccess.insertItem(level, target, stack, false);
             insertedIntoWorld = stack.getCount() - remaining.getCount();
-            if (!remaining.isEmpty()) {
-                network.insert(key, remaining.getCount(), Actionable.MODULATE);
-                extractedFromNetwork = insertedIntoWorld;
-                // partial world insert still counts as failure for all-or-nothing plans
-                compensate();
-                return false;
-            }
-            return true;
+            extractedFromNetwork -= insertedIntoWorld;
+            return remaining.isEmpty();
         }
 
         @Override
-        public void compensate() {
+        public CompensationResult compensate() {
             if (insertedIntoWorld > 0) {
                 IItemHandler handler = InventoryAccess.itemHandler(level, target);
                 if (handler != null) {
-                    InventoryAccess.extractMatching(handler, stack, insertedIntoWorld, false);
+                    ItemStack extracted = InventoryAccess.extractMatching(handler, stack, insertedIntoWorld, false);
+                    insertedIntoWorld -= extracted.getCount();
+                    extractedFromNetwork += extracted.getCount();
                 }
-                network.insert(key, insertedIntoWorld, Actionable.MODULATE);
-                insertedIntoWorld = 0;
-                extractedFromNetwork = 0;
-                return;
             }
             if (extractedFromNetwork > 0) {
-                network.insert(key, extractedFromNetwork, Actionable.MODULATE);
-                extractedFromNetwork = 0;
+                long returned = network.insert(key, extractedFromNetwork, Actionable.MODULATE);
+                extractedFromNetwork -= returned;
             }
+            if (insertedIntoWorld == 0 && extractedFromNetwork == 0) {
+                return CompensationResult.complete();
+            }
+            return CompensationResult.failed(insertedIntoWorld + " item(s) remain in target and "
+                    + extractedFromNetwork + " item(s) remain outside the network");
         }
 
         @Override
@@ -234,12 +341,15 @@ public final class SupplyActions {
         }
 
         @Override
-        public void compensate() {
+        public CompensationResult compensate() {
             if (inserted <= 0) {
-                return;
+                return CompensationResult.complete();
             }
-            network.extract(stack.what(), inserted, Actionable.MODULATE);
-            inserted = 0;
+            long extracted = network.extract(stack.what(), inserted, Actionable.MODULATE);
+            inserted -= extracted;
+            return inserted == 0
+                    ? CompensationResult.complete()
+                    : CompensationResult.failed(inserted + " unit(s) remain in the network");
         }
 
         @Override

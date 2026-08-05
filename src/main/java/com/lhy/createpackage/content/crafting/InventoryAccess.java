@@ -3,6 +3,8 @@ package com.lhy.createpackage.content.crafting;
 import org.jetbrains.annotations.Nullable;
 
 import appeng.api.stacks.AEFluidKey;
+import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
+import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -21,16 +23,21 @@ public final class InventoryAccess {
     }
 
     @Nullable
-    public static IItemHandler itemHandler(@Nullable Level level, BlockPos pos) {
+    public static IItemHandler itemHandler(@Nullable Level level, BlockPos pos, @Nullable Direction side) {
         if (level == null || !level.isLoaded(pos)) {
             return null;
         }
-        IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
+        return level.getCapability(Capabilities.ItemHandler.BLOCK, pos, side);
+    }
+
+    @Nullable
+    public static IItemHandler itemHandler(@Nullable Level level, BlockPos pos) {
+        IItemHandler handler = itemHandler(level, pos, null);
         if (handler != null) {
             return handler;
         }
         for (Direction direction : Direction.values()) {
-            handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, direction);
+            handler = itemHandler(level, pos, direction);
             if (handler != null) {
                 return handler;
             }
@@ -39,17 +46,70 @@ public final class InventoryAccess {
     }
 
     @Nullable
-    public static IFluidHandler fluidHandler(@Nullable Level level, BlockPos pos) {
+    public static IItemHandler itemOutputHandler(@Nullable Level level, BlockPos pos) {
         if (level == null || !level.isLoaded(pos)) {
             return null;
         }
+        Object blockEntity = level.getBlockEntity(pos);
+        if (blockEntity == null) {
+            return null;
+        }
+        try {
+            Object output = blockEntity.getClass().getMethod("getOutputInventory").invoke(blockEntity);
+            return output instanceof IItemHandler handler ? handler : null;
+        } catch (ReflectiveOperationException | SecurityException ignored) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public static IFluidHandler fluidHandler(@Nullable Level level, BlockPos pos, @Nullable Direction side) {
+        if (level == null || !level.isLoaded(pos)) {
+            return null;
+        }
+        return level.getCapability(Capabilities.FluidHandler.BLOCK, pos, side);
+    }
+
+    @Nullable
+    public static IFluidHandler fluidHandler(@Nullable Level level, BlockPos pos) {
+        IFluidHandler handler = fluidHandler(level, pos, null);
+        if (handler != null) {
+            return handler;
+        }
         for (Direction direction : Direction.values()) {
-            IFluidHandler handler = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, direction);
+            handler = fluidHandler(level, pos, direction);
             if (handler != null) {
                 return handler;
             }
         }
-        return level.getCapability(Capabilities.FluidHandler.BLOCK, pos, null);
+        return null;
+    }
+
+    @Nullable
+    public static IFluidHandler fluidInputHandler(@Nullable Level level, BlockPos pos) {
+        if (level == null || !level.isLoaded(pos)) {
+            return null;
+        }
+        SmartFluidTankBehaviour input = BlockEntityBehaviour.get(level, pos, SmartFluidTankBehaviour.INPUT);
+        return input == null ? null : input.getCapability();
+    }
+
+    @Nullable
+    public static IFluidHandler fluidOutputHandler(@Nullable Level level, BlockPos pos) {
+        if (level == null || !level.isLoaded(pos)) {
+            return null;
+        }
+        SmartFluidTankBehaviour output = BlockEntityBehaviour.get(level, pos, SmartFluidTankBehaviour.OUTPUT);
+        return output == null ? null : output.getCapability();
+    }
+
+    public static ItemStack insertItem(@Nullable Level level, BlockPos target, @Nullable Direction side, ItemStack stack,
+            boolean simulate) {
+        IItemHandler handler = itemHandler(level, target, side);
+        if (handler == null) {
+            return stack.copy();
+        }
+        return insertIntoHandler(handler, stack, simulate);
     }
 
     public static ItemStack insertItem(@Nullable Level level, BlockPos target, ItemStack stack, boolean simulate) {
@@ -64,6 +124,19 @@ public final class InventoryAccess {
         ItemStack remaining = stack.copy();
         for (int slot = 0; slot < handler.getSlots() && !remaining.isEmpty(); slot++) {
             remaining = handler.insertItem(slot, remaining, simulate);
+        }
+        return remaining;
+    }
+
+    public static ItemStack reinsertIntoHandler(IItemHandler handler, int preferredSlot, ItemStack stack) {
+        ItemStack remaining = stack.copy();
+        if (preferredSlot >= 0 && preferredSlot < handler.getSlots()) {
+            remaining = handler.insertItem(preferredSlot, remaining, false);
+        }
+        for (int slot = 0; slot < handler.getSlots() && !remaining.isEmpty(); slot++) {
+            if (slot != preferredSlot) {
+                remaining = handler.insertItem(slot, remaining, false);
+            }
         }
         return remaining;
     }

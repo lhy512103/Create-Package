@@ -553,11 +553,19 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
         ActionList.Result executed = context.execute();
         if (!executed.success()) {
-            CreatePackage.LOGGER.warn("[Distributor @ {}] simulated plan but execution failed at action #{} ({}); refusing pattern",
-                    getBlockPos(), executed.failedIndex(), executed.failedAction());
-            rememberStatus("execute_failed");
-            rememberFailure("execute_failed",
-                    "action #" + executed.failedIndex() + " " + executed.failedAction(), route, -1);
+            String failureDetail = "action #" + executed.failedIndex() + " " + executed.failedAction();
+            if (!executed.fullyCompensated()) {
+                failureDetail += "; rollback incomplete: " + executed.compensationFailures();
+                CreatePackage.LOGGER.error("[Distributor @ {}] execution failed and rollback was incomplete: {}",
+                        getBlockPos(), failureDetail);
+                rememberStatus("compensation_failed");
+                rememberFailure("compensation_failed", failureDetail, route, -1);
+            } else {
+                CreatePackage.LOGGER.warn("[Distributor @ {}] simulated plan but execution failed at action #{} ({}); refusing pattern",
+                        getBlockPos(), executed.failedIndex(), executed.failedAction());
+                rememberStatus("execute_failed");
+                rememberFailure("execute_failed", failureDetail, route, -1);
+            }
             rememberFailureRoute(route);
             return false;
         }
@@ -619,7 +627,13 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             DistributionJob job = activeJobs.get(i);
             if (isCraftingJobNoLongerWaiting(job)) {
                 clearMissingRefillInput(job);
-                returnPendingSupplies(job);
+                boolean returnedSupplies = returnPendingSupplies(job);
+                boolean flushedOutputs = flushPendingNetworkOutputs(job);
+                didWork = returnedSupplies || flushedOutputs || didWork;
+                if (!job.pendingSupplies.isEmpty() || !job.pendingNetworkOutputs.isEmpty()) {
+                    rememberJobStatus(job, "cancelled");
+                    continue;
+                }
                 if (Config.debugLoggingEnabled()) {
                     CreatePackage.LOGGER.info("[Distributor @ {}] cancelled recipe {} (AE no longer waiting for {})",
                             getBlockPos(), job.recipeId, job.primaryOutput);
@@ -631,18 +645,20 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 continue;
             }
             didWork = tickJob(job) || didWork;
-            if (job.primaryRemaining <= 0) {
+            if (job.primaryRemaining <= 0 && job.pendingNetworkOutputs.isEmpty()) {
                 clearMissingRefillInput(job);
-                returnPendingSupplies(job);
+                didWork = returnPendingSupplies(job) || didWork;
+                if (!job.pendingSupplies.isEmpty()) {
+                    continue;
+                }
                 if (Config.debugLoggingEnabled()) CreatePackage.LOGGER.info("[Distributor @ {}] completed recipe {}", getBlockPos(), job.recipeId);
                 activeJobs.remove(i--);
                 lastStatusKey = activeJobs.isEmpty() ? "completed" : "working";
                 finished = true;
             }
         }
-        if (finished) {
+        if (finished || didWork) {
             saveAndSync();
-            didWork = true;
         }
         return didWork;
     }
@@ -746,11 +762,24 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return 0;
     }
 
-    private void returnPendingSupplies(DistributionJob job) {
-        for (AssemblyPlanner.PendingSupply supply : job.pendingSupplies) {
-            insertIntoNetwork(supply.stack().what(), supply.stack().amount(), Actionable.MODULATE);
+    private boolean returnPendingSupplies(DistributionJob job) {
+        boolean didWork = false;
+        for (int i = 0; i < job.pendingSupplies.size();) {
+            AssemblyPlanner.PendingSupply supply = job.pendingSupplies.get(i);
+            long returned = insertIntoNetwork(supply.stack().what(), supply.stack().amount(), Actionable.MODULATE);
+            returned = Math.max(0, Math.min(returned, supply.stack().amount()));
+            if (returned > 0) {
+                didWork = true;
+            }
+            long remaining = supply.stack().amount() - returned;
+            if (remaining == 0) {
+                job.pendingSupplies.remove(i);
+            } else {
+                job.pendingSupplies.set(i, supply.withAmount(remaining));
+                i++;
+            }
         }
-        job.pendingSupplies.clear();
+        return didWork;
     }
 
     private boolean retryRefillRound(DistributionJob job) {
@@ -761,12 +790,12 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private boolean collectOutput(DistributionJob job) {
+        boolean didWork = flushPendingNetworkOutputs(job);
         IItemHandler handler = itemHandler(job.outputPos);
         if (handler == null) {
-            return false;
+            return didWork;
         }
 
-        boolean didWork = false;
         long primaryCollected = 0;
         long otherCollected = 0;
         for (int slot = 0; slot < handler.getSlots(); slot++) {
@@ -801,22 +830,31 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             }
 
             long inserted = insertIntoNetwork(extractedKey, extracted.getCount(), Actionable.MODULATE);
-            if (inserted < extracted.getCount()) {
-                CreatePackage.LOGGER.warn("[Distributor @ {}] network accepted fewer items than simulated ({} < {})",
-                        getBlockPos(), inserted, extracted.getCount());
+            long committed = Math.max(0, Math.min(inserted, extracted.getCount()));
+            long remainder = extracted.getCount() - committed;
+            if (remainder > 0) {
+                ItemStack returnedRemainder = InventoryAccess.reinsertIntoHandler(handler, slot,
+                        extracted.copyWithCount((int) remainder));
+                remainder = returnedRemainder.getCount();
+            }
+            if (remainder > 0) {
+                PatternStacks.addStack(job.pendingNetworkOutputs, new GenericStack(extractedKey, remainder));
+                CreatePackage.LOGGER.warn("[Distributor @ {}] buffered output that neither the network nor machine accepted ({} item(s))",
+                        getBlockPos(), remainder);
+                didWork = true;
             }
 
             job.roundHasOutput = true;
             if (extractedKey.equals(job.primaryOutput)) {
-                job.primaryRemaining -= inserted;
-                primaryCollected += inserted;
+                job.primaryRemaining -= committed;
+                primaryCollected += committed;
                 if (job.primaryRemaining < 0) {
                     job.primaryRemaining = 0;
                 }
             } else {
-                otherCollected += inserted;
+                otherCollected += committed;
             }
-            didWork = inserted > 0 || didWork;
+            didWork = committed > 0 || didWork;
         }
         if (otherCollected > 0 && primaryCollected == 0 && job.primaryRemaining > 0
                 && job.pendingSupplies.isEmpty()) {
@@ -824,6 +862,29 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
         if (didWork) {
             saveAndSync();
+        }
+        return didWork;
+    }
+
+    private boolean flushPendingNetworkOutputs(DistributionJob job) {
+        boolean didWork = false;
+        for (int i = 0; i < job.pendingNetworkOutputs.size();) {
+            GenericStack pending = job.pendingNetworkOutputs.get(i);
+            long inserted = insertIntoNetwork(pending.what(), pending.amount(), Actionable.MODULATE);
+            long committed = Math.max(0, Math.min(inserted, pending.amount()));
+            if (committed > 0) {
+                if (pending.what().equals(job.primaryOutput)) {
+                    job.primaryRemaining = Math.max(0, job.primaryRemaining - committed);
+                }
+                didWork = true;
+            }
+            if (committed == pending.amount()) {
+                job.pendingNetworkOutputs.remove(i);
+            } else {
+                job.pendingNetworkOutputs.set(i,
+                        new GenericStack(pending.what(), pending.amount() - committed));
+                i++;
+            }
         }
         return didWork;
     }
@@ -856,7 +917,14 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             if (!leftover.isEmpty()) {
                 AEItemKey key = AEItemKey.of(leftover);
                 if (key != null) {
-                    insertIntoNetwork(key, leftover.getCount(), Actionable.MODULATE);
+                    long inserted = insertIntoNetwork(key, leftover.getCount(), Actionable.MODULATE);
+                    long committed = Math.max(0, Math.min(inserted, leftover.getCount()));
+                    long uncommitted = leftover.getCount() - committed;
+                    if (uncommitted > 0) {
+                        PatternStacks.addStack(job.pendingNetworkOutputs, new GenericStack(key, uncommitted));
+                        CreatePackage.LOGGER.warn("[Distributor @ {}] buffered {} transitional item(s) after reflow recovery was only partially accepted",
+                                getBlockPos(), uncommitted);
+                    }
                 }
             }
             rememberJobStatus(job, "waiting_reflow_input");
@@ -1612,6 +1680,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private static final String NBT_PENDING_KEY = "key";
         private static final String NBT_PENDING_AMOUNT = "amount";
         private static final String NBT_ROUTE = "route";
+        private static final String NBT_PENDING_NETWORK_OUTPUTS = "pendingNetworkOutputs";
 
         private final ResourceLocation recipeId;
         private final AEItemKey primaryOutput;
@@ -1623,6 +1692,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private final int loops;
         private final List<GenericStack> refillInputs;
         private final List<AssemblyPlanner.PendingSupply> pendingSupplies;
+        private final List<GenericStack> pendingNetworkOutputs = new ArrayList<>();
         @Nullable
         private final MechanicalPackagePatternData.PatternEncoder encoder;
         private final List<BlockPos> route;
@@ -1711,6 +1781,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 pendingList.add(supplyTag);
             }
             tag.put(NBT_PENDING_SUPPLIES, pendingList);
+            ListTag networkOutputList = new ListTag();
+            for (GenericStack pendingOutput : pendingNetworkOutputs) {
+                networkOutputList.add(GenericStack.writeTag(registries, pendingOutput));
+            }
+            tag.put(NBT_PENDING_NETWORK_OUTPUTS, networkOutputList);
             long[] packedRoute = new long[route.size()];
             for (int i = 0; i < packedRoute.length; i++) {
                 packedRoute[i] = route.get(i).asLong();
@@ -1778,6 +1853,13 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                     ? tag.getBoolean(NBT_AWAITING_FINAL_OUTPUT)
                     : job.loops <= 1;
             job.statusKey = tag.contains(NBT_STATUS) ? tag.getString(NBT_STATUS) : "working";
+            ListTag networkOutputList = tag.getList(NBT_PENDING_NETWORK_OUTPUTS, Tag.TAG_COMPOUND);
+            for (int i = 0; i < networkOutputList.size(); i++) {
+                GenericStack pendingOutput = GenericStack.readTag(registries, networkOutputList.getCompound(i));
+                if (pendingOutput != null && pendingOutput.amount() > 0) {
+                    job.pendingNetworkOutputs.add(pendingOutput);
+                }
+            }
             return job;
         }
 

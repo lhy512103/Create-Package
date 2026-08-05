@@ -6,6 +6,8 @@ import com.lhy.createpackage.content.distributor.AdvancedPackageDistributorMenu;
 import com.lhy.createpackage.content.distributor.BasicPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.BasicPackageDistributorMenu;
 import com.lhy.createpackage.content.converter.MechanicalPatternConverterMenu;
+import com.lhy.createpackage.content.kinetic.ExtendedKineticPatternProviderBlockEntity;
+import com.lhy.createpackage.content.kinetic.ExtendedKineticPatternProviderMenu;
 import com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity;
 import com.lhy.createpackage.content.kinetic.KineticPatternProviderMenu;
 
@@ -53,6 +55,15 @@ public final class ModMenuTypes {
                                     "block." + CreatePackage.MODID + ".kinetic_pattern_provider"))
                             .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
                                     CreatePackage.MODID, "kinetic_pattern_provider")));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<ExtendedKineticPatternProviderMenu>> EXTENDED_KINETIC_PATTERN_PROVIDER =
+            MENUS.register("extended_kinetic_pattern_provider",
+                    () -> MenuTypeBuilder
+                            .create(ExtendedKineticPatternProviderMenu::new, ExtendedKineticPatternProviderBlockEntity.class)
+                            .withMenuTitle(host -> Component.translatable(
+                                    "block." + CreatePackage.MODID + ".extended_kinetic_pattern_provider"))
+                            .buildUnregistered(ResourceLocation.fromNamespaceAndPath(
+                                    CreatePackage.MODID, "extended_kinetic_pattern_provider")));
 
     private ModMenuTypes() {}
 }

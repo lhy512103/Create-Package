@@ -26,9 +26,10 @@ class ActionListTest {
             }
 
             @Override
-            public void compensate() {
+            public CompensationResult compensate() {
                 compensateCount.incrementAndGet();
                 log.add("undo1");
+                return CompensationResult.complete();
             }
 
             @Override
@@ -46,9 +47,10 @@ class ActionListTest {
             }
 
             @Override
-            public void compensate() {
+            public CompensationResult compensate() {
                 compensateCount.incrementAndGet();
                 log.add("undo2");
+                return CompensationResult.complete();
             }
 
             @Override
@@ -59,7 +61,17 @@ class ActionListTest {
         SupplyAction fail = new SupplyAction() {
             @Override
             public boolean perform(boolean simulate) {
+                if (!simulate) {
+                    log.add("fail-partial");
+                }
                 return false;
+            }
+
+            @Override
+            public CompensationResult compensate() {
+                compensateCount.incrementAndGet();
+                log.add("undo-fail");
+                return CompensationResult.complete();
             }
 
             @Override
@@ -75,8 +87,61 @@ class ActionListTest {
         assertFalse(result.success());
         assertEquals(2, result.failedIndex());
         assertEquals("fail", result.failedAction());
-        assertEquals(2, compensateCount.get());
-        assertEquals(List.of("ok1", "ok2", "undo2", "undo1"), log);
+        assertEquals(3, compensateCount.get());
+        assertTrue(result.fullyCompensated());
+        assertTrue(result.compensationFailures().isEmpty());
+        assertEquals(List.of("ok1", "ok2", "fail-partial", "undo-fail", "undo2", "undo1"), log);
+    }
+
+    @Test
+    void executeCollectsCompensationFailuresAndContinuesRollback() {
+        List<String> log = new ArrayList<>();
+        SupplyAction earlier = new SupplyAction() {
+            @Override
+            public boolean perform(boolean simulate) {
+                return true;
+            }
+
+            @Override
+            public CompensationResult compensate() {
+                log.add("undo-earlier");
+                return CompensationResult.failed("two items remain");
+            }
+
+            @Override
+            public String describe() {
+                return "earlier";
+            }
+        };
+        SupplyAction failed = new SupplyAction() {
+            @Override
+            public boolean perform(boolean simulate) {
+                return false;
+            }
+
+            @Override
+            public CompensationResult compensate() {
+                log.add("undo-failed");
+                throw new IllegalStateException("handler vanished");
+            }
+
+            @Override
+            public String describe() {
+                return "failed";
+            }
+        };
+
+        ActionList.Result result = new ActionList(List.of(earlier, failed)).execute();
+
+        assertFalse(result.success());
+        assertFalse(result.fullyCompensated());
+        assertEquals(List.of("undo-failed", "undo-earlier"), log);
+        assertEquals(2, result.compensationFailures().size());
+        assertEquals(1, result.compensationFailures().get(0).actionIndex());
+        assertEquals("failed", result.compensationFailures().get(0).action());
+        assertTrue(result.compensationFailures().get(0).detail().contains("handler vanished"));
+        assertEquals(0, result.compensationFailures().get(1).actionIndex());
+        assertEquals("two items remain", result.compensationFailures().get(1).detail());
     }
 
     @Test

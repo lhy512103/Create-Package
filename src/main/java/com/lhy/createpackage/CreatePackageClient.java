@@ -16,9 +16,11 @@ import com.lhy.createpackage.client.AutoRouteKeys;
 import com.lhy.createpackage.client.render.MechanicalPackagePatternHighlighter;
 import com.lhy.createpackage.client.screen.AdvancedPackageDistributorScreen;
 import com.lhy.createpackage.client.screen.CreatePackagePatternProviderScreen;
+import com.lhy.createpackage.client.screen.ExtendedKineticPatternProviderScreen;
 import com.lhy.createpackage.client.screen.MechanicalPatternConverterScreen;
 import com.lhy.createpackage.content.distributor.AdvancedPackageDistributorMenu;
 import com.lhy.createpackage.content.distributor.BasicPackageDistributorMenu;
+import com.lhy.createpackage.content.kinetic.ExtendedKineticPatternProviderMenu;
 import com.lhy.createpackage.content.kinetic.KineticPatternProviderMenu;
 import com.lhy.createpackage.registry.ModMenuTypes;
 
@@ -53,15 +55,19 @@ public class CreatePackageClient {
         event.<BasicPackageDistributorMenu, CreatePackagePatternProviderScreen<BasicPackageDistributorMenu>>register(
                 ModMenuTypes.BASIC_PACKAGE_DISTRIBUTOR.get(), (menu, playerInv, title) ->
                 new CreatePackagePatternProviderScreen<>(menu, playerInv, title,
-                        StyleManager.loadStyleDoc("/screens/pattern_provider.json")));
+                        StyleManager.loadStyleDoc("/screens/createpackage_pattern_provider.json")));
         event.<AdvancedPackageDistributorMenu, AdvancedPackageDistributorScreen>register(
                 ModMenuTypes.ADVANCED_PACKAGE_DISTRIBUTOR.get(), (menu, playerInv, title) ->
                 new AdvancedPackageDistributorScreen(menu, playerInv, title,
-                        StyleManager.loadStyleDoc("/screens/pattern_provider.json")));
+                        StyleManager.loadStyleDoc("/screens/createpackage_pattern_provider.json")));
         event.<KineticPatternProviderMenu, CreatePackagePatternProviderScreen<KineticPatternProviderMenu>>register(
                 ModMenuTypes.KINETIC_PATTERN_PROVIDER.get(), (menu, playerInv, title) ->
                 new CreatePackagePatternProviderScreen<>(menu, playerInv, title,
-                        StyleManager.loadStyleDoc("/screens/pattern_provider.json")));
+                        StyleManager.loadStyleDoc("/screens/createpackage_pattern_provider.json")));
+        event.<ExtendedKineticPatternProviderMenu, ExtendedKineticPatternProviderScreen>register(
+                ModMenuTypes.EXTENDED_KINETIC_PATTERN_PROVIDER.get(), (menu, playerInv, title) ->
+                new ExtendedKineticPatternProviderScreen(menu, playerInv, title,
+                        StyleManager.loadStyleDoc("/screens/createpackage_extended_kinetic_pattern_provider.json")));
     }
 
     static void registerKeyMappings(RegisterKeyMappingsEvent event) {

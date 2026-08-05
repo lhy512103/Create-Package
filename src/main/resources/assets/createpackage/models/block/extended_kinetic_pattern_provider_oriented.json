@@ -1,0 +1,12 @@
+{
+  "parent": "ae2:block/pattern_provider_oriented",
+  "textures": {
+    "particle": "createpackage:block/extended_kinetic_pattern_provider_all",
+    "down": "createpackage:block/extended_kinetic_pattern_provider_back",
+    "up": "createpackage:block/extended_kinetic_pattern_provider_front",
+    "north": "createpackage:block/extended_kinetic_pattern_provider_side",
+    "south": "createpackage:block/extended_kinetic_pattern_provider_side",
+    "east": "createpackage:block/extended_kinetic_pattern_provider_side",
+    "west": "createpackage:block/extended_kinetic_pattern_provider_side"
+  }
+}
