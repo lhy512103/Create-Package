@@ -1,6 +1,19 @@
 # 更新日志
 
-## [0.1.0] - 2026-07-24
+## [20.1.1] - 2026-08-08
+
+### 新增
+
+- 增加扩展动力样板供应器，支持最多 9 页、每页 36 个样板槽位。
+- 增加对 Create Crafts & Additions、Create Diesel Generators、Vintage Improvements、Create Metallurgy、Create Bitterballen 与 Create Confectionery 机器的规划和输入输出兼容。
+
+### 修复
+
+- 按机器真实容量计算智能批处理规模，并强化失败补偿和回滚。
+- 修复 AE 网络只能部分接收产物时的物品/流体丢失，未接收产物会持久化并重试。
+- 修复网络工具槽位显示，并按朝向细化包裹分配器碰撞箱。
+
+## [20.1.0] - 2026-07-24
 
 ### 新增
 

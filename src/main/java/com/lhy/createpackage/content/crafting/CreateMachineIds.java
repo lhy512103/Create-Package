@@ -13,6 +13,13 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class CreateMachineIds {
     public static final String CREATE_MORE_MACHINES = "createmoremachines";
+    public static final String CREATE_ADDITION = "createaddition";
+    public static final String CREATE_DIESEL_GENERATORS = "createdieselgenerators";
+    public static final String VINTAGE_IMPROVEMENTS = "vintageimprovements";
+    public static final String CREATE_VINTAGE = "vintage";
+    public static final String CREATE_METALLURGY = "createmetallurgy";
+    public static final String CREATE_BITTERBALLEN = "create_bic_bit";
+    public static final String CREATE_CONFECTIONERY = "create_confectionery";
 
     public static final ResourceLocation DEPLOYER = create("deployer");
     public static final ResourceLocation SPOUT = create("spout");
@@ -25,12 +32,41 @@ public final class CreateMachineIds {
     public static final ResourceLocation MILLSTONE = create("millstone");
     public static final ResourceLocation CRUSHING_WHEEL = create("crushing_wheel");
     public static final ResourceLocation CRUSHING_CONTROLLER = create("crushing_wheel_controller");
+    public static final ResourceLocation ROLLING_MILL = addon(CREATE_ADDITION, "rolling_mill");
+    public static final ResourceLocation TESLA_COIL = addon(CREATE_ADDITION, "tesla_coil");
+    public static final ResourceLocation BASIN_LID = addon(CREATE_DIESEL_GENERATORS, "basin_lid");
+    public static final ResourceLocation BULK_FERMENTER = addon(CREATE_DIESEL_GENERATORS, "bulk_fermenter");
+    public static final ResourceLocation DISTILLATION_TANK = addon(CREATE_DIESEL_GENERATORS, "distillation_tank");
+    public static final ResourceLocation HELVE_HAMMER = addon(VINTAGE_IMPROVEMENTS, "helve_hammer");
+    public static final ResourceLocation HELVE_STRUCTURE = addon(VINTAGE_IMPROVEMENTS, "helve_structure");
+    public static final ResourceLocation HELVE_KINETIC = addon(VINTAGE_IMPROVEMENTS, "helve_kinetic");
+    public static final ResourceLocation CENTRIFUGE = addon(VINTAGE_IMPROVEMENTS, "centrifuge");
+    public static final ResourceLocation CENTRIFUGE_STRUCTURE = addon(VINTAGE_IMPROVEMENTS, "centrifuge_structure");
+    public static final ResourceLocation CURVING_PRESS = addon(VINTAGE_IMPROVEMENTS, "curving_press");
+    public static final ResourceLocation SPRING_COILING = addon(VINTAGE_IMPROVEMENTS, "spring_coiling_machine");
+    public static final ResourceLocation COMPRESSOR = addon(VINTAGE_IMPROVEMENTS, "vacuum_chamber");
+    public static final ResourceLocation LASER = addon(VINTAGE_IMPROVEMENTS, "laser");
+    public static final ResourceLocation VIBRATING_TABLE = addon(VINTAGE_IMPROVEMENTS, "vibrating_table");
+    public static final ResourceLocation GRINDER_BELT = addon(VINTAGE_IMPROVEMENTS, "belt_grinder");
+    public static final ResourceLocation LATHE = addon(VINTAGE_IMPROVEMENTS, "lathe");
+    public static final ResourceLocation LATHE_MOVING = addon(VINTAGE_IMPROVEMENTS, "lathe_moving");
+    public static final ResourceLocation FOUNDRY_BASIN = addon(CREATE_METALLURGY, "foundry_basin");
+    public static final ResourceLocation CASTING_TABLE = addon(CREATE_METALLURGY, "casting_table");
+    public static final ResourceLocation MECHANICAL_BELT_GRINDER = addon(CREATE_METALLURGY, "mechanical_belt_grinder");
+    public static final ResourceLocation FOUNDRY_MIXER = addon(CREATE_METALLURGY, "foundry_mixer");
+    public static final ResourceLocation FOUNDRY_LID = addon(CREATE_METALLURGY, "foundry_lid");
+    public static final ResourceLocation INDUSTRIAL_CRUCIBLE = addon(CREATE_METALLURGY, "industrial_crucible");
+    public static final ResourceLocation MECHANICAL_FRYER = addon(CREATE_BITTERBALLEN, "mechanical_fryer");
 
     private CreateMachineIds() {
     }
 
     public static ResourceLocation create(String path) {
-        return new ResourceLocation("create", path);
+        return addon("create", path);
+    }
+
+    private static ResourceLocation addon(String namespace, String path) {
+        return new ResourceLocation(namespace, path);
     }
 
     @Nullable
@@ -48,6 +84,12 @@ public final class CreateMachineIds {
 
     public static boolean isCreateMoreMachines(@Nullable ResourceLocation id, String suffix) {
         return id != null && CREATE_MORE_MACHINES.equals(id.getNamespace()) && id.getPath().endsWith(suffix);
+    }
+
+    private static boolean isVintage(@Nullable ResourceLocation id, String path) {
+        return id != null
+                && path.equals(id.getPath())
+                && (VINTAGE_IMPROVEMENTS.equals(id.getNamespace()) || CREATE_VINTAGE.equals(id.getNamespace()));
     }
 
     public static boolean isDeployer(@Nullable ResourceLocation id) {
@@ -90,6 +132,163 @@ public final class CreateMachineIds {
         return CRUSHING_CONTROLLER.equals(id);
     }
 
+    public static boolean isRollingMill(@Nullable ResourceLocation id) {
+        return ROLLING_MILL.equals(id);
+    }
+
+    public static boolean isTeslaCoil(@Nullable ResourceLocation id) {
+        return TESLA_COIL.equals(id);
+    }
+
+    public static boolean isBasinLid(@Nullable ResourceLocation id) {
+        return BASIN_LID.equals(id);
+    }
+
+    public static boolean isBulkFermenter(@Nullable ResourceLocation id) {
+        return BULK_FERMENTER.equals(id);
+    }
+
+    public static boolean isDistillationTank(@Nullable ResourceLocation id) {
+        return DISTILLATION_TANK.equals(id);
+    }
+
+    // Vintage Improvements / Create: Vintage machine checks
+    public static boolean isHelveHammer(@Nullable ResourceLocation id) {
+        return isVintage(id, "helve_hammer");
+    }
+
+    public static boolean isHelveSlave(@Nullable ResourceLocation id) {
+        return isVintage(id, "helve_structure") || isVintage(id, "helve_kinetic");
+    }
+
+    /**
+     * Resolves linkable Vintage multipart blocks to the block that owns their runtime state and capabilities.
+     * Each slave block is followed using its own facing, matching Vintage Improvements' getMaster methods.
+     */
+    public static BlockPos normalizeKineticMachinePos(Level level, BlockPos observedPos) {
+        if (level == null || observedPos == null || !level.isLoaded(observedPos)) {
+            return observedPos;
+        }
+        BlockPos above = observedPos.above();
+        if (level.isLoaded(above) && isHelveHammer(idOf(level, above))) {
+            return above.immutable();
+        }
+
+        BlockPos current = observedPos.immutable();
+        for (int step = 0; step < 8 && level.isLoaded(current); step++) {
+            ResourceLocation currentId = idOf(level, current);
+            if (isHelveHammer(currentId) || isCentrifuge(currentId) || isLathe(currentId)) {
+                return current.immutable();
+            }
+            if (isIndustrialCrucible(currentId)) {
+                return industrialCrucibleController(level, current);
+            }
+            if (!isHelveSlave(currentId)
+                    && !isVintage(currentId, "centrifuge_structure")
+                    && !isVintage(currentId, "lathe_moving")) {
+                return observedPos.immutable();
+            }
+            net.minecraft.core.Direction facing = facingOf(level.getBlockState(current));
+            if (facing == null) {
+                return observedPos.immutable();
+            }
+            int distance = isVintage(currentId, "helve_kinetic") ? 2 : 1;
+            current = current.relative(facing, distance);
+        }
+        return observedPos.immutable();
+    }
+
+    private static BlockPos industrialCrucibleController(Level level, BlockPos partPos) {
+        Object blockEntity = level.getBlockEntity(partPos);
+        if (blockEntity == null) {
+            return partPos.immutable();
+        }
+        try {
+            Object controller = blockEntity.getClass().getMethod("getController").invoke(blockEntity);
+            if (controller instanceof BlockPos controllerPos
+                    && level.isLoaded(controllerPos)
+                    && isIndustrialCrucible(idOf(level, controllerPos))) {
+                return controllerPos.immutable();
+            }
+        } catch (ReflectiveOperationException | SecurityException ignored) {
+            // Optional compatibility boundary: an unavailable method leaves the observed block as the target.
+        }
+        return partPos.immutable();
+    }
+
+    @Nullable
+    private static net.minecraft.core.Direction facingOf(BlockState state) {
+        for (var property : state.getProperties()) {
+            if ("facing".equals(property.getName())
+                    && state.getValue(property) instanceof net.minecraft.core.Direction facing) {
+                return facing;
+            }
+        }
+        return null;
+    }
+
+    public static boolean isCentrifuge(@Nullable ResourceLocation id) {
+        return isVintage(id, "centrifuge");
+    }
+
+    public static boolean isCurvingPress(@Nullable ResourceLocation id) {
+        return isVintage(id, "curving_press");
+    }
+
+    public static boolean isSpringCoiling(@Nullable ResourceLocation id) {
+        return isVintage(id, "spring_coiling_machine");
+    }
+
+    public static boolean isCompressor(@Nullable ResourceLocation id) {
+        return isVintage(id, "vacuum_chamber");
+    }
+
+    public static boolean isLaser(@Nullable ResourceLocation id) {
+        return isVintage(id, "laser");
+    }
+
+    public static boolean isVibratingTable(@Nullable ResourceLocation id) {
+        return isVintage(id, "vibrating_table");
+    }
+
+    public static boolean isGrinderBelt(@Nullable ResourceLocation id) {
+        return isVintage(id, "belt_grinder");
+    }
+
+    public static boolean isLathe(@Nullable ResourceLocation id) {
+        return isVintage(id, "lathe");
+    }
+
+    // Create Metallurgy machine checks
+    public static boolean isFoundryBasin(@Nullable ResourceLocation id) {
+        return FOUNDRY_BASIN.equals(id);
+    }
+
+    public static boolean isCastingTable(@Nullable ResourceLocation id) {
+        return CASTING_TABLE.equals(id);
+    }
+
+    public static boolean isMechanicalBeltGrinder(@Nullable ResourceLocation id) {
+        return MECHANICAL_BELT_GRINDER.equals(id);
+    }
+
+    public static boolean isFoundryMixer(@Nullable ResourceLocation id) {
+        return FOUNDRY_MIXER.equals(id);
+    }
+
+    public static boolean isFoundryLid(@Nullable ResourceLocation id) {
+        return FOUNDRY_LID.equals(id);
+    }
+
+    public static boolean isIndustrialCrucible(@Nullable ResourceLocation id) {
+        return INDUSTRIAL_CRUCIBLE.equals(id);
+    }
+
+    // Create Bitterballen machine checks
+    public static boolean isMechanicalFryer(@Nullable ResourceLocation id) {
+        return MECHANICAL_FRYER.equals(id);
+    }
+
     public static String kineticRoleKey(@Nullable ResourceLocation id) {
         if (isDeployer(id)) {
             return "deployer";
@@ -111,6 +310,72 @@ public final class CreateMachineIds {
         }
         if (isMillstone(id)) {
             return "millstone";
+        }
+        if (isRollingMill(id)) {
+            return "rolling_mill";
+        }
+        if (isTeslaCoil(id)) {
+            return "tesla_coil";
+        }
+        if (isBasinLid(id)) {
+            return "basin_lid";
+        }
+        if (isBulkFermenter(id)) {
+            return "bulk_fermenter";
+        }
+        if (isDistillationTank(id)) {
+            return "distillation_tank";
+        }
+        // Vintage Improvements
+        if (isHelveHammer(id)) {
+            return "helve_hammer";
+        }
+        if (isCentrifuge(id)) {
+            return "centrifuge";
+        }
+        if (isCurvingPress(id)) {
+            return "curving_press";
+        }
+        if (isSpringCoiling(id)) {
+            return "spring_coiling";
+        }
+        if (isCompressor(id)) {
+            return "compressor";
+        }
+        if (isLaser(id)) {
+            return "laser";
+        }
+        if (isVibratingTable(id)) {
+            return "vibrating_table";
+        }
+        if (isGrinderBelt(id)) {
+            return "grinder_belt";
+        }
+        if (isLathe(id)) {
+            return "lathe";
+        }
+        // Create Metallurgy
+        if (isFoundryBasin(id)) {
+            return "foundry_basin";
+        }
+        if (isCastingTable(id)) {
+            return "casting_table";
+        }
+        if (isMechanicalBeltGrinder(id)) {
+            return "mechanical_belt_grinder";
+        }
+        if (isFoundryMixer(id)) {
+            return "foundry_mixer";
+        }
+        if (isFoundryLid(id)) {
+            return "foundry_lid";
+        }
+        if (isIndustrialCrucible(id)) {
+            return "industrial_crucible";
+        }
+        // Create Bitterballen
+        if (isMechanicalFryer(id)) {
+            return "mechanical_fryer";
         }
         return "generic";
     }

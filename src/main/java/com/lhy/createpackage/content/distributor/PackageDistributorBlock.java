@@ -1,11 +1,14 @@
 package com.lhy.createpackage.content.distributor;
 
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.function.BiFunction;
 
 import org.jetbrains.annotations.Nullable;
 
 import com.lhy.createpackage.registry.ModItems;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -20,6 +23,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -35,7 +39,14 @@ import appeng.menu.locator.MenuLocators;
 public class PackageDistributorBlock extends BaseEntityBlock {
 
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
-    private static final VoxelShape SHAPE = Block.box(0.0, 0.0, 0.0, 16.0, 32.0, 16.0);
+    private static final VoxelShape NORTH_COLLISION_SHAPE = Shapes.or(
+            Block.box(0, 0, 0, 16, 9, 16), Block.box(2, 9, 2, 14, 21, 14),
+            Block.box(3, 21, 2, 13, 23, 14), Block.box(5, 23, 2, 11, 25, 14),
+            Block.box(6, 25, 1, 10, 27, 15), Block.box(7, 27, 1, 9, 29, 15));
+    private static final VoxelShape NORTH_SELECTION_SHAPE = Shapes.or(
+            NORTH_COLLISION_SHAPE, Block.box(1, 9, 5, 15, 11, 11), Block.box(2, 22, 3, 3, 32, 13));
+    private static final Map<Direction, VoxelShape> COLLISION_SHAPES = shapesByDirection(NORTH_COLLISION_SHAPE);
+    private static final Map<Direction, VoxelShape> SELECTION_SHAPES = shapesByDirection(NORTH_SELECTION_SHAPE);
 
     private final BiFunction<BlockPos, BlockState, BlockEntity> blockEntityFactory;
 
@@ -46,7 +57,7 @@ public class PackageDistributorBlock extends BaseEntityBlock {
     public PackageDistributorBlock(Properties properties, BiFunction<BlockPos, BlockState, BlockEntity> blockEntityFactory) {
         super(properties);
         this.blockEntityFactory = blockEntityFactory;
-        registerDefaultState(stateDefinition.any().setValue(FACING, net.minecraft.core.Direction.NORTH));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
     @Override
@@ -67,13 +78,35 @@ public class PackageDistributorBlock extends BaseEntityBlock {
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
+        return SELECTION_SHAPES.get(state.getValue(FACING));
     }
 
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos,
             CollisionContext context) {
-        return SHAPE;
+        return COLLISION_SHAPES.get(state.getValue(FACING));
+    }
+
+    private static Map<Direction, VoxelShape> shapesByDirection(VoxelShape northShape) {
+        EnumMap<Direction, VoxelShape> shapes = new EnumMap<>(Direction.class);
+        for (Direction direction : Direction.values()) shapes.put(direction, rotateFromNorth(northShape, direction));
+        return Map.copyOf(shapes);
+    }
+
+    private static VoxelShape rotateFromNorth(VoxelShape shape, Direction direction) {
+        VoxelShape rotated = Shapes.empty();
+        for (AABB box : shape.toAabbs()) {
+            VoxelShape rotatedBox = switch (direction) {
+                case NORTH -> Shapes.create(box);
+                case EAST -> Shapes.box(1 - box.maxZ, box.minY, box.minX, 1 - box.minZ, box.maxY, box.maxX);
+                case SOUTH -> Shapes.box(1 - box.maxX, box.minY, 1 - box.maxZ, 1 - box.minX, box.maxY, 1 - box.minZ);
+                case WEST -> Shapes.box(box.minZ, box.minY, 1 - box.maxX, box.maxZ, box.maxY, 1 - box.minX);
+                case UP -> Shapes.box(box.minX, box.minZ, 1 - box.maxY, box.maxX, box.maxZ, 1 - box.minY);
+                case DOWN -> Shapes.box(box.minX, 1 - box.maxZ, box.minY, box.maxX, 1 - box.minZ, box.maxY);
+            };
+            rotated = Shapes.or(rotated, rotatedBox);
+        }
+        return rotated.optimize();
     }
 
     @Override

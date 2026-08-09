@@ -51,6 +51,14 @@ dependencies {
     runtimeOnly fg.deobf("maven.modrinth:mystical-agradditions:${mystical_agradditions_version}")
     runtimeOnly fg.deobf("curse.maven:cosmetic-armor-reworked-237307:4600191")
 
+    // === 动力供应器兼容目标（可选，仅加入开发运行环境） ===
+    runtimeOnly fg.deobf("maven.modrinth:kU1G12Nn:${createaddition_version}") // Create Crafts & Additions
+    runtimeOnly fg.deobf("maven.modrinth:ZM3tt6p1:${create_diesel_generators_version}") // Create: Diesel Generators
+    runtimeOnly fg.deobf("maven.modrinth:qVZh767G:${create_vintage_version}") // Create: Vintage
+    runtimeOnly fg.deobf("maven.modrinth:Soft45xC:${create_metallurgy_version}") // Create Metallurgy
+    runtimeOnly fg.deobf("maven.modrinth:16DuAG4k:${create_bitterballen_version}") // Create: Bitterballen
+    runtimeOnly fg.deobf("maven.modrinth:WPE5gRs9:${create_confectionery_version}") // Create Confectionery
+
     // 客户端工具类依赖：仅加入 runClient，不能进入 dedicated server classpath。
     clientRuntimeOnly fg.deobf("maven.modrinth:justenoughcharacters:${jecharacters_version}")
     clientRuntimeOnly fg.deobf("maven.modrinth:extreme_sound_muffler:${sound_muffler_version}")

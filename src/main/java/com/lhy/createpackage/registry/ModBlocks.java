@@ -4,6 +4,7 @@ import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.BasicPackageDistributorBlockEntity;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlock;
+import com.lhy.createpackage.content.kinetic.ExtendedKineticPatternProviderBlockEntity;
 import com.lhy.createpackage.content.kinetic.KineticPatternProviderBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -24,6 +25,9 @@ public final class ModBlocks {
             () -> new PackageDistributorBlock(properties(4.0f, 8.0f), AdvancedPackageDistributorBlockEntity::new));
     public static final RegistryObject<KineticPatternProviderBlock> KINETIC_PATTERN_PROVIDER = BLOCKS.register("kinetic_pattern_provider",
             () -> new KineticPatternProviderBlock(properties(3.0f, 6.0f)));
+
+    public static final RegistryObject<KineticPatternProviderBlock> EXTENDED_KINETIC_PATTERN_PROVIDER = BLOCKS.register("extended_kinetic_pattern_provider",
+            () -> new KineticPatternProviderBlock(properties(4.0f, 8.0f), ExtendedKineticPatternProviderBlockEntity::new));
 
     private static BlockBehaviour.Properties properties(float hardness, float resistance) {
         return BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(hardness, resistance)

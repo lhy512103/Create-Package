@@ -22,6 +22,8 @@ public final class ModItems {
             () -> new PackageDistributorBlockItem(ModBlocks.ADVANCED_PACKAGE_DISTRIBUTOR.get(), new Item.Properties()));
     public static final RegistryObject<BlockItem> KINETIC_PATTERN_PROVIDER = ITEMS.register("kinetic_pattern_provider",
             () -> new BlockItem(ModBlocks.KINETIC_PATTERN_PROVIDER.get(), new Item.Properties()));
+    public static final RegistryObject<BlockItem> EXTENDED_KINETIC_PATTERN_PROVIDER = ITEMS.register("extended_kinetic_pattern_provider",
+            () -> new BlockItem(ModBlocks.EXTENDED_KINETIC_PATTERN_PROVIDER.get(), new Item.Properties()));
     public static final RegistryObject<Item> MACHINE_LINKER = ITEMS.register("machine_linker",
             () -> new MachineLinkerItem(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> MECHANICAL_PATTERN_CONVERTER = ITEMS.register("mechanical_pattern_converter",
@@ -31,6 +33,8 @@ public final class ModItems {
     public static final RegistryObject<Item> PARALLEL_CARD = ITEMS.register("parallel_card",
             () -> Upgrades.createUpgradeCardItem(new Item.Properties()));
     public static final RegistryObject<Item> INCOMPLETE_PACKAGE_DISTRIBUTOR = ITEMS.register("incomplete_package_distributor",
+            () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> INCOMPLETE_EXTENDED_KINETIC_PATTERN_PROVIDER = ITEMS.register("incomplete_extended_kinetic_pattern_provider",
             () -> new Item(new Item.Properties()));
     private ModItems() {}
 }
