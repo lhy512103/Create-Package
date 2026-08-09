@@ -1,4 +1,52 @@
+# Changelog
+
+## English
+
+## [20.1.1] - 2026-08-08
+
+### Added
+
+- Added the Extended Kinetic Pattern Provider, supporting up to 9 pages with 36 pattern slots per page.
+- Added planning and input/output compatibility for machines from Create Crafts & Additions, Create Diesel Generators, Vintage Improvements, Create Metallurgy, Create Bitterballen, and Create Confectionery.
+
+### Fixed
+
+- Calculated smart batch sizes based on actual machine capacity, with improved failure compensation and rollback handling.
+- Fixed item and fluid loss when the AE network could only partially accept outputs; unaccepted outputs are now persisted and retried.
+- Fixed network tool slot rendering and refined the Package Distributor collision shape based on its orientation.
+
+## [20.1.0] - 2026-07-24
+
+### Added
+
+- Established a dedicated build branch for Minecraft 1.20.1 / Forge 47.4.10.
+- Added AE2 15.4.10 and Create 1.20.1-6.0.8 dependencies and mod metadata constraints.
+- Added a Java 17 GitHub Actions workflow for builds and artifact uploads.
+- Added a Chinese README, migration plan, issue templates, and pull request template.
+
+### Migrated
+
+- Ported registration, events, networking, capabilities, menus, and GUI APIs from NeoForge 1.21.1 to Forge 1.20.1.
+- Adapted the project to the Create 6.0.8, Ponder, Flywheel/Vanillin, and AE2 15.4.10 APIs.
+- Migrated the Package Distributor, Kinetic Pattern Provider, mechanical patterns, recipes, assets, and data files.
+- Integrated the AE2 Pattern Workstation project's development runtime dependency tree into the ForgeGradle run configuration for compatibility testing.
+
+### Verified
+
+- The `clean build` task completes successfully.
+- The Forge client starts successfully and loads Ponder scenes, sounds, models, and textures.
+- The Forge dedicated server starts successfully and reaches the `Done` state.
+
+### Known Notes
+
+- This is the first stable release for the Forge 1.20.1 branch; subsequent patches follow semantic versioning.
+- Not all third-party development runtime dependencies are mandatory for users; required dependencies are defined by `META-INF/mods.toml`.
+
+---
+
 # 更新日志
+
+## 中文
 
 ## [20.1.1] - 2026-08-08
 
