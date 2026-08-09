@@ -11,7 +11,10 @@ import com.lhy.createpackage.client.AutoRouteKeys;
 import com.lhy.createpackage.client.render.MechanicalPackagePatternHighlighter;
 import com.lhy.createpackage.client.screen.AdvancedPackageDistributorScreen;
 import com.lhy.createpackage.client.screen.BasicPackageDistributorScreen;
+import com.lhy.createpackage.client.screen.ExtendedKineticPatternProviderScreen;
 import com.lhy.createpackage.client.screen.KineticPatternProviderScreen;
+import com.lhy.createpackage.content.kinetic.ExtendedKineticPatternProviderMenu;
+
 import com.lhy.createpackage.client.screen.MechanicalPatternConverterScreen;
 import com.lhy.createpackage.client.ponder.CreatePackagePonderPlugin;
 import com.lhy.createpackage.registry.ModMenuTypes;
@@ -38,6 +41,9 @@ public class CreatePackageClient {
             MenuScreens.register(ModMenuTypes.BASIC_PACKAGE_DISTRIBUTOR.get(), BasicPackageDistributorScreen::new);
             MenuScreens.register(ModMenuTypes.ADVANCED_PACKAGE_DISTRIBUTOR.get(), AdvancedPackageDistributorScreen::new);
             MenuScreens.register(ModMenuTypes.KINETIC_PATTERN_PROVIDER.get(), KineticPatternProviderScreen::new);
+            MenuScreens.<ExtendedKineticPatternProviderMenu, ExtendedKineticPatternProviderScreen>register(
+                    ModMenuTypes.EXTENDED_KINETIC_PATTERN_PROVIDER.get(),
+                    (menu, playerInv, title) -> new ExtendedKineticPatternProviderScreen(menu, playerInv, title));
             });
     }
 

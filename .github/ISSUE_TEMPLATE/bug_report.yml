@@ -5,13 +5,13 @@ labels: [bug]
 body:
   - type: markdown
     attributes:
-      value: 感谢反馈。请先使用最新的 forge-1.20.1 分支构建，并移除与复现无关的模组。
+      value: 感谢反馈。请先使用最新的 1.20.1-forge 分支构建，并移除与复现无关的模组。
   - type: input
     id: versions
     attributes:
       label: 版本信息
       description: 请填写 Minecraft、Forge、Create、AE2 和 Create Package 的精确版本。
-      placeholder: "MC 1.20.1 / Forge 47.4.10 / Create 6.0.8 / AE2 15.4.10 / Create Package 0.1.0-migration"
+      placeholder: "MC 1.20.1 / Forge 47.4.10 / Create 6.0.8 / AE2 15.4.10 / Create Package 0.1.0"
     validations:
       required: true
   - type: textarea

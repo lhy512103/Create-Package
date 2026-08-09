@@ -25,6 +25,3 @@ repositories {
     maven { name = 'Create'; url = 'https://maven.createmod.net' }
     maven { name = 'GeckoLib'; url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
 }
-
-
-

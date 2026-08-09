@@ -11,7 +11,7 @@ import com.lhy.createpackage.registry.ModItems;
 
 import appeng.api.crafting.PatternDetailsHelper;
 import appeng.menu.SlotSemantics;
-import appeng.menu.me.items.PatternEncodingTermMenu;
+import appeng.menu.me.items.CraftingTermMenu;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,7 +28,7 @@ public final class MechanicalPackagePatternEncodingCompat {
         if (event.player.level().isClientSide() || !(event.player instanceof ServerPlayer player)) {
             return;
         }
-        if (!(player.containerMenu instanceof PatternEncodingTermMenu menu)) {
+        if (!(player.containerMenu instanceof CraftingTermMenu menu)) {
             REMEMBERED_ROUTES.remove(player.getUUID());
             return;
         }
@@ -66,7 +66,7 @@ public final class MechanicalPackagePatternEncodingCompat {
         REMEMBERED_ROUTES.remove(event.getEntity().getUUID());
     }
 
-    private static boolean rememberMechanicalRoute(ServerPlayer player, PatternEncodingTermMenu menu, Slot slot,
+    private static boolean rememberMechanicalRoute(ServerPlayer player, CraftingTermMenu menu, Slot slot,
             ItemStack stack) {
         if (!stack.is(ModItems.MECHANICAL_PACKAGE_PATTERN.get())) {
             return false;

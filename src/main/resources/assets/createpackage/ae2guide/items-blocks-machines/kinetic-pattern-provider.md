@@ -37,6 +37,11 @@ New jobs go to idle linked machines first.
 * **Mechanical Saw**: sets filter from the primary item output; recovers from the fixed output side
 * **Millstone / Crushing**: recovers actual stacks from supported output inventories
 * **CreateMoreMachines**: same roles by registry-id suffix, using standard item/fluid capabilities
+* **Create Crafts & Additions**: Rolling Mill uses its internal inventory; an upward-facing Tesla Coil works over a Depot or Belt two blocks below it
+* **Create Diesel Generators**: Basin Lid feeds and collects from the Basin directly below it; Bulk Fermenter accepts mixed item/fluid pattern inputs through its multiblock capabilities
+* **Vintage Improvements Compressor**: requires a Basin two blocks below. For `pressurizing` recipes, every fluid is sent according to the recipe's secondary-fluid marker: Basin fluids stay in the Basin, compressor fluids go into the Vacuum Chamber, and fluid outputs are recovered from the matching location.
+
+Distillation Tanks are detected but intentionally rejected for now: one operation writes separate fluid products into different vertical tank layers, while a provider job currently has one recoverable output position.
 
 Primary outputs may be items **or fluids**. Fluid products and byproducts are recovered from fluid handlers at the output position.
 

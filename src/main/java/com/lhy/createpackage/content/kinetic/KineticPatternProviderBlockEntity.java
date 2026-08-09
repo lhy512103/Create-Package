@@ -2,7 +2,9 @@ package com.lhy.createpackage.content.kinetic;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -13,8 +15,11 @@ import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.compat.ExtendedAePlusCompat;
 import com.lhy.createpackage.content.crafting.ActionList;
 import com.lhy.createpackage.content.crafting.CreateMachineIds;
+import com.lhy.createpackage.content.crafting.DynamicSegmentWalker;
+import com.lhy.createpackage.content.crafting.ExpectedOutputMatcher;
 import com.lhy.createpackage.content.crafting.FailureDiagnostics;
 import com.lhy.createpackage.content.crafting.InventoryAccess;
+import com.lhy.createpackage.content.crafting.MachineEndpoint;
 import com.lhy.createpackage.content.crafting.MachinePlanFactory;
 import com.lhy.createpackage.content.crafting.NetworkIO;
 import com.lhy.createpackage.content.crafting.PatternStacks;
@@ -39,6 +44,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -50,6 +56,7 @@ import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.util.LazyOptional;
+import net.minecraft.world.phys.AABB;
 
 import appeng.api.config.Actionable;
 import appeng.api.config.LockCraftingMode;
@@ -100,9 +107,10 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
     private static final int DEFAULT_ROUND_OUTPUT_TIMEOUT_TICKS = 20 * 60;
     private static final int SMART_BATCH_GATHER_TICKS = 0;
 
-    private final InternalPatternProviderLogic logic = new InternalPatternProviderLogic();
-    private final IUpgradeInventory upgrades = UpgradeInventories.forMachine(
-            ModItems.KINETIC_PATTERN_PROVIDER.get(), MAX_PARALLEL_CARDS, this::onUpgradesChanged);
+    private final InternalPatternProviderLogic logic;
+    private final IUpgradeInventory upgrades;
+    private final net.minecraft.world.item.Item providerItem;
+    private final net.minecraft.world.inventory.MenuType<? extends KineticPatternProviderMenu> providerMenuType;
     private final MachineSource actionSource = new MachineSource(this);
     private final List<KineticJob> activeJobs = new ArrayList<>();
     private final List<BlockPos> linkedMachines = new ArrayList<>();
@@ -117,9 +125,21 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
     private int visibleParallelCards;
 
     public KineticPatternProviderBlockEntity(BlockPos pos, BlockState blockState) {
-        super(ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(), pos, blockState);
+        this(ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(), pos, blockState,
+                ModItems.KINETIC_PATTERN_PROVIDER.get(), ModMenuTypes.KINETIC_PATTERN_PROVIDER.get(), 9);
+    }
+
+    protected KineticPatternProviderBlockEntity(net.minecraft.world.level.block.entity.BlockEntityType<?> type,
+            BlockPos pos, BlockState blockState, net.minecraft.world.item.Item providerItem,
+            net.minecraft.world.inventory.MenuType<? extends KineticPatternProviderMenu> providerMenuType,
+            int patternSlots) {
+        super(type, pos, blockState);
+        this.providerItem = providerItem;
+        this.providerMenuType = providerMenuType;
+        this.logic = new InternalPatternProviderLogic(patternSlots);
+        this.upgrades = UpgradeInventories.forMachine(providerItem, MAX_PARALLEL_CARDS, this::onUpgradesChanged);
         getMainNode()
-                .setVisualRepresentation(ModItems.KINETIC_PATTERN_PROVIDER.get())
+                .setVisualRepresentation(providerItem)
                 .setFlags(GridFlags.REQUIRE_CHANNEL)
                 .setIdlePowerUsage(1.0)
                 .addService(IGridTickable.class, this)
@@ -139,6 +159,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         super.onReady();
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
         logic.updatePatterns();
+        if (level != null && !level.isClientSide()) {
+            normalizeLinkedMachines();
+        }
     }
 
     @Override
@@ -277,7 +300,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             if (output != null) {
                 AEItemKey definition = output instanceof AEItemKey itemKey ? itemKey : null;
                 KineticJob streamedJob = new KineticJob(output, definition, remaining, machinePos, outputPos,
-                        machineRole, List.of(), List.of(), false);
+                        List.of(defaultOutputEndpoint(output, outputPos)), machineRole, List.of(), List.of(), false);
                 streamedJob.ticks = data.readVarInt();
                 streamedJobs.add(streamedJob);
             } else {
@@ -377,7 +400,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
 
     @Override
     public AEItemKey getTerminalIcon() {
-        return AEItemKey.of(ModItems.KINETIC_PATTERN_PROVIDER.get());
+        return AEItemKey.of(providerItem);
     }
 
     @Override
@@ -410,23 +433,23 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         }
         return new PatternContainerGroup(
                 getTerminalIcon(),
-                ModItems.KINETIC_PATTERN_PROVIDER.get().getDescription(),
+                providerItem.getDescription(),
                 List.of());
     }
 
     @Override
     public ItemStack getMainMenuIcon() {
-        return new ItemStack(ModItems.KINETIC_PATTERN_PROVIDER.get());
+        return new ItemStack(providerItem);
     }
 
     @Override
     public void openMenu(Player player, MenuLocator locator) {
-        MenuOpener.open(ModMenuTypes.KINETIC_PATTERN_PROVIDER.get(), player, locator);
+        MenuOpener.open(providerMenuType, player, locator);
     }
 
     @Override
     public void returnToMainMenu(Player player, ISubMenu subMenu) {
-        MenuOpener.returnTo(ModMenuTypes.KINETIC_PATTERN_PROVIDER.get(), player, subMenu.getLocator());
+        MenuOpener.returnTo(providerMenuType, player, subMenu.getLocator());
     }
 
     @Override
@@ -553,17 +576,38 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         return List.copyOf(linkedMachines);
     }
 
+    private BlockPos normalizeLinkedMachinePos(BlockPos pos) {
+        return level == null ? pos.immutable() : CreateMachineIds.normalizeKineticMachinePos(level, pos);
+    }
+
+    private void normalizeLinkedMachines() {
+        List<BlockPos> normalized = new ArrayList<>();
+        for (BlockPos linked : linkedMachines) {
+            BlockPos master = normalizeLinkedMachinePos(linked);
+            if (!normalized.contains(master)) {
+                normalized.add(master);
+            }
+        }
+        if (!linkedMachines.equals(normalized)) {
+            linkedMachines.clear();
+            linkedMachines.addAll(normalized);
+            onLinksChanged();
+        }
+    }
+
     public boolean linkMachine(BlockPos pos) {
-        if (linkedMachines.contains(pos)) {
+        BlockPos normalized = normalizeLinkedMachinePos(pos);
+        if (linkedMachines.contains(normalized)) {
             return false;
         }
-        linkedMachines.add(pos.immutable());
+        linkedMachines.add(normalized);
         onLinksChanged();
         return true;
     }
 
     public boolean unlinkMachine(BlockPos pos) {
-        boolean removed = linkedMachines.remove(pos);
+        BlockPos normalized = normalizeLinkedMachinePos(pos);
+        boolean removed = linkedMachines.removeIf(linked -> normalizeLinkedMachinePos(linked).equals(normalized));
         if (removed) {
             onLinksChanged();
         }
@@ -574,7 +618,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         if (index < 0 || index >= linkedMachines.size()) {
             return false;
         }
-        BlockPos immutable = pos.immutable();
+        BlockPos immutable = normalizeLinkedMachinePos(pos);
         int existing = linkedMachines.indexOf(immutable);
         if (existing >= 0 && existing != index) {
             return false;
@@ -597,7 +641,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
     }
 
     public boolean hasLinkedMachine(BlockPos pos) {
-        return linkedMachines.contains(pos);
+        BlockPos normalized = normalizeLinkedMachinePos(pos);
+        return linkedMachines.stream().anyMatch(linked -> normalizeLinkedMachinePos(linked).equals(normalized));
     }
 
     public boolean isSmartDoublingEnabled() {
@@ -676,7 +721,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             PatternStacks.consumeInputs(inputs);
             if (target.job() == null) {
                 KineticJob job = new KineticJob(primaryOutput, patternDetails.getDefinition(), primary.amount(),
-                        plan.machinePos(), plan.outputPos(), plan.machineRole(), plan.patternOutputs(),
+                        plan.machinePos(), plan.outputPos(), plan.outputEndpoints(), plan.machineRole(), plan.patternOutputs(),
                         plan.refillInputs(), plan.collectUnexpectedOutputs());
                 job.pendingDispatches.add(new KineticJob.PendingDispatch(primary.amount(), PatternStacks.copyStacks(flattenedInputs)));
                 job.pendingDispatchTicks = SMART_BATCH_GATHER_TICKS;
@@ -698,15 +743,22 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         }
         ActionList.Result executed = plan.execute();
         if (!executed.success()) {
-            if (debug) {
-                debugLog("push rejected: target execution failed machine={} role={} output={} amount={} action=#{} {}",
-                        plan.machinePos(), plan.machineRole(), primaryOutput, primary.amount(),
-                        executed.failedIndex(), executed.failedAction());
+            String failureDetail = "action #" + executed.failedIndex() + " " + executed.failedAction();
+            if (!executed.fullyCompensated()) {
+                failureDetail += "; rollback incomplete: " + executed.compensationFailures();
+                CreatePackage.LOGGER.error("[Kinetic Provider @ {}] execution failed and rollback was incomplete: {}",
+                        getBlockPos(), failureDetail);
+                rememberStatus("compensation_failed");
+                diagnostics.remember("compensation_failed", failureDetail, List.of(plan.machinePos()), -1);
+            } else {
+                if (debug) {
+                    debugLog("push rejected: target execution failed machine={} role={} output={} amount={} action=#{} {}",
+                            plan.machinePos(), plan.machineRole(), primaryOutput, primary.amount(),
+                            executed.failedIndex(), executed.failedAction());
+                }
+                rememberStatus("execute_failed");
+                diagnostics.remember("execute_failed", failureDetail, List.of(plan.machinePos()), -1);
             }
-            rememberStatus("execute_failed");
-            diagnostics.remember("execute_failed",
-                    "action #" + executed.failedIndex() + " " + executed.failedAction(),
-                    List.of(plan.machinePos()), -1);
             return false;
         }
 
@@ -714,9 +766,10 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         diagnostics.clear();
         if (target.job() == null) {
             KineticJob job = new KineticJob(primaryOutput, patternDetails.getDefinition(), primary.amount(),
-                    plan.machinePos(), plan.outputPos(), plan.machineRole(), plan.patternOutputs(),
+                    plan.machinePos(), plan.outputPos(), plan.outputEndpoints(), plan.machineRole(), plan.patternOutputs(),
                     plan.refillInputs(), plan.collectUnexpectedOutputs());
             job.roundsStarted = 1;
+            job.markOutputStart(level.getGameTime());
             activeJobs.add(job);
             if (debug) {
                 debugLog("push started job machine={} role={} output={} amount={} active={}/{}",
@@ -890,10 +943,10 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             return false;
         }
         for (KineticJob job : activeJobs) {
-            MachinePlanFactory.Plan plan = createPlanAt(job.machinePos, job.primaryOutput, 1,
-                    job.patternOutputs, job.refillInputs);
+            MachinePlanFactory.Plan plan = createPlanAt(job.machinePos, job.primaryOutput,
+                    primaryPatternOutputAmount(job), job.patternOutputs, job.refillInputs);
             if (plan != null
-                    && Objects.equals(plan.outputPos(), job.outputPos)
+                    && Objects.equals(plan.outputEndpoints(), job.outputEndpoints)
                     && Objects.equals(plan.machineRole(), job.machineRole)
                     && plan.collectUnexpectedOutputs() == job.collectUnexpectedOutputs
                     && job.queuedPatterns < maxAcceptableQueuedPatterns(plan)) {
@@ -929,10 +982,14 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
                 if (targets.size() >= getMaxParallelMachines()) {
                     break;
                 }
-                if (linked.equals(front) || !level.isLoaded(linked) || !Objects.equals(frontId, blockId(linked))) {
+                if (!level.isLoaded(linked)) {
                     continue;
                 }
-                targets.add(linked.immutable());
+                BlockPos normalized = CreateMachineIds.normalizeKineticMachinePos(level, linked);
+                if (targets.contains(normalized) || !Objects.equals(frontId, blockId(normalized))) {
+                    continue;
+                }
+                targets.add(normalized.immutable());
             }
         }
         return List.copyOf(targets);
@@ -989,7 +1046,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
                 }
                 job.remaining = 0;
             }
-            if (job.remaining <= 0) {
+            if (job.remaining <= 0 && job.pendingNetworkOutputs.isEmpty()) {
                 if (debugLoggingEnabled()) {
                     debugLog("job completed machine={} role={} queued={} pending={}",
                             job.machinePos, job.machineRole, job.queuedPatterns, job.pendingDispatches.size());
@@ -1003,7 +1060,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             if (isCraftingJobNoLongerWaiting(job)) {
                 job.statusKey = "cancelled";
                 didWork = returnPendingDispatches(job) || didWork;
-                if (!job.hasPendingDispatches()) {
+                if (!job.hasPendingDispatches() && job.pendingNetworkOutputs.isEmpty()) {
                     activeJobs.remove(i--);
                     lastStatusKey = activeJobs.isEmpty() ? "cancelled" : "working";
                     didWork = true;
@@ -1012,7 +1069,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             }
             if (job.returningPendingDispatches()) {
                 didWork = returnPendingDispatches(job) || didWork;
-                if (!job.hasPendingDispatches()) {
+                if (!job.hasPendingDispatches() && job.pendingNetworkOutputs.isEmpty()) {
                     activeJobs.remove(i--);
                     lastStatusKey = activeJobs.isEmpty() ? job.statusKey : "working";
                     didWork = true;
@@ -1030,7 +1087,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
                         getBlockPos(), job.primaryOutput, job.remaining, job.machineRole, job.machinePos);
                 job.statusKey = "timeout";
                 didWork = returnPendingDispatches(job) || didWork;
-                if (!job.hasPendingDispatches()) {
+                if (!job.hasPendingDispatches() && job.pendingNetworkOutputs.isEmpty()) {
                     activeJobs.remove(i--);
                     lastStatusKey = activeJobs.isEmpty() ? "timeout" : "working";
                     didWork = true;
@@ -1052,7 +1109,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         MachinePlanFactory.Plan plan = createPlanAt(job.machinePos, job.primaryOutput, pending.outputAmount(),
                 job.patternOutputs, pending.inputs());
         if (plan == null
-                || !Objects.equals(plan.outputPos(), job.outputPos)
+                || !Objects.equals(plan.outputEndpoints(), job.outputEndpoints)
                 || !Objects.equals(plan.machineRole(), job.machineRole)
                 || plan.collectUnexpectedOutputs() != job.collectUnexpectedOutputs) {
             job.pendingDispatchTicks = Config.pendingDispatchRetryTicks();
@@ -1075,6 +1132,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             return false;
         }
 
+        job.markOutputStart(level.getGameTime());
         for (int i = 0; i < batch.patternCount(); i++) {
             job.pendingDispatches.remove(0);
         }
@@ -1144,21 +1202,46 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
                 || inputs.isEmpty()) {
             return false;
         }
-        List<GenericStack> unmatched = PatternStacks.copyStacks(inputs);
+        Map<AEKey, Long> expected = new HashMap<>();
+        for (GenericStack input : inputs) {
+            if (input == null || input.amount() <= 0 || !addBatchAmount(expected, input.what(), input.amount())) {
+                return false;
+            }
+        }
+        Map<AEKey, Long> supplied = new HashMap<>();
         for (SupplyAction action : plan.actions().actions()) {
             if (action instanceof SupplyActions.ItemInsertAction itemAction) {
-                if (!matchesItemBatchInput(unmatched, itemAction.stack())) {
+                ItemStack stack = itemAction.stack();
+                AEItemKey key = stack.isEmpty() ? null : AEItemKey.of(stack);
+                if (key == null || !addBatchAmount(supplied, key, stack.getCount())) {
+                    return false;
+                }
+            } else if (action instanceof SupplyActions.ItemEntityInsertAction entityAction) {
+                ItemStack stack = entityAction.stack();
+                AEItemKey key = stack.isEmpty() ? null : AEItemKey.of(stack);
+                if (key == null || !addBatchAmount(supplied, key, stack.getCount())) {
                     return false;
                 }
             } else if (action instanceof SupplyActions.FluidInsertAction fluidAction) {
-                if (!matchesFluidBatchInput(unmatched, fluidAction.stack())) {
+                FluidStack stack = fluidAction.stack();
+                AEFluidKey key = stack.isEmpty() ? null : AEFluidKey.of(stack);
+                if (key == null || !addBatchAmount(supplied, key, stack.getAmount())) {
                     return false;
                 }
             } else {
                 return false;
             }
         }
-        return unmatched.isEmpty();
+        return expected.equals(supplied);
+    }
+
+    private boolean addBatchAmount(Map<AEKey, Long> amounts, AEKey key, long amount) {
+        long merged = PatternStacks.safeAdd(amounts.getOrDefault(key, 0L), amount);
+        if (merged <= 0) {
+            return false;
+        }
+        amounts.put(key, merged);
+        return true;
     }
 
     private boolean supportsSmartStackBatch(MachinePlanFactory.Plan plan) {
@@ -1170,9 +1253,34 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             return plan.actions().actions().size() == 1
                     && plan.actions().actions().get(0) instanceof SupplyActions.ItemInsertAction;
         }
-        if ("mixer".equals(plan.machineRole())) {
-            // Create / CMM mixers always feed a basin and benefit from large fluid/item fills.
+        if ("mixer".equals(plan.machineRole())
+                || "compressor".equals(plan.machineRole())
+                || "bulk_fermenter".equals(plan.machineRole())
+                || "foundry_basin".equals(plan.machineRole())
+                || "foundry_mixer".equals(plan.machineRole())
+                || "foundry_lid".equals(plan.machineRole())
+                || "casting_table".equals(plan.machineRole())
+                || "industrial_crucible".equals(plan.machineRole())) {
             return isBasinInsertOnlyPlan(plan);
+        }
+        if ("laser".equals(plan.machineRole())) {
+            return plan.actions().actions().size() == 1
+                    && (plan.actions().actions().get(0) instanceof SupplyActions.ItemInsertAction
+                            || plan.actions().actions().get(0) instanceof SupplyActions.ItemEntityInsertAction);
+        }
+        if ("tesla_coil".equals(plan.machineRole())
+                || "millstone".equals(plan.machineRole())
+                || "vibrating_table".equals(plan.machineRole())
+                || "rolling_mill".equals(plan.machineRole())
+                || "lathe".equals(plan.machineRole())
+                || "spring_coiling".equals(plan.machineRole())
+                || "curving_press".equals(plan.machineRole())) {
+            return plan.actions().actions().size() == 1
+                    && plan.actions().actions().get(0) instanceof SupplyActions.ItemInsertAction;
+        }
+        if ("helve_hammer".equals(plan.machineRole())) {
+            return !plan.actions().actions().isEmpty()
+                    && plan.actions().actions().stream().allMatch(SupplyActions.ItemInsertAction.class::isInstance);
         }
         if ("deployer".equals(plan.machineRole())) {
             return plan.actions().actions().size() == 2
@@ -1197,33 +1305,6 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             }
         }
         return true;
-    }
-
-    private boolean matchesItemBatchInput(List<GenericStack> unmatched, ItemStack stack) {
-        if (stack.isEmpty() || stack.getCount() <= 0) {
-            return false;
-        }
-        AEItemKey actionKey = AEItemKey.of(stack);
-        return actionKey != null && removeExactBatchInput(unmatched, actionKey, stack.getCount());
-    }
-
-    private boolean matchesFluidBatchInput(List<GenericStack> unmatched, FluidStack stack) {
-        if (stack.isEmpty() || stack.getAmount() <= 0) {
-            return false;
-        }
-        AEFluidKey actionKey = AEFluidKey.of(stack);
-        return actionKey != null && removeExactBatchInput(unmatched, actionKey, stack.getAmount());
-    }
-
-    private boolean removeExactBatchInput(List<GenericStack> unmatched, AEKey key, long amount) {
-        for (int i = 0; i < unmatched.size(); i++) {
-            GenericStack input = unmatched.get(i);
-            if (input.what().equals(key) && input.amount() == amount) {
-                unmatched.remove(i);
-                return true;
-            }
-        }
-        return false;
     }
 
     private int maxSmartBatchPatternCount(MachinePlanFactory.Plan plan) {
@@ -1256,6 +1337,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             long actionLimit;
             if (action instanceof SupplyActions.ItemInsertAction itemAction) {
                 actionLimit = maxItemBatchPatternCount(itemAction, totalCapacity);
+            } else if (action instanceof SupplyActions.ItemEntityInsertAction entityAction) {
+                ItemStack stack = entityAction.stack();
+                actionLimit = stack.isEmpty() ? 1 : Math.max(1, stack.getMaxStackSize() / stack.getCount());
             } else if (action instanceof SupplyActions.FluidInsertAction fluidAction) {
                 actionLimit = maxFluidBatchPatternCount(fluidAction, totalCapacity);
             } else {
@@ -1274,17 +1358,17 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         if (action.stack().isEmpty() || action.stack().getCount() <= 0) {
             return 1;
         }
+        IItemHandler handler = action.handler();
         long capacity = totalCapacity
-                ? itemTargetTotalCapacity(action.target(), action.stack())
-                : itemTargetCapacity(action.target(), action.stack());
+                ? itemTargetTotalCapacity(handler, action.stack())
+                : itemTargetCapacity(handler, action.stack());
         if (capacity <= 0) {
             return 1;
         }
         return Math.max(1, capacity / action.stack().getCount());
     }
 
-    private long itemTargetCapacity(BlockPos target, ItemStack stack) {
-        IItemHandler handler = itemHandler(target);
+    private long itemTargetCapacity(@Nullable IItemHandler handler, ItemStack stack) {
         AEItemKey stackKey = AEItemKey.of(stack);
         if (handler == null || stackKey == null) {
             return 0;
@@ -1310,8 +1394,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         return capacity;
     }
 
-    private long itemTargetTotalCapacity(BlockPos target, ItemStack stack) {
-        IItemHandler handler = itemHandler(target);
+    private long itemTargetTotalCapacity(@Nullable IItemHandler handler, ItemStack stack) {
         AEItemKey stackKey = AEItemKey.of(stack);
         if (handler == null || stackKey == null) {
             return 0;
@@ -1343,17 +1426,17 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         if (action.stack().isEmpty() || action.stack().getAmount() <= 0) {
             return 1;
         }
+        IFluidHandler handler = action.handler();
         long capacity = totalCapacity
-                ? fluidTargetTotalCapacity(action.target(), action.stack())
-                : fluidTargetCapacity(action.target(), action.stack());
+                ? fluidTargetTotalCapacity(handler, action.stack())
+                : fluidTargetCapacity(handler, action.stack());
         if (capacity <= 0) {
             return 1;
         }
         return Math.max(1, capacity / action.stack().getAmount());
     }
 
-    private long fluidTargetCapacity(BlockPos target, FluidStack stack) {
-        IFluidHandler handler = fluidHandler(target);
+    private long fluidTargetCapacity(@Nullable IFluidHandler handler, FluidStack stack) {
         AEFluidKey stackKey = AEFluidKey.of(stack);
         if (handler == null || stackKey == null) {
             return 0;
@@ -1374,8 +1457,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         return capacity;
     }
 
-    private long fluidTargetTotalCapacity(BlockPos target, FluidStack stack) {
-        IFluidHandler handler = fluidHandler(target);
+    private long fluidTargetTotalCapacity(@Nullable IFluidHandler handler, FluidStack stack) {
         AEFluidKey stackKey = AEFluidKey.of(stack);
         if (handler == null || stackKey == null) {
             return 0;
@@ -1471,122 +1553,275 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
     }
 
     private boolean collectOutputs(KineticJob job) {
-        IItemHandler itemHandler = itemHandler(job.outputPos);
-        IFluidHandler fluidHandler = fluidHandler(job.outputPos);
-        if (itemHandler == null && fluidHandler == null) {
-            rememberStatus("missing_output");
-            return false;
+        OutputCollection collected = new OutputCollection();
+        flushPendingNetworkOutputs(job, collected);
+        if (job.outputEndpoints.isEmpty()) {
+            if (!collected.didWork) {
+                rememberStatus("missing_output");
+            }
+            return collected.didWork;
         }
-        boolean didWork = false;
-        long primaryCollected = 0;
-        long otherCollected = 0;
-        if (itemHandler != null) {
-            for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
-                ItemStack available = itemHandler.extractItem(slot, extractAmountForSlot(itemHandler, slot), true);
-                if (available.isEmpty()) {
-                    continue;
-                }
-                AEItemKey key = AEItemKey.of(available);
-                if (key == null || (!job.collectUnexpectedOutputs && !isExpectedOutput(job, key))) {
-                    continue;
-                }
-                long accepted = insertIntoNetwork(key, available.getCount(), Actionable.SIMULATE);
-                if (accepted <= 0) {
-                    continue;
-                }
-                int extractAmount = (int) Math.min(accepted, available.getCount());
-                ItemStack extracted = itemHandler.extractItem(slot, extractAmount, false);
-                if (extracted.isEmpty()) {
-                    continue;
-                }
-                AEItemKey extractedKey = AEItemKey.of(extracted);
-                if (extractedKey == null) {
-                    continue;
-                }
-                long inserted = insertIntoNetwork(extractedKey, extracted.getCount(), Actionable.MODULATE);
-                if (inserted > 0) {
-                    job.roundHasOutput = true;
-                    job.roundTicks = 0;
-                    if (extractedKey.equals(job.primaryOutput)) {
-                        job.remaining = Math.max(0, job.remaining - inserted);
-                        primaryCollected += inserted;
-                    } else {
-                        otherCollected += inserted;
-                    }
-                    didWork = true;
-                }
+        for (MachineEndpoint endpoint : job.outputEndpoints) {
+            if (endpoint.medium() == MachineEndpoint.Medium.ITEM
+                    || endpoint.medium() == MachineEndpoint.Medium.SMART_ITEM_OUTPUT
+                    || endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_ITEM_OUTPUT) {
+                collectItemOutput(job, endpoint, collected);
+            } else if (endpoint.medium() == MachineEndpoint.Medium.FLUID
+                    || endpoint.medium() == MachineEndpoint.Medium.SMART_FLUID_OUTPUT
+                    || endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_FLUID_OUTPUT) {
+                collectFluidOutput(job, endpoint, collected);
+            } else {
+                collectDroppedItemOutput(job, endpoint, collected);
             }
         }
-        if (fluidHandler != null) {
-            for (int tank = 0; tank < fluidHandler.getTanks(); tank++) {
-                FluidStack available = fluidHandler.getFluidInTank(tank);
-                if (available.isEmpty()) {
-                    continue;
-                }
-                AEFluidKey key = AEFluidKey.of(available);
-                if (key == null || (!job.collectUnexpectedOutputs && !isExpectedOutput(job, key))) {
-                    continue;
-                }
-                int availableAmount = available.getAmount();
-                long accepted = insertIntoNetwork(key, availableAmount, Actionable.SIMULATE);
-                if (accepted <= 0) {
-                    continue;
-                }
-                int extractAmount = (int) Math.min(accepted, availableAmount);
-                FluidStack extracted = fluidHandler.drain(new FluidStack(available, extractAmount),
-                        IFluidHandler.FluidAction.EXECUTE);
-                if (extracted.isEmpty()) {
-                    continue;
-                }
-                AEFluidKey extractedKey = AEFluidKey.of(extracted);
-                if (extractedKey == null) {
-                    continue;
-                }
-                long inserted = insertIntoNetwork(extractedKey, extracted.getAmount(), Actionable.MODULATE);
-                if (inserted > 0) {
-                    job.roundHasOutput = true;
-                    job.roundTicks = 0;
-                    if (extractedKey.equals(job.primaryOutput)) {
-                        job.remaining = Math.max(0, job.remaining - inserted);
-                        primaryCollected += inserted;
-                    } else {
-                        otherCollected += inserted;
-                    }
-                    didWork = true;
-                }
+        if (!collected.foundHandler) {
+            if (!collected.didWork) {
+                rememberStatus("missing_output");
             }
+            return collected.didWork;
         }
         if (!job.collectUnexpectedOutputs
                 && job.remaining > 0
                 && job.queuedPatterns <= 1
-                && primaryCollected == 0
-                && otherCollected > 0) {
-            didWork = startRefillRound(job, "secondary_output") || didWork;
+                && collected.primary == 0
+                && collected.other > 0) {
+            collected.didWork = startRefillRound(job, "secondary_output") || collected.didWork;
         }
-        if (didWork) {
+        if (collected.didWork) {
             if (debugLoggingEnabled()) {
                 debugLog("collected machine={} role={} primary={} other={} remaining={} queued={} pending={}",
-                        job.machinePos, job.machineRole, primaryCollected, otherCollected, job.remaining,
+                        job.machinePos, job.machineRole, collected.primary, collected.other, job.remaining,
                         job.queuedPatterns, job.pendingDispatches.size());
             }
-            // Freeing output space should immediately wake pending dispatches and AE pushes.
             requestCraftingUpdate();
             wakeTicker();
             saveAndSync();
         }
-        return didWork;
+        return collected.didWork;
+    }
+
+    private void collectItemOutput(KineticJob job, MachineEndpoint endpoint, OutputCollection collected) {
+        IItemHandler handler = itemOutputHandler(endpoint);
+        if (handler == null) {
+            return;
+        }
+        collected.foundHandler = true;
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            ItemStack available = handler.extractItem(slot, extractAmountForSlot(handler, slot), true);
+            if (available.isEmpty()) {
+                continue;
+            }
+            AEItemKey key = AEItemKey.of(available);
+            if (key == null || (!job.collectUnexpectedOutputs && !isExpectedOutput(job, key))) {
+                continue;
+            }
+            long accepted = insertIntoNetwork(key, available.getCount(), Actionable.SIMULATE);
+            if (accepted <= 0) {
+                continue;
+            }
+            ItemStack extracted = handler.extractItem(slot, (int) Math.min(accepted, available.getCount()), false);
+            AEItemKey extractedKey = AEItemKey.of(extracted);
+            if (extractedKey == null) {
+                continue;
+            }
+            long inserted = insertIntoNetwork(extractedKey, extracted.getCount(), Actionable.MODULATE);
+            long committed = Math.max(0, Math.min(inserted, extracted.getCount()));
+            if (committed > 0) {
+                recordCollectedOutput(job, extractedKey, committed, collected);
+            }
+            int remainder = extracted.getCount() - (int) committed;
+            if (remainder > 0) {
+                ItemStack unreturned = InventoryAccess.reinsertIntoHandler(handler, slot,
+                        extracted.copyWithCount(remainder));
+                bufferNetworkRemainder(job, extractedKey, unreturned.getCount(), 0, collected);
+            }
+        }
+    }
+
+    private void collectDroppedItemOutput(KineticJob job, MachineEndpoint endpoint, OutputCollection collected) {
+        collected.foundHandler = true;
+        AABB collectionArea = droppedItemCollectionArea(endpoint);
+        long maxEntityAge = job.maxCollectableEntityAge(level.getGameTime());
+        for (ItemEntity entity : level.getEntitiesOfClass(ItemEntity.class, collectionArea)) {
+            if (entity.tickCount > maxEntityAge) {
+                continue;
+            }
+            ItemStack available = entity.getItem();
+            AEItemKey key = AEItemKey.of(available);
+            if (key == null || (!job.collectUnexpectedOutputs && !isExpectedOutput(job, key))) {
+                continue;
+            }
+            long accepted = insertIntoNetwork(key, available.getCount(), Actionable.SIMULATE);
+            if (accepted <= 0) {
+                continue;
+            }
+            long inserted = insertIntoNetwork(key, Math.min(accepted, available.getCount()), Actionable.MODULATE);
+            long committed = Math.max(0, Math.min(inserted, available.getCount()));
+            if (committed <= 0) {
+                continue;
+            }
+            if (committed == available.getCount()) {
+                entity.discard();
+            } else {
+                available.shrink((int) committed);
+                entity.setItem(available);
+            }
+            recordCollectedOutput(job, key, committed, collected);
+        }
+    }
+
+    private static AABB droppedItemCollectionArea(MachineEndpoint endpoint) {
+        // Ejected items keep moving; cover enough travel for providers waking a few ticks after the spawn.
+        return new AABB(endpoint.pos()).inflate(1.5);
+    }
+
+    private void collectFluidOutput(KineticJob job, MachineEndpoint endpoint, OutputCollection collected) {
+        IFluidHandler handler = fluidOutputHandler(endpoint);
+        if (handler == null) {
+            return;
+        }
+        collected.foundHandler = true;
+        if (endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_FLUID_OUTPUT) {
+            collectDynamicFluidSegments(job, handler, collected);
+            return;
+        }
+        for (int tank = 0; tank < handler.getTanks(); tank++) {
+            FluidStack available = handler.getFluidInTank(tank);
+            if (available.isEmpty()) {
+                continue;
+            }
+            AEFluidKey key = AEFluidKey.of(available);
+            if (key == null || (!job.collectUnexpectedOutputs && !isExpectedOutput(job, key))) {
+                continue;
+            }
+            long accepted = insertIntoNetwork(key, available.getAmount(), Actionable.SIMULATE);
+            if (accepted <= 0) {
+                continue;
+            }
+            FluidStack extracted = handler.drain(new FluidStack(available, (int) Math.min(accepted, available.getAmount())),
+                    IFluidHandler.FluidAction.EXECUTE);
+            AEFluidKey extractedKey = AEFluidKey.of(extracted);
+            if (extractedKey == null) {
+                continue;
+            }
+            long inserted = insertIntoNetwork(extractedKey, extracted.getAmount(), Actionable.MODULATE);
+            long committed = Math.max(0, Math.min(inserted, extracted.getAmount()));
+            if (committed > 0) {
+                recordCollectedOutput(job, extractedKey, committed, collected);
+            }
+            int remainder = extracted.getAmount() - (int) committed;
+            if (remainder > 0) {
+                int returned = handler.fill(new FluidStack(extracted, remainder), IFluidHandler.FluidAction.EXECUTE);
+                bufferNetworkRemainder(job, extractedKey, remainder - Math.max(0, Math.min(returned, remainder)), 0,
+                        collected);
+            }
+        }
+    }
+
+    private void collectDynamicFluidSegments(KineticJob job, IFluidHandler handler, OutputCollection collected) {
+        DynamicSegmentWalker.walk(handler::getTanks, tank -> {
+            FluidStack available = handler.getFluidInTank(tank);
+            if (available.isEmpty()) {
+                return false;
+            }
+            AEFluidKey key = AEFluidKey.of(available);
+            if (key == null || (!job.collectUnexpectedOutputs && !isExpectedOutput(job, key))) {
+                return false;
+            }
+            long accepted = insertIntoNetwork(key, available.getAmount(), Actionable.SIMULATE);
+            if (accepted <= 0) {
+                return false;
+            }
+            FluidStack extracted = handler.drain(new FluidStack(available, (int) Math.min(accepted, available.getAmount())),
+                    IFluidHandler.FluidAction.EXECUTE);
+            AEFluidKey extractedKey = AEFluidKey.of(extracted);
+            if (extractedKey == null) {
+                return false;
+            }
+            long inserted = insertIntoNetwork(extractedKey, extracted.getAmount(), Actionable.MODULATE);
+            long committed = Math.max(0, Math.min(inserted, extracted.getAmount()));
+            if (committed > 0) {
+                recordCollectedOutput(job, extractedKey, committed, collected);
+            }
+            int remainder = extracted.getAmount() - (int) committed;
+            if (remainder > 0) {
+                int returned = handler.fill(new FluidStack(extracted, remainder), IFluidHandler.FluidAction.EXECUTE);
+                bufferNetworkRemainder(job, extractedKey, remainder - Math.max(0, Math.min(returned, remainder)), 0,
+                        collected);
+            }
+            return !extracted.isEmpty() && extracted.getAmount() >= available.getAmount();
+        });
+    }
+
+    @Nullable
+    private IItemHandler itemOutputHandler(MachineEndpoint endpoint) {
+        if (endpoint.medium() == MachineEndpoint.Medium.SMART_ITEM_OUTPUT) {
+            return InventoryAccess.itemOutputHandler(level, endpoint.pos());
+        }
+        return endpoint.side() == null
+                ? InventoryAccess.itemHandler(level, endpoint.pos())
+                : InventoryAccess.itemHandler(level, endpoint.pos(), endpoint.side());
+    }
+
+    @Nullable
+    private IFluidHandler fluidOutputHandler(MachineEndpoint endpoint) {
+        if (endpoint.medium() == MachineEndpoint.Medium.SMART_FLUID_OUTPUT) {
+            return InventoryAccess.fluidOutputHandler(level, endpoint.pos());
+        }
+        return endpoint.side() == null
+                ? InventoryAccess.fluidHandler(level, endpoint.pos())
+                : InventoryAccess.fluidHandler(level, endpoint.pos(), endpoint.side());
+    }
+
+    private void flushPendingNetworkOutputs(KineticJob job, OutputCollection collected) {
+        for (int i = 0; i < job.pendingNetworkOutputs.size();) {
+            GenericStack pending = job.pendingNetworkOutputs.get(i);
+            long inserted = insertIntoNetwork(pending.what(), pending.amount(), Actionable.MODULATE);
+            long committed = Math.max(0, Math.min(inserted, pending.amount()));
+            if (committed > 0) {
+                recordCollectedOutput(job, pending.what(), committed, collected);
+            }
+            if (committed == pending.amount()) {
+                job.pendingNetworkOutputs.remove(i);
+            } else {
+                job.pendingNetworkOutputs.set(i,
+                        new GenericStack(pending.what(), pending.amount() - committed));
+                i++;
+            }
+        }
+    }
+
+    private static void bufferNetworkRemainder(KineticJob job, AEKey key, long extracted, long inserted,
+            OutputCollection collected) {
+        long remainder = extracted - Math.max(0, inserted);
+        if (remainder <= 0) {
+            return;
+        }
+        PatternStacks.addStack(job.pendingNetworkOutputs, new GenericStack(key, remainder));
+        collected.didWork = true;
+    }
+
+    private static void recordCollectedOutput(KineticJob job, AEKey key, long amount, OutputCollection collected) {
+        job.roundHasOutput = true;
+        job.roundTicks = 0;
+        if (key.equals(job.primaryOutput)) {
+            job.remaining = Math.max(0, job.remaining - amount);
+            collected.primary += amount;
+        } else {
+            collected.other += amount;
+        }
+        collected.didWork = true;
+    }
+
+    private static final class OutputCollection {
+        private boolean foundHandler;
+        private boolean didWork;
+        private long primary;
+        private long other;
     }
 
     private boolean isExpectedOutput(KineticJob job, AEKey key) {
-        if (key.equals(job.primaryOutput)) {
-            return true;
-        }
-        for (GenericStack output : job.patternOutputs) {
-            if (output.what().equals(key)) {
-                return true;
-            }
-        }
-        return false;
+        return ExpectedOutputMatcher.matches(job.primaryOutput, job.patternOutputs, GenericStack::what, key);
     }
 
     private boolean shouldCompletePartialOutputJob(KineticJob job) {
@@ -1615,29 +1850,45 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
     }
 
     private boolean hasCollectableOutput(KineticJob job) {
-        IItemHandler itemHandler = itemHandler(job.outputPos);
-        if (itemHandler != null) {
-            for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
-                ItemStack available = itemHandler.extractItem(slot, extractAmountForSlot(itemHandler, slot), true);
-                if (available.isEmpty()) {
+        for (MachineEndpoint endpoint : job.outputEndpoints) {
+            if (endpoint.medium() == MachineEndpoint.Medium.ITEM
+                    || endpoint.medium() == MachineEndpoint.Medium.SMART_ITEM_OUTPUT
+                    || endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_ITEM_OUTPUT) {
+                IItemHandler handler = itemOutputHandler(endpoint);
+                if (handler == null) {
                     continue;
                 }
-                AEItemKey key = AEItemKey.of(available);
-                if (key != null && (job.collectUnexpectedOutputs || isExpectedOutput(job, key))) {
-                    return true;
+                for (int slot = 0; slot < handler.getSlots(); slot++) {
+                    ItemStack available = handler.extractItem(slot, extractAmountForSlot(handler, slot), true);
+                    AEItemKey key = AEItemKey.of(available);
+                    if (key != null && (job.collectUnexpectedOutputs || isExpectedOutput(job, key))) {
+                        return true;
+                    }
                 }
-            }
-        }
-        IFluidHandler fluidHandler = fluidHandler(job.outputPos);
-        if (fluidHandler != null) {
-            for (int tank = 0; tank < fluidHandler.getTanks(); tank++) {
-                FluidStack available = fluidHandler.getFluidInTank(tank);
-                if (available.isEmpty()) {
+            } else if (endpoint.medium() == MachineEndpoint.Medium.FLUID
+                    || endpoint.medium() == MachineEndpoint.Medium.SMART_FLUID_OUTPUT
+                    || endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_FLUID_OUTPUT) {
+                IFluidHandler handler = fluidOutputHandler(endpoint);
+                if (handler == null) {
                     continue;
                 }
-                AEFluidKey key = AEFluidKey.of(available);
-                if (key != null && (job.collectUnexpectedOutputs || isExpectedOutput(job, key))) {
-                    return true;
+                for (int tank = 0; tank < handler.getTanks(); tank++) {
+                    AEFluidKey key = AEFluidKey.of(handler.getFluidInTank(tank));
+                    if (key != null && (job.collectUnexpectedOutputs || isExpectedOutput(job, key))) {
+                        return true;
+                    }
+                }
+            } else {
+                long maxEntityAge = job.maxCollectableEntityAge(level.getGameTime());
+                for (ItemEntity entity : level.getEntitiesOfClass(ItemEntity.class,
+                        droppedItemCollectionArea(endpoint))) {
+                    if (entity.tickCount > maxEntityAge) {
+                        continue;
+                    }
+                    AEItemKey key = AEItemKey.of(entity.getItem());
+                    if (key != null && (job.collectUnexpectedOutputs || isExpectedOutput(job, key))) {
+                        return true;
+                    }
                 }
             }
         }
@@ -1668,12 +1919,12 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             return false;
         }
 
-        MachinePlanFactory.Plan refill = createPlanAt(job.machinePos, job.primaryOutput, job.remaining, job.patternOutputs,
-                job.refillInputs);
+        MachinePlanFactory.Plan refill = createPlanAt(job.machinePos, job.primaryOutput,
+                primaryPatternOutputAmount(job), job.patternOutputs, job.refillInputs);
         if (refill == null) {
             return false;
         }
-        if (!Objects.equals(refill.outputPos(), job.outputPos)) {
+        if (!Objects.equals(refill.outputEndpoints(), job.outputEndpoints)) {
             rememberJobStatus(job, "missing_output");
             return false;
         }
@@ -1708,6 +1959,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             return false;
         }
 
+        job.markOutputStart(level.getGameTime());
         job.roundsStarted++;
         job.roundTicks = 0;
         job.roundHasOutput = false;
@@ -1719,14 +1971,23 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         return true;
     }
 
+    private long primaryPatternOutputAmount(KineticJob job) {
+        for (GenericStack output : job.patternOutputs) {
+            if (output != null && job.primaryOutput.equals(output.what()) && output.amount() > 0) {
+                return output.amount();
+            }
+        }
+        return 1;
+    }
+
     @Nullable
     private MachinePlanFactory.Plan createPlanAt(BlockPos machinePos, AEKey primaryOutput, long outputAmount,
             List<GenericStack> patternOutputs, List<GenericStack> inputs) {
         if (level == null || !level.isLoaded(machinePos)) {
-            rememberStatus("missing_machine");
-            return null;
+            return MachinePlanFactory.Plan.failure("missing_machine");
         }
-        return createPlanForMachine(machinePos, primaryOutput, outputAmount, patternOutputs, PatternStacks.copyStacks(inputs));
+        return MachinePlanFactory.create(level, machinePos, primaryOutput, outputAmount, patternOutputs,
+                PatternStacks.copyStacks(inputs));
     }
 
     private boolean isCraftingJobNoLongerWaiting(KineticJob job) {
@@ -1740,7 +2001,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
     @Nullable
     private BlockPos targetMachinePos() {
         Direction direction = targetDirection();
-        return direction == null ? null : getBlockPos().relative(direction);
+        if (direction == null) {
+            return null;
+        }
+        BlockPos observed = getBlockPos().relative(direction);
+        return level == null ? observed : CreateMachineIds.normalizeKineticMachinePos(level, observed);
     }
 
     @Nullable
@@ -1954,13 +2219,13 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
 
     @Override
     public ItemStack getIcon(boolean isPlayerSneaking) {
-        return new ItemStack(ModItems.KINETIC_PATTERN_PROVIDER.get());
+        return new ItemStack(providerItem);
     }
 
     @Override
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         tooltip.add(Component.translatable("tooltip." + CreatePackage.MODID + ".kinetic_pattern_provider.header",
-                ModItems.KINETIC_PATTERN_PROVIDER.get().getDescription()).withStyle(ChatFormatting.GOLD));
+                providerItem.getDescription()).withStyle(ChatFormatting.GOLD));
         tooltip.add(statusLine());
         tooltip.add(aeLine());
         tooltip.add(smartDoublingLine());
@@ -1985,6 +2250,13 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
 
     private static Component machineRoleName(String role) {
         return Component.translatable("tooltip." + CreatePackage.MODID + ".kinetic_pattern_provider.role." + role);
+    }
+
+    private static MachineEndpoint defaultOutputEndpoint(AEKey output, BlockPos outputPos) {
+        MachineEndpoint.Medium medium = output instanceof AEFluidKey
+                ? MachineEndpoint.Medium.FLUID
+                : MachineEndpoint.Medium.ITEM;
+        return new MachineEndpoint(outputPos, null, medium, MachineEndpoint.Purpose.OUTPUT);
     }
 
     private static boolean sameJobs(List<KineticJob> left, List<KineticJob> right) {
@@ -2026,6 +2298,10 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         private static final String NBT_REMAINING = "remaining";
         private static final String NBT_MACHINE = "machine";
         private static final String NBT_OUTPUT = "output";
+        private static final String NBT_OUTPUT_ENDPOINTS = "outputEndpoints";
+        private static final String NBT_ENDPOINT_POS = "pos";
+        private static final String NBT_ENDPOINT_SIDE = "side";
+        private static final String NBT_ENDPOINT_MEDIUM = "medium";
         private static final String NBT_ROLE = "role";
         private static final String NBT_TICKS = "ticks";
         private static final String NBT_ROUND_TICKS = "roundTicks";
@@ -2040,13 +2316,17 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         private static final String NBT_PENDING_OUTPUT = "outputAmount";
         private static final String NBT_PENDING_INPUTS = "inputs";
         private static final String NBT_PENDING_DISPATCH_TICKS = "pendingDispatchTicks";
+        private static final String NBT_OUTPUT_START_TIME = "outputStartTime";
+        private static final String NBT_PENDING_NETWORK_OUTPUTS = "pendingNetworkOutputs";
 
         private final AEKey primaryOutput;
         @Nullable
         private AEItemKey patternDefinition;
         private long remaining;
         private final BlockPos machinePos;
+        // Kept for old client stream and old save compatibility; authoritative collection uses endpoints.
         private final BlockPos outputPos;
+        private final List<MachineEndpoint> outputEndpoints;
         private final String machineRole;
         private List<GenericStack> patternOutputs;
         private List<GenericStack> refillInputs;
@@ -2058,16 +2338,20 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         private int queuedPatterns = 1;
         private String statusKey = "working";
         private final List<PendingDispatch> pendingDispatches = new ArrayList<>();
+        private final List<GenericStack> pendingNetworkOutputs = new ArrayList<>();
         private int pendingDispatchTicks;
+        private long outputStartTime = -1;
 
         private KineticJob(AEKey primaryOutput, @Nullable AEItemKey patternDefinition, long remaining, BlockPos machinePos,
-                BlockPos outputPos, String machineRole, List<GenericStack> patternOutputs,
+                BlockPos outputPos, List<MachineEndpoint> outputEndpoints, String machineRole,
+                List<GenericStack> patternOutputs,
                 List<GenericStack> refillInputs, boolean collectUnexpectedOutputs) {
             this.primaryOutput = primaryOutput;
             this.patternDefinition = patternDefinition;
             this.remaining = remaining;
             this.machinePos = machinePos.immutable();
             this.outputPos = outputPos.immutable();
+            this.outputEndpoints = List.copyOf(outputEndpoints);
             this.machineRole = machineRole;
             this.patternOutputs = List.copyOf(patternOutputs);
             this.refillInputs = List.copyOf(refillInputs);
@@ -2086,6 +2370,17 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             return !pendingDispatches.isEmpty();
         }
 
+        private void markOutputStart(long gameTime) {
+            outputStartTime = gameTime;
+        }
+
+        private long maxCollectableEntityAge(long gameTime) {
+            if (outputStartTime < 0 || gameTime < outputStartTime) {
+                return Math.max(1, ticks + 1L);
+            }
+            return Math.max(1, gameTime - outputStartTime + 1L);
+        }
+
         private CompoundTag write() {
             CompoundTag tag = new CompoundTag();
             tag.put(NBT_PRIMARY, primaryOutput.toTagGeneric());
@@ -2095,6 +2390,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             tag.putLong(NBT_REMAINING, remaining);
             tag.putLong(NBT_MACHINE, machinePos.asLong());
             tag.putLong(NBT_OUTPUT, outputPos.asLong());
+            tag.put(NBT_OUTPUT_ENDPOINTS, writeEndpoints(outputEndpoints));
             tag.putString(NBT_ROLE, machineRole);
             tag.putInt(NBT_TICKS, ticks);
             tag.putInt(NBT_ROUND_TICKS, roundTicks);
@@ -2106,6 +2402,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             tag.put(NBT_PATTERN_OUTPUTS, writeStackList(patternOutputs));
             tag.put(NBT_REFILL_INPUTS, writeStackList(refillInputs));
             tag.putInt(NBT_PENDING_DISPATCH_TICKS, pendingDispatchTicks);
+            tag.putLong(NBT_OUTPUT_START_TIME, outputStartTime);
+            tag.put(NBT_PENDING_NETWORK_OUTPUTS, writeStackList(pendingNetworkOutputs));
             if (!pendingDispatches.isEmpty()) {
                 net.minecraft.nbt.ListTag pendingTags = new net.minecraft.nbt.ListTag();
                 for (PendingDispatch pending : pendingDispatches) {
@@ -2134,9 +2432,12 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             AEItemKey definition = tag.contains(NBT_DEFINITION)
                     ? AEItemKey.fromTag(tag.getCompound(NBT_DEFINITION))
                     : (primary instanceof AEItemKey itemKey ? itemKey : null);
+            BlockPos outputPos = BlockPos.of(tag.getLong(NBT_OUTPUT));
+            List<MachineEndpoint> outputEndpoints = tag.contains(NBT_OUTPUT_ENDPOINTS, net.minecraft.nbt.Tag.TAG_LIST)
+                    ? readEndpoints(tag)
+                    : List.of(defaultOutputEndpoint(primary, outputPos));
             KineticJob job = new KineticJob(primary, definition, tag.getLong(NBT_REMAINING),
-                    BlockPos.of(tag.getLong(NBT_MACHINE)),
-                    BlockPos.of(tag.getLong(NBT_OUTPUT)),
+                    BlockPos.of(tag.getLong(NBT_MACHINE)), outputPos, outputEndpoints,
                     tag.getString(NBT_ROLE),
                     outputs,
                     refillInputs,
@@ -2148,6 +2449,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
             job.roundHasOutput = tag.getBoolean(NBT_ROUND_HAS_OUTPUT);
             job.statusKey = tag.contains(NBT_JOB_STATUS) ? tag.getString(NBT_JOB_STATUS) : "working";
             job.pendingDispatchTicks = tag.getInt(NBT_PENDING_DISPATCH_TICKS);
+            job.outputStartTime = tag.contains(NBT_OUTPUT_START_TIME) ? tag.getLong(NBT_OUTPUT_START_TIME) : -1;
+            job.pendingNetworkOutputs.addAll(readStackList(tag, NBT_PENDING_NETWORK_OUTPUTS));
             var pendingTags = tag.getList(NBT_PENDING_DISPATCHES, net.minecraft.nbt.Tag.TAG_COMPOUND);
             for (int i = 0; i < pendingTags.size(); i++) {
                 CompoundTag pendingTag = pendingTags.getCompound(i);
@@ -2158,6 +2461,37 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
                 }
             }
             return job;
+        }
+
+        private static net.minecraft.nbt.ListTag writeEndpoints(List<MachineEndpoint> endpoints) {
+            net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+            for (MachineEndpoint endpoint : endpoints) {
+                CompoundTag endpointTag = new CompoundTag();
+                endpointTag.putLong(NBT_ENDPOINT_POS, endpoint.pos().asLong());
+                if (endpoint.side() != null) endpointTag.putString(NBT_ENDPOINT_SIDE, endpoint.side().getSerializedName());
+                endpointTag.putString(NBT_ENDPOINT_MEDIUM, endpoint.medium().name());
+                list.add(endpointTag);
+            }
+            return list;
+        }
+
+        private static List<MachineEndpoint> readEndpoints(CompoundTag tag) {
+            List<MachineEndpoint> endpoints = new ArrayList<>();
+            var endpointTags = tag.getList(NBT_OUTPUT_ENDPOINTS, net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int i = 0; i < endpointTags.size(); i++) {
+                CompoundTag endpointTag = endpointTags.getCompound(i);
+                MachineEndpoint.Medium medium;
+                try {
+                    medium = MachineEndpoint.Medium.valueOf(endpointTag.getString(NBT_ENDPOINT_MEDIUM));
+                } catch (IllegalArgumentException ignored) {
+                    continue;
+                }
+                Direction side = endpointTag.contains(NBT_ENDPOINT_SIDE)
+                        ? Direction.byName(endpointTag.getString(NBT_ENDPOINT_SIDE)) : null;
+                endpoints.add(new MachineEndpoint(BlockPos.of(endpointTag.getLong(NBT_ENDPOINT_POS)), side, medium,
+                        MachineEndpoint.Purpose.OUTPUT));
+            }
+            return List.copyOf(endpoints);
         }
 
         private static net.minecraft.nbt.ListTag writeStackList(
@@ -2196,8 +2530,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
     }
 
     private final class InternalPatternProviderLogic extends PatternProviderLogic {
-        private InternalPatternProviderLogic() {
-            super(getMainNode(), KineticPatternProviderBlockEntity.this);
+        private InternalPatternProviderLogic(int patternSlots) {
+            super(getMainNode(), KineticPatternProviderBlockEntity.this, patternSlots);
         }
 
         @Override
@@ -2228,4 +2562,3 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         }
     }
 }
-

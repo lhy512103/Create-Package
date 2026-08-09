@@ -1,0 +1,116 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "createpackage:kinetic_pattern_provider"
+  },
+  "loops": 4,
+  "results": [
+    {
+      "item": "createpackage:extended_kinetic_pattern_provider"
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        },
+        {
+          "item": "create:polished_rose_quartz"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ]
+    },
+    {
+      "type": "create:deploying",
+      "keepHeldItem": true,
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        },
+        {
+          "item": "create:rose_quartz"
+        }
+      ],
+      "results": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ],
+      "processing_time": 100,
+      "results": [
+        {
+          "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+        }
+      ]
+    }
+  ],
+  "transitionalItem": {
+    "item": "createpackage:incomplete_extended_kinetic_pattern_provider"
+  }
+}

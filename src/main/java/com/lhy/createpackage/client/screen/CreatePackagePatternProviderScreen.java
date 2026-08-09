@@ -29,11 +29,13 @@ import appeng.client.gui.style.ScreenStyle;
 import appeng.client.gui.widgets.ServerSettingToggleButton;
 import appeng.client.gui.widgets.SettingToggleButton;
 import appeng.client.gui.widgets.ToggleButton;
+import appeng.client.gui.widgets.ToolboxPanel;
 import appeng.client.gui.widgets.UpgradesPanel;
 import appeng.core.localization.GuiText;
 import appeng.core.localization.InGameTooltip;
 import appeng.core.sync.packets.ConfigButtonPacket;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
+import appeng.items.tools.NetworkToolItem;
 import appeng.menu.implementations.PatternProviderMenu;
 import appeng.menu.SlotSemantics;
 
@@ -81,9 +83,16 @@ public class CreatePackagePatternProviderScreen<C extends PatternProviderMenu> e
         lockReason = new LockReason(this);
         widgets.add("lockReason", lockReason);
 
-        if (!menu.getSlots(SlotSemantics.UPGRADE).isEmpty() && menu.getTarget() instanceof PatternProviderLogicHost host) {
-            widgets.add("upgrades", new UpgradesPanel(menu.getSlots(SlotSemantics.UPGRADE), () ->
+        var upgradeSlots = menu.getSlots(SlotSemantics.UPGRADE);
+        if (!upgradeSlots.isEmpty() && menu.getTarget() instanceof PatternProviderLogicHost host) {
+            widgets.add("upgrades", new UpgradesPanel(upgradeSlots, () ->
                     appeng.api.upgrades.Upgrades.getTooltipLinesForMachine(host.getTerminalIcon().getItem())));
+        }
+        if (!menu.getSlots(SlotSemantics.TOOLBOX).isEmpty()) {
+            var networkTool = NetworkToolItem.findNetworkToolInv(menu.getPlayer());
+            if (networkTool != null) {
+                widgets.add("toolbox", new ToolboxPanel(style, networkTool.getItemStack().getHoverName()));
+            }
         }
     }
 

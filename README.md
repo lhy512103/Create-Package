@@ -57,7 +57,7 @@ chmod +x ./gradlew
 ## 分支与迁移资料
 
 - `main`：Minecraft 1.21.1 NeoForge 版本。
-- `forge-1.20.1`：Minecraft 1.20.1 Forge 版本。
+- `1.20.1-forge`：Minecraft 1.20.1 Forge 版本。
 - [MIGRATION_PLAN_zh_CN.md](MIGRATION_PLAN_zh_CN.md)：迁移范围、API 对照、依赖树、验证结果和后续维护检查表。
 - [CHANGELOG.md](CHANGELOG.md)：版本变更记录。
 

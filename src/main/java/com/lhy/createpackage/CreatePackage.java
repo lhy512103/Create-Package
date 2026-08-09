@@ -52,8 +52,10 @@ public class CreatePackage {
             AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get(), ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
             AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
             AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(), ModItems.KINETIC_PATTERN_PROVIDER.get());
+            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.EXTENDED_KINETIC_PATTERN_PROVIDER.get(), ModItems.EXTENDED_KINETIC_PATTERN_PROVIDER.get());
             Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(), 2);
             Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.KINETIC_PATTERN_PROVIDER.get(), 2);
+            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.EXTENDED_KINETIC_PATTERN_PROVIDER.get(), 2);
             if (ModList.get().isLoaded("ftbultimine")) {
                 com.lhy.createpackage.integration.ftbultimine.FtbUltimineCompat.register();
             }

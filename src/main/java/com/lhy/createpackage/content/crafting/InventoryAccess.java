@@ -3,6 +3,8 @@ package com.lhy.createpackage.content.crafting;
 import org.jetbrains.annotations.Nullable;
 
 import appeng.api.stacks.AEFluidKey;
+import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
+import com.simibubi.create.foundation.blockEntity.behaviour.fluid.SmartFluidTankBehaviour;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -22,6 +24,14 @@ public final class InventoryAccess {
     }
 
     @Nullable
+    public static IItemHandler itemHandler(@Nullable Level level, BlockPos pos, @Nullable Direction side) {
+        if (level == null || !level.isLoaded(pos)) return null;
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        return blockEntity == null ? null
+                : blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, side).orElse(null);
+    }
+
+    @Nullable
     public static IItemHandler itemHandler(@Nullable Level level, BlockPos pos) {
         if (level == null || !level.isLoaded(pos)) {
             return null;
@@ -38,6 +48,27 @@ public final class InventoryAccess {
     }
 
     @Nullable
+    public static IItemHandler itemOutputHandler(@Nullable Level level, BlockPos pos) {
+        if (level == null || !level.isLoaded(pos)) return null;
+        Object blockEntity = level.getBlockEntity(pos);
+        if (blockEntity == null) return null;
+        try {
+            Object output = blockEntity.getClass().getMethod("getOutputInventory").invoke(blockEntity);
+            return output instanceof IItemHandler handler ? handler : null;
+        } catch (ReflectiveOperationException | SecurityException ignored) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public static IFluidHandler fluidHandler(@Nullable Level level, BlockPos pos, @Nullable Direction side) {
+        if (level == null || !level.isLoaded(pos)) return null;
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        return blockEntity == null ? null
+                : blockEntity.getCapability(ForgeCapabilities.FLUID_HANDLER, side).orElse(null);
+    }
+
+    @Nullable
     public static IFluidHandler fluidHandler(@Nullable Level level, BlockPos pos) {
         if (level == null || !level.isLoaded(pos)) {
             return null;
@@ -49,6 +80,26 @@ public final class InventoryAccess {
             if (handler != null) return handler;
         }
         return blockEntity.getCapability(ForgeCapabilities.FLUID_HANDLER, null).orElse(null);
+    }
+
+    @Nullable
+    public static IFluidHandler fluidInputHandler(@Nullable Level level, BlockPos pos) {
+        if (level == null || !level.isLoaded(pos)) return null;
+        SmartFluidTankBehaviour input = BlockEntityBehaviour.get(level, pos, SmartFluidTankBehaviour.INPUT);
+        return input == null ? null : input.getCapability().orElse(null);
+    }
+
+    @Nullable
+    public static IFluidHandler fluidOutputHandler(@Nullable Level level, BlockPos pos) {
+        if (level == null || !level.isLoaded(pos)) return null;
+        SmartFluidTankBehaviour output = BlockEntityBehaviour.get(level, pos, SmartFluidTankBehaviour.OUTPUT);
+        return output == null ? null : output.getCapability().orElse(null);
+    }
+
+    public static ItemStack insertItem(@Nullable Level level, BlockPos target, @Nullable Direction side,
+            ItemStack stack, boolean simulate) {
+        IItemHandler handler = itemHandler(level, target, side);
+        return handler == null ? stack.copy() : insertIntoHandler(handler, stack, simulate);
     }
 
     public static ItemStack insertItem(@Nullable Level level, BlockPos target, ItemStack stack, boolean simulate) {
@@ -63,6 +114,19 @@ public final class InventoryAccess {
         ItemStack remaining = stack.copy();
         for (int slot = 0; slot < handler.getSlots() && !remaining.isEmpty(); slot++) {
             remaining = handler.insertItem(slot, remaining, simulate);
+        }
+        return remaining;
+    }
+
+    public static ItemStack reinsertIntoHandler(IItemHandler handler, int preferredSlot, ItemStack stack) {
+        ItemStack remaining = stack.copy();
+        if (preferredSlot >= 0 && preferredSlot < handler.getSlots()) {
+            remaining = handler.insertItem(preferredSlot, remaining, false);
+        }
+        for (int slot = 0; slot < handler.getSlots() && !remaining.isEmpty(); slot++) {
+            if (slot != preferredSlot) {
+                remaining = handler.insertItem(slot, remaining, false);
+            }
         }
         return remaining;
     }
