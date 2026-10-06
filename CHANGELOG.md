@@ -1,4 +1,24 @@
-﻿# Changelog
+# Changelog
+
+## Unreleased
+
+### English
+
+- Added: Kinetic Pattern Provider support for Enchantment Industry grindstone sanding.
+- Added: Runtime mods aligned with MEST, including its extra AE and processing mods.
+- Fixed: Deployer patterns no longer fail when a non-consumed tool is already in the machine.
+- Fixed: Extended Kinetic Pattern Provider disconnecting from AE cables after reload or wrenching.
+- Fixed: Parallel cards not matching between the upgrade GUI and sneak-insert.
+- Fixed: MEST spliced-terminal network-tool slots missing on both Kinetic Pattern Provider screens.
+
+### 中文
+
+- 新增：动力样板供应器支持附魔工业动力砂轮打磨。
+- 新增：运行时依赖与 MEST 对齐，并补上其额外模组。
+- 修复：机械手已预放不消耗施加物时不再误报缺料。
+- 修复：扩展动力样板供应器重进或扳手转向后与 AE 线缆断连。
+- 修复：并行卡界面显示与实际生效不一致。
+- 修复：两个动力样板供应器界面不显示 MEST 终端网络工具槽。
 
 ## 2026-07-25
 

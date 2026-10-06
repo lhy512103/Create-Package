@@ -19,6 +19,7 @@ public final class CreateMachineIds {
     public static final String CREATE_METALLURGY = "createmetallurgy";
     public static final String CREATE_BITTERBALLEN = "create_bic_bit";
     public static final String CREATE_CONFECTIONERY = "create_confectionery";
+    public static final String CREATE_ENCHANTMENT_INDUSTRY = "create_enchantment_industry";
 
     public static final ResourceLocation DEPLOYER = create("deployer");
     public static final ResourceLocation SPOUT = create("spout");
@@ -62,6 +63,11 @@ public final class CreateMachineIds {
 
     // Create Bitterballen machines
     public static final ResourceLocation MECHANICAL_FRYER = addon(CREATE_BITTERBALLEN, "mechanical_fryer");
+
+    // Create Enchantment Industry
+    public static final ResourceLocation MECHANICAL_GRINDSTONE = addon(CREATE_ENCHANTMENT_INDUSTRY,
+            "mechanical_grindstone");
+    public static final ResourceLocation GRINDSTONE_DRAIN = addon(CREATE_ENCHANTMENT_INDUSTRY, "grindstone_drain");
 
     private CreateMachineIds() {
     }
@@ -171,6 +177,12 @@ public final class CreateMachineIds {
         BlockPos above = observedPos.above();
         if (level.isLoaded(above) && isHelveHammer(idOf(level, above))) {
             return above.immutable();
+        }
+        if (isMechanicalGrindstone(idOf(level, observedPos))) {
+            BlockPos below = observedPos.below();
+            if (level.isLoaded(below) && isGrindstoneDrain(idOf(level, below))) {
+                return below.immutable();
+            }
         }
 
         BlockPos current = observedPos.immutable();
@@ -288,6 +300,14 @@ public final class CreateMachineIds {
         return MECHANICAL_FRYER.equals(id);
     }
 
+    public static boolean isMechanicalGrindstone(@Nullable ResourceLocation id) {
+        return MECHANICAL_GRINDSTONE.equals(id);
+    }
+
+    public static boolean isGrindstoneDrain(@Nullable ResourceLocation id) {
+        return GRINDSTONE_DRAIN.equals(id);
+    }
+
     public static String kineticRoleKey(@Nullable ResourceLocation id) {
         if (isDeployer(id)) {
             return "deployer";
@@ -375,6 +395,9 @@ public final class CreateMachineIds {
         // Create Bitterballen
         if (isMechanicalFryer(id)) {
             return "mechanical_fryer";
+        }
+        if (isGrindstoneDrain(id) || isMechanicalGrindstone(id)) {
+            return "grindstone_drain";
         }
         return "generic";
     }

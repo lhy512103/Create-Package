@@ -19,8 +19,8 @@ public final class ModCapabilities {
         registerDistributor(event, ModBlockEntities.PACKAGE_DISTRIBUTOR.get());
         registerDistributor(event, ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get());
         registerDistributor(event, ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get());
-        event.registerBlockEntity(AECapabilities.IN_WORLD_GRID_NODE_HOST,
-                ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(), (be, context) -> be);
+        registerKineticProvider(event, ModBlockEntities.KINETIC_PATTERN_PROVIDER.get());
+        registerKineticProvider(event, ModBlockEntities.EXTENDED_KINETIC_PATTERN_PROVIDER.get());
     }
 
     private static <T extends com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity> void registerDistributor(
@@ -30,6 +30,12 @@ public final class ModCapabilities {
 
         // Allow pattern providers to treat this block as a crafting machine and push patterns to it.
         event.registerBlockEntity(AECapabilities.CRAFTING_MACHINE, type, (be, context) -> be);
+    }
+
+    private static <T extends com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity> void registerKineticProvider(
+            RegisterCapabilitiesEvent event, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
+        // AE2 cables only auto-register this host for AE2's own block-entity types.
+        event.registerBlockEntity(AECapabilities.IN_WORLD_GRID_NODE_HOST, type, (be, context) -> be);
     }
 
     private ModCapabilities() {}

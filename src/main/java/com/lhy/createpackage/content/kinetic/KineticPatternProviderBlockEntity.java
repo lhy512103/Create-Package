@@ -105,6 +105,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     private static final String NBT_STATUS = "kineticStatus";
     private static final String NBT_SMART_DOUBLING = "smartDoubling";
     private static final String NBT_UPGRADES = "upgrades";
+    private static final String NBT_PARALLEL_UPGRADES = "parallel_upgrades";
     private static final String NBT_LINKED_MACHINES = "linkedMachines";
     private static final int MAX_PARALLEL_CARDS = 2;
     private static final int PARALLEL_MACHINES_PER_CARD = 16;
@@ -164,6 +165,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
         logic.updatePatterns();
         if (level != null && !level.isClientSide()) {
+            migrateHostUpgradesIntoLogic();
             normalizeLinkedMachines();
         }
     }
@@ -173,7 +175,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         super.saveAdditional(data, registries);
         logic.writeToNBT(data, registries);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
-        upgrades.writeToNBT(data, NBT_UPGRADES, registries);
+        if (getUpgrades() == upgrades) {
+            upgrades.writeToNBT(data, NBT_PARALLEL_UPGRADES, registries);
+        }
         data.putString(NBT_STATUS, lastStatusKey);
         data.putBoolean(NBT_SMART_DOUBLING, smartDoubling);
         long[] linked = new long[linkedMachines.size()];
@@ -197,7 +201,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
         logic.readFromNBT(data, registries);
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
-        upgrades.readFromNBT(data, NBT_UPGRADES, registries);
+        if (data.contains(NBT_PARALLEL_UPGRADES)) {
+            upgrades.readFromNBT(data, NBT_PARALLEL_UPGRADES, registries);
+        } else if (ExtendedAePlusCompat.patternLogicUpgrades(logic) == null) {
+            upgrades.readFromNBT(data, NBT_UPGRADES, registries);
+        }
         lastStatusKey = data.contains(NBT_STATUS) ? data.getString(NBT_STATUS) : "ready";
         smartDoubling = data.contains(NBT_SMART_DOUBLING) && data.getBoolean(NBT_SMART_DOUBLING);
         linkedMachines.clear();
@@ -323,8 +331,12 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     public void addAdditionalDrops(Level level, BlockPos pos, List<ItemStack> drops) {
         super.addAdditionalDrops(level, pos, drops);
         logic.addDrops(drops);
-        for (ItemStack upgrade : upgrades) {
-            drops.add(upgrade);
+        if (getUpgrades() == upgrades) {
+            for (ItemStack upgrade : upgrades) {
+                if (!upgrade.isEmpty()) {
+                    drops.add(upgrade);
+                }
+            }
         }
     }
 
@@ -339,6 +351,14 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     @Override
     public AECableType getCableConnectionType(Direction dir) {
         return AECableType.SMART;
+    }
+
+    @Override
+    public void setBlockState(BlockState state) {
+        super.setBlockState(state);
+        // PUSH_DIRECTION is not an AE orientation property, so wrenching must still refresh
+        // which sides expose the in-world grid node. Matches AE2 PatternProviderBlockEntity.
+        onGridConnectableSidesChanged();
     }
 
     @Override
@@ -372,7 +392,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     @Override
     public @Nullable InternalInventory getSubInventory(ResourceLocation id) {
         if (id.equals(ISegmentedInventory.UPGRADES)) {
-            return upgrades;
+            return getUpgrades();
         }
         return super.getSubInventory(id);
     }
@@ -550,7 +570,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         if (level != null && level.isClientSide()) {
             return visibleParallelCards;
         }
-        return Math.min(MAX_PARALLEL_CARDS, upgrades.getInstalledUpgrades(ModItems.PARALLEL_CARD.get()));
+        return Math.min(MAX_PARALLEL_CARDS, countInstalledParallelCards());
     }
 
     public int getMaxParallelMachines() {
@@ -1253,7 +1273,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 || "foundry_mixer".equals(plan.machineRole())
                 || "foundry_lid".equals(plan.machineRole())
                 || "casting_table".equals(plan.machineRole())
-                || "industrial_crucible".equals(plan.machineRole())) {
+                || "industrial_crucible".equals(plan.machineRole())
+                || "grindstone_drain".equals(plan.machineRole())) {
             return isBasinInsertOnlyPlan(plan);
         }
         if ("laser".equals(plan.machineRole())) {
@@ -1276,7 +1297,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                     && plan.actions().actions().stream().allMatch(SupplyActions.ItemInsertAction.class::isInstance);
         }
         if ("deployer".equals(plan.machineRole())) {
-            return plan.actions().actions().size() == 2
+            int size = plan.actions().actions().size();
+            return size >= 1 && size <= 2
                     && plan.actions().actions().stream().allMatch(SupplyActions.ItemInsertAction.class::isInstance);
         }
         if ("spout".equals(plan.machineRole())) {
@@ -1824,22 +1846,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 && job.roundTicks > 0
                 && !job.hasPendingDispatches()
                 && job.roundsStarted >= job.queuedPatterns
-                && !hasAnyItems(job.machinePos)
+                && !InventoryAccess.hasAnyItem(level, job.machinePos)
                 && !InventoryAccess.hasAnyFluid(level, job.machinePos)
                 && !hasCollectableOutput(job);
-    }
-
-    private boolean hasAnyItems(BlockPos pos) {
-        IItemHandler handler = itemHandler(pos);
-        if (handler == null) {
-            return false;
-        }
-        for (int slot = 0; slot < handler.getSlots(); slot++) {
-            if (!handler.getStackInSlot(slot).isEmpty()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean hasCollectableOutput(KineticJob job) {
@@ -2079,6 +2088,29 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     private void wakeTicker() {
         getMainNode().ifPresent((grid, node) -> grid.getTickManager().wakeDevice(node));
+    }
+
+    private int countInstalledParallelCards() {
+        int count = getUpgrades().getInstalledUpgrades(ModItems.PARALLEL_CARD.get());
+        if (getUpgrades() != upgrades) {
+            count += upgrades.getInstalledUpgrades(ModItems.PARALLEL_CARD.get());
+        }
+        return count;
+    }
+
+    private void migrateHostUpgradesIntoLogic() {
+        IUpgradeInventory fromLogic = ExtendedAePlusCompat.patternLogicUpgrades(logic);
+        if (fromLogic == null || fromLogic == upgrades) {
+            return;
+        }
+        for (int slot = 0; slot < fromLogic.size(); slot++) {
+            ItemStack stack = fromLogic.getStackInSlot(slot);
+            if (stack.isEmpty() || stack.getItem() != ModItems.PARALLEL_CARD.get()) {
+                continue;
+            }
+            ItemStack leftover = upgrades.addItems(stack);
+            fromLogic.setItemDirect(slot, leftover);
+        }
     }
 
     private void onUpgradesChanged() {

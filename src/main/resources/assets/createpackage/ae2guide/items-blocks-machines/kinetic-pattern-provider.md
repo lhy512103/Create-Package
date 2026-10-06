@@ -30,12 +30,13 @@ New jobs go to idle linked machines first.
 
 ## Supported targets
 
-* **Deployer**: processed item to the working position, held item into the deployer
+* **Deployer**: processed item to the working position, held item into the deployer. A non-consumed held item already placed in the deployer may be omitted from the pattern.
 * **Spout**: item to the working position, fluid into the spout
 * **Mechanical Press**: depot/belt or basin mode
 * **Mechanical Mixer**: basin recipes (items + fluids)
 * **Mechanical Saw**: sets filter from the primary item output; recovers from the fixed output side
 * **Millstone / Crushing**: recovers actual stacks from supported output inventories
+* **Create Enchantment Industry**: Mechanical Grindstone over a Grindstone Drain. Face either block; item outputs are recovered from the drain's ejection side (belt/depot or dropped items). The wheel and drain must spin in opposite directions.
 * **CreateMoreMachines**: same roles by registry-id suffix, using standard item/fluid capabilities
 * **Create Crafts & Additions**: Rolling Mill uses its internal inventory; an upward-facing Tesla Coil works over a Depot or Belt two blocks below it
 * **Create Diesel Generators**: Basin Lid feeds and collects from the Basin directly below it; Bulk Fermenter accepts mixed item/fluid pattern inputs through its multiblock capabilities

@@ -84,15 +84,19 @@ public class CreatePackagePatternProviderScreen<C extends PatternProviderMenu> e
         lockReason = new LockReason(this);
         widgets.add("lockReason", lockReason);
 
-        if (!menu.getSlots(SlotSemantics.UPGRADE).isEmpty() && menu.getTarget() instanceof PatternProviderLogicHost host) {
-            widgets.add("upgrades", new UpgradesPanel(menu.getSlots(SlotSemantics.UPGRADE), () ->
+        var upgradeSlots = menu.getSlots(SlotSemantics.UPGRADE).stream()
+                .filter(slot -> !(slot instanceof appeng.menu.slot.AppEngSlot appEngSlot) || appEngSlot.isSlotEnabled())
+                .toList();
+        if (!upgradeSlots.isEmpty() && menu.getTarget() instanceof PatternProviderLogicHost host) {
+            widgets.add("upgrades", new UpgradesPanel(upgradeSlots, () ->
                     appeng.api.upgrades.Upgrades.getTooltipLinesForMachine(host.getTerminalIcon().getItem())));
         }
         if (!menu.getSlots(SlotSemantics.TOOLBOX).isEmpty()) {
             var networkTool = NetworkToolItem.findNetworkToolInv(menu.getPlayer());
-            if (networkTool != null) {
-                widgets.add("toolbox", new ToolboxPanel(style, networkTool.getItemStack().getHoverName()));
-            }
+            Component toolboxName = networkTool != null
+                    ? networkTool.getItemStack().getHoverName()
+                    : GuiText.NetworkTool.text();
+            widgets.add("toolbox", new ToolboxPanel(style, toolboxName));
         }
     }
 
