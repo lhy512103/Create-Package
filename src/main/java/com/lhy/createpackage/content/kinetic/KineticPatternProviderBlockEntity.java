@@ -502,7 +502,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
         boolean didWork = returnInventoryToNetwork();
         if (!activeJobs.isEmpty()) {
-            didWork |= tickJobs();
+            didWork |= tickJobs(ticksSinceLastCall);
         }
         if (!activeJobs.isEmpty() || hasReturnInventoryWork()) {
             return didWork ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
@@ -796,6 +796,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             job.roundsStarted++;
             job.roundHasOutput = false;
             job.roundTicks = 0;
+            job.lastRefillAttemptTicks = 0;
             job.ticks = 0;
             if (debug) {
                 debugLog("push appended immediately machine={} role={} output={} amount={} remaining={} queued={} pending={}",
@@ -1038,15 +1039,19 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         return plan;
     }
 
-    private boolean tickJobs() {
+    private boolean tickJobs(int ticksSinceLastCall) {
         if (activeJobs.isEmpty() || level == null || level.isClientSide()) {
             return false;
         }
+        int step = Math.max(1, ticksSinceLastCall);
         boolean didWork = false;
         for (int i = 0; i < activeJobs.size(); i++) {
             KineticJob job = activeJobs.get(i);
-            job.ticks++;
-            job.roundTicks++;
+            job.ticks += step;
+            job.roundTicks += step;
+            if (job.pendingDispatchTicks > 0) {
+                job.pendingDispatchTicks = Math.max(0, job.pendingDispatchTicks - step);
+            }
             boolean collected = collectOutputs(job);
             didWork |= collected;
             if (collected && job.hasPendingDispatches()) {
@@ -1092,8 +1097,10 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 didWork = dispatchPendingPattern(job) || didWork;
             } else if (job.waitingForRefill()) {
                 didWork = retryRefillRound(job, collected) || didWork;
-            } else if (job.roundTicks > emptyOutputRefillTimeoutTicks()) {
-                didWork = startRefillRound(job, job.roundHasOutput ? "output_timeout" : "empty_output") || didWork;
+            } else if (!job.roundHasOutput
+                    && Config.enableProbabilisticEmptyRefill()
+                    && job.roundTicks > emptyOutputRefillTimeoutTicks()) {
+                didWork = startRefillRound(job, "empty_output") || didWork;
             }
             if (job.ticks > Config.kineticMaxJobTicks()) {
                 CreatePackage.LOGGER.warn("[Kinetic Pattern Provider @ {}] timed out waiting for {} x{} from {} at {}",
@@ -1115,7 +1122,6 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     private boolean dispatchPendingPattern(KineticJob job) {
         if (job.pendingDispatchTicks > 0) {
-            job.pendingDispatchTicks--;
             return false;
         }
         KineticJob.PendingDispatch pending = job.pendingDispatches.get(0);
@@ -1152,6 +1158,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         job.pendingDispatchTicks = 0;
         job.roundsStarted += batch.patternCount();
         job.roundTicks = 0;
+        job.lastRefillAttemptTicks = 0;
         job.roundHasOutput = false;
         rememberJobStatus(job, "working");
         if (debugLoggingEnabled()) {
@@ -1819,6 +1826,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     private static void recordCollectedOutput(KineticJob job, AEKey key, long amount, OutputCollection collected) {
         job.roundHasOutput = true;
         job.roundTicks = 0;
+        job.lastRefillAttemptTicks = 0;
         if (key.equals(job.primaryOutput)) {
             job.remaining = Math.max(0, job.remaining - amount);
             collected.primary += amount;
@@ -1909,7 +1917,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         if (targetChanged && "refill_target_full".equals(job.statusKey)) {
             return startRefillRound(job, "target_freed");
         }
-        if (job.roundTicks % Config.refillRetryTicks() != 0) {
+        if (job.roundTicks - job.lastRefillAttemptTicks < Config.refillRetryTicks()) {
             return false;
         }
         return startRefillRound(job, job.statusKey);
@@ -1918,16 +1926,19 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     private boolean startRefillRound(KineticJob job, String reason) {
         if (job.refillInputs.isEmpty()) {
             rememberJobStatus(job, "refill_unavailable");
+            job.lastRefillAttemptTicks = job.roundTicks;
             return false;
         }
 
         MachinePlanFactory.Plan refill = createPlanAt(job.machinePos, job.primaryOutput,
                 primaryPatternOutputAmount(job), job.patternOutputs, job.refillInputs);
         if (refill == null) {
+            job.lastRefillAttemptTicks = job.roundTicks;
             return false;
         }
         if (!Objects.equals(refill.outputEndpoints(), job.outputEndpoints)) {
             rememberJobStatus(job, "missing_output");
+            job.lastRefillAttemptTicks = job.roundTicks;
             return false;
         }
 
@@ -1935,11 +1946,13 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             long available = extractFromNetwork(input.what(), input.amount(), Actionable.SIMULATE);
             if (available < input.amount()) {
                 rememberJobStatus(job, "waiting_refill_inputs");
+                job.lastRefillAttemptTicks = job.roundTicks;
                 return false;
             }
         }
         if (!refill.simulate()) {
             rememberJobStatus(job, "refill_target_full");
+            job.lastRefillAttemptTicks = job.roundTicks;
             return false;
         }
 
@@ -1950,6 +1963,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                     insertIntoNetwork(input.what(), extracted, Actionable.MODULATE);
                 }
                 rememberJobStatus(job, "waiting_refill_inputs");
+                job.lastRefillAttemptTicks = job.roundTicks;
                 return false;
             }
         }
@@ -1958,12 +1972,14 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 insertIntoNetwork(input.what(), input.amount(), Actionable.MODULATE);
             }
             rememberJobStatus(job, "refill_target_full");
+            job.lastRefillAttemptTicks = job.roundTicks;
             return false;
         }
 
         job.markOutputStart(level.getGameTime());
         job.roundsStarted++;
         job.roundTicks = 0;
+        job.lastRefillAttemptTicks = 0;
         job.roundHasOutput = false;
         rememberJobStatus(job, "working");
         CreatePackage.LOGGER.info("[Kinetic Pattern Provider @ {}] refilled {} after {} (round {})",
@@ -2330,6 +2346,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         private static final String NBT_ROLE = "role";
         private static final String NBT_TICKS = "ticks";
         private static final String NBT_ROUND_TICKS = "roundTicks";
+        private static final String NBT_LAST_REFILL_ATTEMPT_TICKS = "lastRefillAttemptTicks";
         private static final String NBT_ROUNDS_STARTED = "roundsStarted";
         private static final String NBT_ROUND_HAS_OUTPUT = "roundHasOutput";
         private static final String NBT_JOB_STATUS = "jobStatus";
@@ -2358,6 +2375,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         private final boolean collectUnexpectedOutputs;
         private int ticks;
         private int roundTicks;
+        private int lastRefillAttemptTicks;
         private int roundsStarted;
         private boolean roundHasOutput;
         private int queuedPatterns = 1;
@@ -2419,6 +2437,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             tag.putString(NBT_ROLE, machineRole);
             tag.putInt(NBT_TICKS, ticks);
             tag.putInt(NBT_ROUND_TICKS, roundTicks);
+            tag.putInt(NBT_LAST_REFILL_ATTEMPT_TICKS, lastRefillAttemptTicks);
             tag.putInt(NBT_ROUNDS_STARTED, roundsStarted);
             tag.putInt("queuedPatterns", queuedPatterns);
             tag.putBoolean(NBT_ROUND_HAS_OUTPUT, roundHasOutput);
@@ -2471,6 +2490,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                     tag.getBoolean(NBT_COLLECT_UNEXPECTED_OUTPUTS));
             job.ticks = tag.getInt(NBT_TICKS);
             job.roundTicks = tag.getInt(NBT_ROUND_TICKS);
+            job.lastRefillAttemptTicks = tag.getInt(NBT_LAST_REFILL_ATTEMPT_TICKS);
             job.roundsStarted = tag.getInt(NBT_ROUNDS_STARTED);
             job.queuedPatterns = tag.contains("queuedPatterns") ? Math.max(1, tag.getInt("queuedPatterns")) : 1;
             job.roundHasOutput = tag.getBoolean(NBT_ROUND_HAS_OUTPUT);

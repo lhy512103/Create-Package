@@ -223,7 +223,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
         @Override
         public TickRateModulation tickingRequest(IGridNode node, int ticksSinceLastCall) {
             if (hasDistributorJob()) {
-                return tickDistributorJob() ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
+                return tickDistributorJob(ticksSinceLastCall) ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
             }
             return TickRateModulation.SLEEP;
         }

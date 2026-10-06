@@ -10,6 +10,7 @@
 - Fixed: Extended Kinetic Pattern Provider disconnecting from AE cables after reload or wrenching.
 - Fixed: Parallel cards not matching between the upgrade GUI and sneak-insert.
 - Fixed: MEST spliced-terminal network-tool slots missing on both Kinetic Pattern Provider screens.
+- Fixed: Package distributor and kinetic refill waits now use real game ticks, so empty-output and retry intervals match the config.
 
 ### 中文
 
@@ -19,6 +20,7 @@
 - 修复：扩展动力样板供应器重进或扳手转向后与 AE 线缆断连。
 - 修复：并行卡界面显示与实际生效不一致。
 - 修复：两个动力样板供应器界面不显示 MEST 终端网络工具槽。
+- 修复：封包分发器和动力样板供应器的空产出等待/补刷重试改为按游戏真实 tick 计时，配置对所有类型生效。
 
 ## 2026-07-25
 

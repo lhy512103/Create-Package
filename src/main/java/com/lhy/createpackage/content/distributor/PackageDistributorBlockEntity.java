@@ -617,9 +617,14 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     protected final boolean tickDistributorJob() {
+        return tickDistributorJob(1);
+    }
+
+    protected final boolean tickDistributorJob(int ticksSinceLastCall) {
         if (activeJobs.isEmpty() || level == null || level.isClientSide()) {
             return false;
         }
+        int step = Math.max(1, ticksSinceLastCall);
 
         boolean didWork = false;
         boolean finished = false;
@@ -644,7 +649,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 didWork = true;
                 continue;
             }
-            didWork = tickJob(job) || didWork;
+            didWork = tickJob(job, step) || didWork;
             if (job.primaryRemaining <= 0 && job.pendingNetworkOutputs.isEmpty()) {
                 clearMissingRefillInput(job);
                 didWork = returnPendingSupplies(job) || didWork;
@@ -671,9 +676,9 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return grid != null && grid.getCraftingService().getRequestedAmount(job.primaryOutput) <= 0;
     }
 
-    private boolean tickJob(DistributionJob job) {
-        job.ticks++;
-        job.roundTicks++;
+    private boolean tickJob(DistributionJob job, int step) {
+        job.ticks += step;
+        job.roundTicks += step;
         boolean waitingForRefill = job.waitingForRefill();
         boolean waitingForReflow = job.waitingForReflow();
         boolean waitingForTargetSpace = job.waitingForTargetSpace();
@@ -783,7 +788,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private boolean retryRefillRound(DistributionJob job) {
-        if (job.roundTicks % Config.refillRetryTicks() != 0) {
+        if (job.roundTicks - job.lastRefillAttemptTicks < Config.refillRetryTicks()) {
             return false;
         }
         return startRefillRound(job, job.statusKey);
@@ -934,6 +939,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         job.awaitingFinalOutput = nextPassIsFinal;
         job.roundHasOutput = false;
         job.roundTicks = 0;
+        job.lastRefillAttemptTicks = 0;
         rememberJobStatus(job, "working");
         CreatePackage.LOGGER.debug("[Distributor @ {}] reflowed transitional item for recipe {} to {} (final pass: {})",
                 getBlockPos(), job.recipeId, job.inputPos, nextPassIsFinal);
@@ -982,11 +988,13 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     private boolean startRefillRound(DistributionJob job, String reason) {
         if (job.refillInputs.isEmpty()) {
             rememberJobStatus(job, "refill_unavailable");
+            job.lastRefillAttemptTicks = job.roundTicks;
             return false;
         }
 
         RefillContext context = createRefillContext(job, job.refillInputs, job.route);
         if (context == null) {
+            job.lastRefillAttemptTicks = job.roundTicks;
             return false;
         }
 
@@ -1000,6 +1008,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 }
                 setMissingRefillInput(job, missing, reason);
                 rememberJobStatus(job, "waiting_refill_inputs");
+                job.lastRefillAttemptTicks = job.roundTicks;
                 return false;
             }
         }
@@ -1011,6 +1020,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                         + "inputs yet", getBlockPos(), job.recipeId, reason);
             }
             rememberJobStatus(job, "refill_target_full");
+            job.lastRefillAttemptTicks = job.roundTicks;
             return false;
         }
 
@@ -1025,6 +1035,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 }
                 setMissingRefillInput(job, missing, reason);
                 rememberJobStatus(job, "waiting_refill_inputs");
+                job.lastRefillAttemptTicks = job.roundTicks;
                 return false;
             }
         }
@@ -1039,12 +1050,14 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             rememberJobStatus(job, "refill_target_full");
             rememberFailure("refill_target_full",
                     "action #" + refillExecuted.failedIndex() + " " + refillExecuted.failedAction(), job.route, -1);
+            job.lastRefillAttemptTicks = job.roundTicks;
             return false;
         }
 
         job.pendingSupplies.addAll(context.pendingSupplies());
         job.roundsStarted++;
         job.roundTicks = 0;
+        job.lastRefillAttemptTicks = 0;
         job.roundHasOutput = false;
         job.awaitingFinalOutput = job.loops <= 1;
         rememberJobStatus(job, "working");
@@ -1664,6 +1677,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private static final String NBT_LOOPS = "loops";
         private static final String NBT_TICKS = "ticks";
         private static final String NBT_ROUND_TICKS = "roundTicks";
+        private static final String NBT_LAST_REFILL_ATTEMPT_TICKS = "lastRefillAttemptTicks";
         private static final String NBT_ROUNDS_STARTED = "roundsStarted";
         private static final String NBT_ROUND_HAS_OUTPUT = "roundHasOutput";
         private static final String NBT_AWAITING_FINAL_OUTPUT = "awaitingFinalOutput";
@@ -1698,6 +1712,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         private final List<BlockPos> route;
         private int ticks;
         private int roundTicks;
+        private int lastRefillAttemptTicks;
         private long roundsStarted;
         private boolean roundHasOutput;
         private boolean awaitingFinalOutput;
@@ -1751,6 +1766,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             tag.putInt(NBT_LOOPS, loops);
             tag.putInt(NBT_TICKS, ticks);
             tag.putInt(NBT_ROUND_TICKS, roundTicks);
+            tag.putInt(NBT_LAST_REFILL_ATTEMPT_TICKS, lastRefillAttemptTicks);
             tag.putLong(NBT_ROUNDS_STARTED, roundsStarted);
             tag.putBoolean(NBT_ROUND_HAS_OUTPUT, roundHasOutput);
             tag.putBoolean(NBT_AWAITING_FINAL_OUTPUT, awaitingFinalOutput);
@@ -1847,6 +1863,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             }
             job.ticks = tag.getInt(NBT_TICKS);
             job.roundTicks = tag.getInt(NBT_ROUND_TICKS);
+            job.lastRefillAttemptTicks = tag.getInt(NBT_LAST_REFILL_ATTEMPT_TICKS);
             job.roundsStarted = tag.contains(NBT_ROUNDS_STARTED) ? tag.getLong(NBT_ROUNDS_STARTED) : 1;
             job.roundHasOutput = tag.getBoolean(NBT_ROUND_HAS_OUTPUT);
             job.awaitingFinalOutput = tag.contains(NBT_AWAITING_FINAL_OUTPUT)
@@ -1890,7 +1907,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             if (activeJobs.isEmpty()) {
                 return TickRateModulation.SLEEP;
             }
-            return tickDistributorJob() ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
+            return tickDistributorJob(ticksSinceLastCall) ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
         }
     }
 }

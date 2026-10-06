@@ -13,8 +13,9 @@ public class Config {
             .define("enableDebugLogging", false);
 
     public static final ModConfigSpec.IntValue EMPTY_OUTPUT_REFILL_TIMEOUT_TICKS = BUILDER
-            .comment("How long a package distributor waits after starting a sequenced-assembly round before treating "
-                    + "no output as an empty probability result and attempting a refill.")
+            .comment("How long package distributors and kinetic pattern providers wait after starting a craft round "
+                    + "before treating no output as an empty probability result and attempting a refill. "
+                    + "This is real game ticks, independent of AE2's slower idle tick rate.")
             .defineInRange("emptyOutputRefillTimeoutTicks", 20 * 60, 20, 20 * 60 * 30);
 
     public static final ModConfigSpec.IntValue MISSING_REFILL_NOTICE_INTERVAL_SECONDS = BUILDER
@@ -35,8 +36,8 @@ public class Config {
             .defineInRange("kineticMaxJobTicks", 20 * 60 * 5, 20 * 30, 20 * 60 * 60);
 
     public static final ModConfigSpec.IntValue REFILL_RETRY_TICKS = BUILDER
-            .comment("How often craft bridges retry a blocked probabilistic refill while waiting for materials or "
-                    + "target space.")
+            .comment("How often package distributors and kinetic pattern providers retry a blocked probabilistic "
+                    + "refill while waiting for materials or target space. This is real game ticks.")
             .defineInRange("refillRetryTicks", 20 * 5, 5, 20 * 60);
 
     public static final ModConfigSpec.IntValue PENDING_DISPATCH_RETRY_TICKS = BUILDER
