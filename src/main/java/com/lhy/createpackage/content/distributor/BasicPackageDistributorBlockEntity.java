@@ -15,6 +15,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -25,6 +26,10 @@ import appeng.api.config.LockCraftingMode;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.inventories.InternalInventory;
+import appeng.api.inventories.ISegmentedInventory;
+import appeng.api.upgrades.IUpgradeInventory;
+import appeng.api.upgrades.IUpgradeableObject;
+import appeng.api.upgrades.UpgradeInventories;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
@@ -50,7 +55,7 @@ import appeng.util.SettingsFrom;
  * from {@link PackageDistributorBlockEntity}; no adjacent pattern provider is required.
  */
 public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockEntity
-        implements PatternProviderLogicHost {
+        implements PatternProviderLogicHost, IUpgradeableObject {
 
     private final InternalPatternProviderLogic logic = new InternalPatternProviderLogic();
     private final CombinedTicker combinedTicker = new CombinedTicker();
@@ -107,6 +112,20 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     @Override
     public PatternProviderLogic getLogic() {
         return logic;
+    }
+
+    @Override
+    public IUpgradeInventory getUpgrades() {
+        IUpgradeInventory fromLogic = ExtendedAePlusCompat.patternLogicUpgrades(logic);
+        return fromLogic != null ? fromLogic : UpgradeInventories.empty();
+    }
+
+    @Override
+    public @Nullable InternalInventory getSubInventory(ResourceLocation id) {
+        if (id.equals(ISegmentedInventory.UPGRADES)) {
+            return getUpgrades();
+        }
+        return super.getSubInventory(id);
     }
 
     @Override

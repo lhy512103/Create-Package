@@ -11,6 +11,7 @@
 - Fixed: Parallel cards not matching between the upgrade GUI and sneak-insert.
 - Fixed: MEST spliced-terminal network-tool slots missing on both Kinetic Pattern Provider screens.
 - Fixed: Package distributor and kinetic refill waits now use real game ticks, so empty-output and retry intervals match the config.
+- Fixed: Basic and Advanced Package Distributor upgrade slots now share the same inventory as sneak-insert, and show MEST network-tool slots.
 
 ### 中文
 
@@ -21,6 +22,7 @@
 - 修复：并行卡界面显示与实际生效不一致。
 - 修复：两个动力样板供应器界面不显示 MEST 终端网络工具槽。
 - 修复：封包分发器和动力样板供应器的空产出等待/补刷重试改为按游戏真实 tick 计时，配置对所有类型生效。
+- 修复：基础/高级封包分发器升级槽与蹲下右键放入使用同一库存，并显示 MEST 网络工具槽。
 
 ## 2026-07-25
 
