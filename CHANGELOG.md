@@ -14,6 +14,7 @@
 - Fixed: Basic and Advanced Package Distributor upgrade slots now share the same inventory as sneak-insert, and show MEST network-tool slots.
 - Added: Goggles show refill-retry countdown on package distributors and both kinetic pattern providers.
 - Added: Missing refill inputs with network patterns are auto-ordered after each failed refill retry.
+- Added: Refill wait ends early when a watched AE crafting job for the missing input finishes.
 
 ### 中文
 
@@ -27,6 +28,7 @@
 - 修复：基础/高级封包分发器升级槽与蹲下右键放入使用同一库存，并显示 MEST 网络工具槽。
 - 新增：封包分发器和两种动力样板供应器护目镜显示补刷重试倒计时。
 - 新增：补刷缺料且网络已有样板时自动下单，每次重试失败后再尝试。
+- 新增：监听到缺料的 AE 合成任务完成后立即结束等待并尝试补刷。
 
 ## 2026-07-25
 
