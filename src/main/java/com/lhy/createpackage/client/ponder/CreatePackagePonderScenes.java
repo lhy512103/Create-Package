@@ -25,13 +25,13 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import appeng.block.crafting.PushDirection;
 
 /**
- * Ponder scenes built from Create Package blocks so captions match the on-screen setup.
+ * Ponder scenes placed to match Create's camera (south-east isometric).
  *
- * <p>Storyboards only supply a Create base plate; scene content is placed with {@code setBlock}.
- * Create Deployers sit two blocks above their depot, leaving room for the extended hand.
+ * <p>x increases right, z increases toward the camera, y is up. Host blocks sit on the sides or
+ * at the back so they do not cover the machines. Overlay {@code text()} strings must match
+ * {@code en_us.json} so {@code text_1/2/3} translations stay aligned with each keyframe.
  */
 public final class CreatePackagePonderScenes {
-    /** Small Create schematic used only for the base plate. */
     private static final ResourceLocation BASE = create("gauges");
 
     private CreatePackagePonderScenes() {
@@ -46,7 +46,7 @@ public final class CreatePackagePonderScenes {
                 .addStoryBoard(BASE, CreatePackagePonderScenes::packageDistributors,
                         CreatePackagePonderTags.CREATE_PACKAGE);
 
-        helper.forComponents(id("kinetic_pattern_provider"))
+        helper.forComponents(id("kinetic_pattern_provider"), id("extended_kinetic_pattern_provider"))
                 .addStoryBoard(BASE, CreatePackagePonderScenes::kineticPatternProvider,
                         CreatePackagePonderTags.CREATE_PACKAGE);
 
@@ -68,64 +68,72 @@ public final class CreatePackagePonderScenes {
         scene.configureBasePlate(0, 0, 5);
         scene.scaleSceneView(0.9f);
         scene.showBasePlate();
-        // Storyboard only provides the plate; clear leftover schematic blocks above it.
-        // Do not hideSection here: unshown sections have no WorldSectionElement and crash Ponder.
         scene.world().setBlocks(util.select().fromTo(0, 1, 0, 4, 4, 4), Blocks.AIR.defaultBlockState(), false);
-        scene.idle(10);
+        scene.idle(8);
 
-        // Route: input depot -> deployer two blocks above middle depot -> output depot
-        BlockPos distributor = util.grid().at(2, 1, 4);
-        BlockPos inputDepot = util.grid().at(1, 1, 2);
-        BlockPos processDepot = util.grid().at(2, 1, 2);
-        BlockPos deployer = processDepot.above(2); // y=3; y=2 is the hand workspace
+        BlockPos regular = util.grid().at(1, 1, 0);
+        BlockPos basic = util.grid().at(2, 1, 0);
+        BlockPos advanced = util.grid().at(3, 1, 0);
+        BlockPos inputDepot = util.grid().at(0, 1, 2);
+        BlockPos deployDepot = util.grid().at(1, 1, 2);
+        BlockPos spoutDepot = util.grid().at(2, 1, 2);
         BlockPos outputDepot = util.grid().at(3, 1, 2);
+        BlockPos deployer = deployDepot.above(2);
+        BlockPos spout = spoutDepot.above(2);
 
-        scene.world().setBlock(distributor, ModBlocks.PACKAGE_DISTRIBUTOR.get().defaultBlockState(), false);
-        scene.world().showSection(util.select().position(distributor), Direction.DOWN);
-        scene.idle(10);
-        scene.overlay().showOutline(PonderPalette.BLUE, "distributor", util.select().position(distributor), 60);
+        scene.world().setBlock(regular, ModBlocks.PACKAGE_DISTRIBUTOR.get().defaultBlockState(), false);
+        scene.world().setBlock(basic, ModBlocks.BASIC_PACKAGE_DISTRIBUTOR.get().defaultBlockState(), false);
+        scene.world().setBlock(advanced, ModBlocks.ADVANCED_PACKAGE_DISTRIBUTOR.get().defaultBlockState(), false);
+        scene.world().showSection(util.select().fromTo(regular, advanced), Direction.DOWN);
+        scene.idle(8);
+        scene.overlay().showOutline(PonderPalette.BLUE, "distributors", util.select().fromTo(regular, advanced), 55);
         scene.overlay().showText(70)
                 .attachKeyFrame()
                 .text("Package Distributors hand a full AE2 processing pattern to a real Create sequenced assembly line.")
-                .pointAt(util.vector().topOf(distributor))
+                .pointAt(util.vector().topOf(basic))
                 .placeNearTarget();
-        scene.idle(80);
+        scene.idle(75);
 
         scene.world().setBlock(inputDepot, createBlockState("depot"), false);
-        scene.world().setBlock(processDepot, createBlockState("depot"), false);
-        scene.world().setBlock(deployer, createDeployerFacing(Direction.DOWN), false);
+        scene.world().setBlock(deployDepot, createBlockState("depot"), false);
+        scene.world().setBlock(spoutDepot, createBlockState("depot"), false);
         scene.world().setBlock(outputDepot, createBlockState("depot"), false);
+        scene.world().setBlock(deployer, facingDown("deployer"), false);
+        scene.world().setBlock(spout, createBlockState("spout"), false);
         Selection input = util.select().position(inputDepot);
-        Selection processing = util.select().position(processDepot)
-                .add(util.select().position(deployer));
+        Selection machines = util.select().position(deployDepot)
+                .add(util.select().position(deployer))
+                .add(util.select().position(spoutDepot))
+                .add(util.select().position(spout));
         Selection output = util.select().position(outputDepot);
-        scene.world().showSection(input, Direction.DOWN);
-        scene.idle(5);
-        scene.world().showSection(processing, Direction.DOWN);
-        scene.idle(5);
-        scene.world().showSection(output, Direction.DOWN);
-        scene.idle(10);
-
-        scene.overlay().showOutline(PonderPalette.GREEN, "input", input, 50);
-        scene.overlay().showOutline(PonderPalette.WHITE, "machine", processing, 50);
-        scene.overlay().showOutline(PonderPalette.OUTPUT, "output", output, 50);
+        scene.world().showSection(util.select().fromTo(inputDepot, outputDepot)
+                .add(util.select().position(deployer))
+                .add(util.select().position(spout)), Direction.DOWN);
+        scene.idle(8);
+        scene.overlay().showOutline(PonderPalette.GREEN, "input", input, 60);
+        scene.overlay().showOutline(PonderPalette.WHITE, "machines", machines, 60);
+        scene.overlay().showOutline(PonderPalette.OUTPUT, "output", output, 60);
         scene.overlay().showText(80)
                 .attachKeyFrame()
                 .text("The route starts at an input depot or belt, visits deployers and spouts in order, and ends at the recovery position.")
-                .pointAt(util.vector().centerOf(deployer))
+                .pointAt(util.vector().blockSurface(deployer, Direction.WEST))
                 .placeNearTarget();
-        scene.idle(20);
-        scene.world().moveDeployer(deployer, 1, 20);
-        scene.idle(20);
-        scene.world().moveDeployer(deployer, -1, 20);
-        scene.idle(30);
+        scene.idle(16);
+        scene.world().moveDeployer(deployer, 1, 16);
+        scene.idle(16);
+        scene.world().moveDeployer(deployer, -1, 16);
+        scene.idle(40);
 
-        scene.overlay().showControls(util.vector().topOf(distributor), Pointing.DOWN, 40)
-                .withItem(new ItemStack(ModItems.MACHINE_LINKER.get()));
+        scene.overlay().showControls(util.vector().topOf(basic), Pointing.DOWN, 45)
+                .withItem(aeItem("processing_pattern"));
+        scene.overlay().showControls(util.vector().topOf(advanced), Pointing.DOWN, 45)
+                .withItem(new ItemStack(ModItems.MECHANICAL_PACKAGE_PATTERN.get()));
+        scene.overlay().showOutline(PonderPalette.GREEN, "basic", util.select().position(basic), 55);
+        scene.overlay().showOutline(PonderPalette.OUTPUT, "advanced", util.select().position(advanced), 55);
         scene.overlay().showText(80)
                 .attachKeyFrame()
                 .text("Basic Distributors store AE2 patterns directly. Advanced Distributors read the saved route from each Mechanical Package Pattern.")
-                .pointAt(util.vector().topOf(distributor))
+                .pointAt(util.vector().topOf(advanced))
                 .placeNearTarget();
         scene.idle(90);
         scene.markAsFinished();
@@ -138,62 +146,78 @@ public final class CreatePackagePonderScenes {
         scene.scaleSceneView(0.9f);
         scene.showBasePlate();
         scene.world().setBlocks(util.select().fromTo(0, 1, 0, 4, 4, 4), Blocks.AIR.defaultBlockState(), false);
-        scene.idle(10);
+        scene.idle(8);
 
-        // The provider must be directly adjacent to the machine block, not its working depot.
-        BlockPos machineDepot = util.grid().at(2, 1, 2);
-        BlockPos machine = machineDepot.above(2);
-        BlockPos provider = util.grid().at(2, 3, 3);
-        BlockPos supportBottom = util.grid().at(2, 1, 3);
-        BlockPos supportTop = supportBottom.above();
+        BlockPos depot = util.grid().at(2, 1, 2);
+        BlockPos machine = depot.above(2);
+        BlockPos provider = util.grid().at(1, 3, 2);
+        BlockPos casingLow = util.grid().at(1, 1, 2);
+        BlockPos casingMid = util.grid().at(1, 2, 2);
         BlockPos extraDepot = util.grid().at(3, 1, 2);
         BlockPos extraMachine = extraDepot.above(2);
 
-        scene.world().setBlock(supportBottom, createBlockState("andesite_casing"), false);
-        scene.world().setBlock(supportTop, createBlockState("andesite_casing"), false);
+        scene.world().setBlock(casingLow, createBlockState("andesite_casing"), false);
+        scene.world().setBlock(casingMid, createBlockState("andesite_casing"), false);
         scene.world().setBlock(provider, ModBlocks.KINETIC_PATTERN_PROVIDER.get().defaultBlockState()
-                .setValue(KineticPatternProviderBlock.PUSH_DIRECTION, PushDirection.NORTH), false);
-        scene.world().showSection(util.select().fromTo(supportBottom, provider), Direction.DOWN);
-        scene.idle(10);
-        scene.overlay().showOutline(PonderPalette.BLUE, "provider", util.select().position(provider), 60);
+                .setValue(KineticPatternProviderBlock.PUSH_DIRECTION, PushDirection.EAST), false);
+        scene.world().setBlock(depot, createBlockState("depot"), false);
+        scene.world().setBlock(machine, facingDown("deployer"), false);
+        Selection station = util.select().fromTo(casingLow, provider)
+                .add(util.select().position(depot))
+                .add(util.select().position(machine));
+        scene.world().showSection(station, Direction.DOWN);
+        scene.idle(8);
+        scene.overlay().showOutline(PonderPalette.BLUE, "provider", util.select().position(provider), 55);
+        scene.overlay().showOutline(PonderPalette.GREEN, "machine", util.select().position(machine)
+                .add(util.select().position(depot)), 55);
         scene.overlay().showText(70)
                 .attachKeyFrame()
-                .text("Place the Kinetic Pattern Provider directly beside a Create machine and set the target side with a wrench.")
-                .pointAt(util.vector().centerOf(provider))
+                .text("Kinetic Pattern Providers face one Create machine and supply its working position, held items, or fluids.")
+                .pointAt(util.vector().blockSurface(provider, Direction.EAST))
                 .placeNearTarget();
-        scene.idle(80);
-
-        scene.world().setBlock(machineDepot, createBlockState("depot"), false);
-        scene.world().setBlock(machine, createDeployerFacing(Direction.DOWN), false);
-        Selection primaryStation = util.select().position(machineDepot)
-                .add(util.select().position(machine));
-        scene.world().showSection(primaryStation, Direction.DOWN);
-        scene.overlay().showOutline(PonderPalette.GREEN, "primary_machine", primaryStation, 60);
-        scene.overlay().showText(75)
-                .attachKeyFrame()
-                .text("The target is the adjacent machine block; the Depot two blocks below is its working position.")
-                .pointAt(util.vector().centerOf(machine))
-                .placeNearTarget();
-        scene.idle(20);
-        scene.world().moveDeployer(machine, 1, 20);
-        scene.idle(20);
-        scene.world().moveDeployer(machine, -1, 20);
-        scene.idle(25);
+        scene.idle(16);
+        scene.world().moveDeployer(machine, 1, 16);
+        scene.idle(16);
+        scene.world().moveDeployer(machine, -1, 16);
+        scene.idle(30);
 
         scene.world().setBlock(extraDepot, createBlockState("depot"), false);
-        scene.world().setBlock(extraMachine, createDeployerFacing(Direction.DOWN), false);
-        Selection extraStation = util.select().position(extraDepot)
-                .add(util.select().position(extraMachine));
-        scene.world().showSection(extraStation, Direction.DOWN);
+        scene.world().setBlock(extraMachine, facingDown("deployer"), false);
+        scene.world().showSection(util.select().position(extraDepot).add(util.select().position(extraMachine)),
+                Direction.DOWN);
+        scene.overlay().showControls(util.vector().topOf(provider), Pointing.DOWN, 40)
+                .withItem(createItem("wrench"));
+        scene.idle(20);
         scene.overlay().showControls(util.vector().topOf(provider), Pointing.DOWN, 40)
                 .withItem(new ItemStack(ModItems.PARALLEL_CARD.get()));
         scene.overlay().showControls(util.vector().topOf(extraMachine), Pointing.DOWN, 40)
                 .withItem(new ItemStack(ModItems.MACHINE_LINKER.get()));
-        scene.overlay().showOutline(PonderPalette.OUTPUT, "linked_machine", extraStation, 60);
+        scene.overlay().showOutline(PonderPalette.OUTPUT, "linked", util.select().position(extraDepot)
+                .add(util.select().position(extraMachine)), 55);
         scene.overlay().showText(80)
                 .attachKeyFrame()
-                .text("Parallel Cards unlock extra matching machines; use the Machine Linker to register each additional machine.")
+                .text("Set the target side with a wrench. Add Parallel Cards and link matching machines with the Machine Linker for multi-machine dispatch.")
                 .pointAt(util.vector().centerOf(extraMachine))
+                .placeNearTarget();
+        scene.idle(90);
+
+        scene.world().setBlocks(util.select().fromTo(1, 1, 2, 3, 3, 2), Blocks.AIR.defaultBlockState(), false);
+        BlockPos millstone = util.grid().at(2, 1, 2);
+        BlockPos millOutput = util.grid().at(2, 1, 3);
+        BlockPos millProvider = util.grid().at(1, 1, 2);
+        scene.world().setBlock(millstone, createBlockState("millstone"), false);
+        scene.world().setBlock(millOutput, createBlockState("depot"), false);
+        scene.world().setBlock(millProvider, ModBlocks.KINETIC_PATTERN_PROVIDER.get().defaultBlockState()
+                .setValue(KineticPatternProviderBlock.PUSH_DIRECTION, PushDirection.EAST), false);
+        Selection recovery = util.select().position(millstone)
+                .add(util.select().position(millOutput))
+                .add(util.select().position(millProvider));
+        scene.world().showSection(recovery, Direction.DOWN);
+        scene.overlay().showOutline(PonderPalette.OUTPUT, "recovery", util.select().position(millOutput), 60);
+        scene.overlay().showText(80)
+                .attachKeyFrame()
+                .text("Saws, millstones, and crushing wheels still need a recoverable output belt, depot, or inventory at the machine output.")
+                .pointAt(util.vector().topOf(millOutput))
                 .placeNearTarget();
         scene.idle(90);
         scene.markAsFinished();
@@ -206,40 +230,42 @@ public final class CreatePackagePonderScenes {
         scene.scaleSceneView(0.9f);
         scene.showBasePlate();
         scene.world().setBlocks(util.select().fromTo(0, 1, 0, 4, 4, 4), Blocks.AIR.defaultBlockState(), false);
-        scene.idle(10);
+        scene.idle(8);
 
-        // Ordered route on three depots: input -> press two blocks above depot -> output
-        BlockPos distributor = util.grid().at(2, 1, 4);
-        BlockPos inputDepot = util.grid().at(1, 1, 2);
-        BlockPos processDepot = util.grid().at(2, 1, 2);
-        BlockPos press = processDepot.above(2);
-        BlockPos outputDepot = util.grid().at(3, 1, 2);
+        BlockPos host = util.grid().at(4, 1, 2);
+        BlockPos inputDepot = util.grid().at(0, 1, 2);
+        BlockPos pressDepot = util.grid().at(1, 1, 2);
+        BlockPos press = pressDepot.above(2);
+        BlockPos outputDepot = util.grid().at(2, 1, 2);
 
-        scene.world().setBlock(distributor, ModBlocks.BASIC_PACKAGE_DISTRIBUTOR.get().defaultBlockState(), false);
-        scene.world().showSection(util.select().position(distributor), Direction.DOWN);
-        scene.idle(10);
-
+        scene.world().setBlock(host, ModBlocks.BASIC_PACKAGE_DISTRIBUTOR.get().defaultBlockState(), false);
         scene.world().setBlock(inputDepot, createBlockState("depot"), false);
-        scene.world().setBlock(processDepot, createBlockState("depot"), false);
-        scene.world().setBlock(press, createPressFacing(Direction.WEST), false);
+        scene.world().setBlock(pressDepot, createBlockState("depot"), false);
+        scene.world().setBlock(press, horizontalFacing("mechanical_press", Direction.WEST), false);
         scene.world().setBlock(outputDepot, createBlockState("depot"), false);
         Selection route = util.select().position(inputDepot)
-                .add(util.select().position(processDepot))
+                .add(util.select().position(pressDepot))
                 .add(util.select().position(press))
                 .add(util.select().position(outputDepot));
-        scene.world().showSection(route, Direction.DOWN);
-        scene.idle(10);
+        scene.world().showSection(util.select().position(host).add(route), Direction.DOWN);
+        scene.idle(8);
 
-        scene.overlay().showControls(util.vector().topOf(inputDepot), Pointing.DOWN, 35)
+        scene.overlay().showControls(util.vector().topOf(host), Pointing.DOWN, 30)
                 .withItem(new ItemStack(ModItems.MACHINE_LINKER.get()));
-        scene.overlay().showControls(util.vector().topOf(press), Pointing.DOWN, 35)
+        scene.idle(12);
+        scene.overlay().showControls(util.vector().topOf(inputDepot), Pointing.DOWN, 25)
                 .withItem(new ItemStack(ModItems.MACHINE_LINKER.get()));
-        scene.overlay().showControls(util.vector().topOf(outputDepot), Pointing.DOWN, 35)
+        scene.idle(8);
+        scene.overlay().showControls(util.vector().topOf(press), Pointing.DOWN, 25)
                 .withItem(new ItemStack(ModItems.MACHINE_LINKER.get()));
+        scene.idle(8);
+        scene.overlay().showControls(util.vector().topOf(outputDepot), Pointing.DOWN, 25)
+                .withItem(new ItemStack(ModItems.MACHINE_LINKER.get()));
+        scene.overlay().showOutline(PonderPalette.GREEN, "linked_route", route, 50);
         scene.overlay().showText(80)
                 .attachKeyFrame()
                 .text("Machine Linkers save one ordered route on a Package Distributor or Basic Package Distributor.")
-                .pointAt(util.vector().centerOf(press))
+                .pointAt(util.vector().blockSurface(press, Direction.WEST))
                 .placeNearTarget();
         scene.idle(90);
 
@@ -254,12 +280,14 @@ public final class CreatePackagePonderScenes {
                 .placeNearTarget();
         scene.idle(90);
 
-        scene.overlay().showControls(util.vector().topOf(distributor), Pointing.DOWN, 50)
+        scene.world().setBlock(host, ModBlocks.ADVANCED_PACKAGE_DISTRIBUTOR.get().defaultBlockState(), false);
+        scene.overlay().showControls(util.vector().topOf(host), Pointing.DOWN, 50)
                 .withItem(new ItemStack(ModItems.MECHANICAL_PACKAGE_PATTERN.get()));
+        scene.overlay().showOutline(PonderPalette.OUTPUT, "advanced_host", util.select().position(host), 55);
         scene.overlay().showText(80)
                 .attachKeyFrame()
                 .text("Converted Mechanical Package Patterns store the original AE2 pattern plus the marked Create route for Advanced Distributors.")
-                .pointAt(util.vector().topOf(distributor))
+                .pointAt(util.vector().topOf(host))
                 .placeNearTarget();
         scene.idle(90);
         scene.markAsFinished();
@@ -272,72 +300,68 @@ public final class CreatePackagePonderScenes {
         scene.scaleSceneView(0.85f);
         scene.showBasePlate();
         scene.world().setBlocks(util.select().fromTo(0, 1, 0, 4, 4, 4), Blocks.AIR.defaultBlockState(), false);
-        scene.idle(10);
+        scene.idle(8);
 
-        // Left: Advanced Distributor route capacity. Right: Kinetic Provider machine capacity.
         BlockPos advanced = util.grid().at(1, 1, 3);
-        BlockPos lineA = util.grid().at(0, 1, 1);
-        BlockPos lineB = util.grid().at(1, 1, 1);
-
-        BlockPos depotA = util.grid().at(3, 1, 2);
-        BlockPos machineA = depotA.above(2);
-        BlockPos kinetic = util.grid().at(3, 3, 3);
-        BlockPos supportBottom = util.grid().at(3, 1, 3);
-        BlockPos supportTop = supportBottom.above();
-        BlockPos depotB = util.grid().at(4, 1, 2);
-        BlockPos machineB = depotB.above(2);
+        BlockPos kinetic = util.grid().at(3, 3, 2);
+        BlockPos kineticCasingLow = util.grid().at(3, 1, 2);
+        BlockPos kineticCasingMid = util.grid().at(3, 2, 2);
+        BlockPos kineticDepot = util.grid().at(4, 1, 2);
+        BlockPos kineticMachine = kineticDepot.above(2);
 
         scene.world().setBlock(advanced, ModBlocks.ADVANCED_PACKAGE_DISTRIBUTOR.get().defaultBlockState(), false);
+        scene.world().setBlock(kineticCasingLow, createBlockState("andesite_casing"), false);
+        scene.world().setBlock(kineticCasingMid, createBlockState("andesite_casing"), false);
+        scene.world().setBlock(kinetic, ModBlocks.KINETIC_PATTERN_PROVIDER.get().defaultBlockState()
+                .setValue(KineticPatternProviderBlock.PUSH_DIRECTION, PushDirection.EAST), false);
+        scene.world().setBlock(kineticDepot, createBlockState("depot"), false);
+        scene.world().setBlock(kineticMachine, facingDown("deployer"), false);
         scene.world().showSection(util.select().position(advanced), Direction.DOWN);
+        scene.world().showSection(util.select().fromTo(kineticCasingLow, kinetic)
+                .add(util.select().position(kineticDepot))
+                .add(util.select().position(kineticMachine)), Direction.DOWN);
+        scene.idle(8);
         scene.overlay().showControls(util.vector().topOf(advanced), Pointing.DOWN, 40)
+                .withItem(new ItemStack(ModItems.PARALLEL_CARD.get()));
+        scene.overlay().showControls(util.vector().topOf(kinetic), Pointing.DOWN, 40)
                 .withItem(new ItemStack(ModItems.PARALLEL_CARD.get()));
         scene.overlay().showText(70)
                 .attachKeyFrame()
-                .text("On an Advanced Package Distributor, each Parallel Card doubles the number of saved routes that may run together.")
+                .text("Parallel Cards upgrade Advanced Package Distributors and Kinetic Pattern Providers.")
                 .pointAt(util.vector().topOf(advanced))
                 .placeNearTarget();
-        scene.idle(80);
+        scene.idle(75);
 
-        scene.world().setBlock(lineA, createBlockState("depot"), false);
-        scene.world().setBlock(lineB, createBlockState("depot"), false);
-        scene.world().showSection(util.select().position(lineA), Direction.DOWN);
-        scene.idle(5);
-        scene.world().showSection(util.select().position(lineB), Direction.DOWN);
-        scene.overlay().showOutline(PonderPalette.GREEN, "route_one", util.select().position(lineA), 55);
-        scene.overlay().showOutline(PonderPalette.BLUE, "route_two", util.select().position(lineB), 55);
-        scene.idle(65);
-
-        scene.world().setBlock(supportBottom, createBlockState("andesite_casing"), false);
-        scene.world().setBlock(supportTop, createBlockState("andesite_casing"), false);
-        scene.world().setBlock(kinetic, ModBlocks.KINETIC_PATTERN_PROVIDER.get().defaultBlockState()
-                .setValue(KineticPatternProviderBlock.PUSH_DIRECTION, PushDirection.NORTH), false);
-        scene.world().setBlock(depotA, createBlockState("depot"), false);
-        scene.world().setBlock(machineA, createDeployerFacing(Direction.DOWN), false);
-        Selection primaryStation = util.select().fromTo(supportBottom, kinetic)
-                .add(util.select().position(depotA))
-                .add(util.select().position(machineA));
-        scene.world().showSection(primaryStation, Direction.DOWN);
-        scene.overlay().showControls(util.vector().topOf(kinetic), Pointing.DOWN, 40)
-                .withItem(new ItemStack(ModItems.PARALLEL_CARD.get()));
-        scene.overlay().showText(75)
+        BlockPos routeA = util.grid().at(0, 1, 1);
+        BlockPos routeB = util.grid().at(1, 1, 1);
+        scene.world().setBlock(routeA, createBlockState("depot"), false);
+        scene.world().setBlock(routeB, createBlockState("depot"), false);
+        scene.world().showSection(util.select().position(routeA).add(util.select().position(routeB)), Direction.DOWN);
+        scene.overlay().showOutline(PonderPalette.GREEN, "route_a", util.select().position(routeA), 55);
+        scene.overlay().showOutline(PonderPalette.BLUE, "route_b", util.select().position(routeB), 55);
+        scene.overlay().showText(80)
                 .attachKeyFrame()
-                .text("On a Kinetic Pattern Provider, the card increases the number of matching machines available for dispatch.")
-                .pointAt(util.vector().centerOf(kinetic))
+                .text("In an Advanced Distributor, one Parallel Card provides 4 concurrent jobs and two provide 8; the capacity is configurable.")
+                .pointAt(util.vector().topOf(advanced))
                 .placeNearTarget();
         scene.idle(85);
 
-        scene.world().setBlock(depotB, createBlockState("depot"), false);
-        scene.world().setBlock(machineB, createDeployerFacing(Direction.DOWN), false);
-        Selection extraStation = util.select().position(depotB)
-                .add(util.select().position(machineB));
-        scene.world().showSection(extraStation, Direction.DOWN);
-        scene.overlay().showOutline(PonderPalette.GREEN, "primary_station",
-                util.select().position(depotA).add(util.select().position(machineA)), 60);
-        scene.overlay().showOutline(PonderPalette.OUTPUT, "extra_station", extraStation, 60);
+        BlockPos extraDepot = util.grid().at(4, 1, 1);
+        BlockPos extraMachine = extraDepot.above(2);
+        scene.world().setBlock(extraDepot, createBlockState("depot"), false);
+        scene.world().setBlock(extraMachine, facingDown("deployer"), false);
+        scene.world().showSection(util.select().position(extraDepot).add(util.select().position(extraMachine)),
+                Direction.DOWN);
+        scene.overlay().showOutline(PonderPalette.GREEN, "primary_kinetic",
+                util.select().position(kineticDepot).add(util.select().position(kineticMachine)), 55);
+        scene.overlay().showOutline(PonderPalette.OUTPUT, "extra_kinetic",
+                util.select().position(extraDepot).add(util.select().position(extraMachine)), 55);
+        scene.overlay().showControls(util.vector().topOf(extraMachine), Pointing.DOWN, 40)
+                .withItem(new ItemStack(ModItems.MACHINE_LINKER.get()));
         scene.overlay().showText(80)
                 .attachKeyFrame()
-                .text("One card permits up to 16 active matching machines; two cards permit up to 32.")
-                .pointAt(util.vector().centerOf(machineB))
+                .text("In a Kinetic Pattern Provider, one card allows up to 16 active matching machines; two cards allow up to 32.")
+                .pointAt(util.vector().centerOf(extraMachine))
                 .placeNearTarget();
         scene.idle(90);
         scene.markAsFinished();
@@ -348,20 +372,28 @@ public final class CreatePackagePonderScenes {
         return block.defaultBlockState();
     }
 
-    private static BlockState createDeployerFacing(Direction facing) {
-        BlockState state = createBlockState("deployer");
+    private static BlockState facingDown(String path) {
+        BlockState state = createBlockState(path);
         if (state.hasProperty(BlockStateProperties.FACING)) {
-            return state.setValue(BlockStateProperties.FACING, facing);
+            return state.setValue(BlockStateProperties.FACING, Direction.DOWN);
         }
         return state;
     }
 
-    private static BlockState createPressFacing(Direction facing) {
-        BlockState state = createBlockState("mechanical_press");
+    private static BlockState horizontalFacing(String path, Direction facing) {
+        BlockState state = createBlockState(path);
         if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
             return state.setValue(BlockStateProperties.HORIZONTAL_FACING, facing);
         }
         return state;
+    }
+
+    private static ItemStack createItem(String path) {
+        return new ItemStack(BuiltInRegistries.ITEM.get(create(path)));
+    }
+
+    private static ItemStack aeItem(String path) {
+        return new ItemStack(BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("ae2", path)));
     }
 
     private static ResourceLocation id(String path) {

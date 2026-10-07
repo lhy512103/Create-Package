@@ -1,6 +1,6 @@
-# Changelog
+﻿# Changelog
 
-## Unreleased
+## v0.0.4
 
 ### English
 
