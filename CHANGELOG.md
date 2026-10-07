@@ -18,7 +18,7 @@
 - Optimized: Removed unused imports, fields, and methods flagged by the IDE.
 - Fixed: Ponder scenes now match their captions, with correct machine facing and camera-friendly placement.
 - Added: Ponder scenes rewritten in the Ponderer JSON DSL and loaded at runtime.
-- Added: Ponderer 1.10.6.1 as a local runtime dependency.
+- Added: Ponderer 1.10.4 as a local runtime dependency (1.10.6.1 crashes on JEI 19.51).
 
 ### 中文
 
@@ -36,7 +36,7 @@
 - 优化：清理未使用的导入、字段和方法。
 - 修复：Ponder 场景与字幕对齐，并纠正机器朝向和镜头遮挡。
 - 新增：思索场景改为 Ponderer JSON DSL 并在运行时加载。
-- 新增：运行时依赖加入 Ponderer 1.10.6.1。
+- 新增：运行时依赖加入 Ponderer 1.10.4（1.10.6.1 会与 JEI 19.51 冲突崩溃）。
 
 ## 2026-07-25
 
