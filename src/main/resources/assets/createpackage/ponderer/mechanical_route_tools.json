@@ -1,0 +1,190 @@
+{
+  "id": "createpackage:mechanical_route_tools",
+  "items": [
+    "createpackage:machine_linker",
+    "createpackage:mechanical_pattern_converter",
+    "createpackage:mechanical_package_pattern"
+  ],
+  "title": {
+    "en_us": "Mechanical Route Tools",
+    "zh_cn": "机械路线工具"
+  },
+  "tags": ["createpackage:create_package"],
+  "editable": false,
+  "scenes": [
+    {
+      "id": "overview",
+      "title": {
+        "en_us": "Mechanical Route Tools",
+        "zh_cn": "机械路线工具"
+      },
+      "steps": [
+        {
+          "type": "encapsulate_bounds",
+          "bounds": [5, 4, 5]
+        },
+        {
+          "type": "set_block",
+          "block": "createpackage:basic_package_distributor",
+          "blockPos": [4, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [0, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [1, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:mechanical_press",
+          "blockProperties": { "facing": "west" },
+          "blockPos": [1, 3, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [2, 1, 2]
+        },
+        {
+          "type": "show_section_and_merge",
+          "direction": "down",
+          "blockPos": [0, 1, 2],
+          "blockPos2": [4, 3, 2]
+        },
+        {
+          "type": "idle",
+          "duration": 8
+        },
+        {
+          "type": "show_controls",
+          "duration": 30,
+          "point": [4.5, 2.1, 2.5],
+          "direction": "down",
+          "item": "createpackage:machine_linker"
+        },
+        {
+          "type": "idle",
+          "duration": 12
+        },
+        {
+          "type": "show_controls",
+          "duration": 25,
+          "point": [0.5, 2.1, 2.5],
+          "direction": "down",
+          "item": "createpackage:machine_linker"
+        },
+        {
+          "type": "idle",
+          "duration": 8
+        },
+        {
+          "type": "show_controls",
+          "duration": 25,
+          "point": [1.5, 4.1, 2.5],
+          "direction": "down",
+          "item": "createpackage:machine_linker"
+        },
+        {
+          "type": "idle",
+          "duration": 8
+        },
+        {
+          "type": "show_controls",
+          "duration": 25,
+          "point": [2.5, 2.1, 2.5],
+          "direction": "down",
+          "item": "createpackage:machine_linker"
+        },
+        {
+          "type": "highlight_section",
+          "color": "green",
+          "duration": 50,
+          "blockPos": [0, 1, 2],
+          "blockPos2": [2, 3, 2]
+        },
+        {
+          "type": "text",
+          "duration": 80,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "point": [1.5, 3.6, 2.5],
+          "text": {
+            "en_us": "Machine Linkers save one ordered route on a Package Distributor or Basic Package Distributor.",
+            "zh_cn": "机器链接器会把一条有序路线保存到封包分发器或基础封包分发器。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 90
+        },
+        {
+          "type": "show_controls",
+          "duration": 40,
+          "point": [0.5, 2.1, 2.5],
+          "direction": "down",
+          "item": "createpackage:mechanical_pattern_converter"
+        },
+        {
+          "type": "show_controls",
+          "duration": 40,
+          "point": [1.5, 4.1, 2.5],
+          "direction": "down",
+          "item": "createpackage:mechanical_package_pattern"
+        },
+        {
+          "type": "text",
+          "duration": 80,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "point": [1.5, 3.6, 2.5],
+          "text": {
+            "en_us": "Mechanical Pattern Converters and Mechanical Package Patterns can mark route blocks directly.",
+            "zh_cn": "机械样板转换器和机械封包样板可以直接标记路线方块。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 90
+        },
+        {
+          "type": "set_block",
+          "block": "createpackage:advanced_package_distributor",
+          "blockPos": [4, 1, 2]
+        },
+        {
+          "type": "show_controls",
+          "duration": 50,
+          "point": [4.5, 2.1, 2.5],
+          "direction": "down",
+          "item": "createpackage:mechanical_package_pattern"
+        },
+        {
+          "type": "highlight_section",
+          "color": "output",
+          "duration": 55,
+          "blockPos": [4, 1, 2],
+          "blockPos2": [4, 1, 2]
+        },
+        {
+          "type": "text",
+          "duration": 80,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "point": [4.5, 2.2, 2.5],
+          "text": {
+            "en_us": "Converted Mechanical Package Patterns store the original AE2 pattern plus the marked Create route for Advanced Distributors.",
+            "zh_cn": "转换后的机械封包样板会保存原 AE2 样板和已标记的 Create 路线，供高级分发器使用。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 90
+        }
+      ]
+    }
+  ]
+}

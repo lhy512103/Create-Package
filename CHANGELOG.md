@@ -17,6 +17,7 @@
 - Added: Refill wait ends early when a watched AE crafting job for the missing input finishes.
 - Optimized: Removed unused imports, fields, and methods flagged by the IDE.
 - Fixed: Ponder scenes now match their captions, with correct machine facing and camera-friendly placement.
+- Added: Ponder scenes rewritten in the Ponderer JSON DSL and loaded at runtime.
 
 ### 中文
 
@@ -33,6 +34,7 @@
 - 新增：监听到缺料的 AE 合成任务完成后立即结束等待并尝试补刷。
 - 优化：清理未使用的导入、字段和方法。
 - 修复：Ponder 场景与字幕对齐，并纠正机器朝向和镜头遮挡。
+- 新增：思索场景改为 Ponderer JSON DSL 并在运行时加载。
 
 ## 2026-07-25
 

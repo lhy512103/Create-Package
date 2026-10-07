@@ -1,0 +1,8 @@
+{
+  "ponderer": {
+    "name": "CreatePackage",
+    "version": "0.0.4",
+    "author": "lhy512103",
+    "description": "Create Package Ponderer scenes for distributors, kinetic providers, route tools, and parallel cards."
+  }
+}

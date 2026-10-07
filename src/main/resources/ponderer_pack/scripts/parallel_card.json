@@ -1,0 +1,196 @@
+{
+  "id": "createpackage:parallel_card",
+  "items": [
+    "createpackage:parallel_card"
+  ],
+  "title": {
+    "en_us": "Parallel Card",
+    "zh_cn": "并行卡"
+  },
+  "tags": ["createpackage:create_package"],
+  "editable": false,
+  "scenes": [
+    {
+      "id": "overview",
+      "title": {
+        "en_us": "Parallel Card",
+        "zh_cn": "并行卡"
+      },
+      "steps": [
+        {
+          "type": "encapsulate_bounds",
+          "bounds": [5, 4, 5]
+        },
+        {
+          "type": "set_block",
+          "block": "createpackage:advanced_package_distributor",
+          "blockPos": [1, 1, 3]
+        },
+        {
+          "type": "set_block",
+          "block": "create:andesite_casing",
+          "blockPos": [3, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:andesite_casing",
+          "blockPos": [3, 2, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "createpackage:kinetic_pattern_provider",
+          "blockProperties": { "push_direction": "east" },
+          "blockPos": [3, 3, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [4, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:deployer",
+          "blockProperties": { "facing": "down" },
+          "blockPos": [4, 3, 2]
+        },
+        {
+          "type": "show_section_and_merge",
+          "direction": "down",
+          "blockPos": [1, 1, 2],
+          "blockPos2": [4, 3, 3]
+        },
+        {
+          "type": "idle",
+          "duration": 8
+        },
+        {
+          "type": "show_controls",
+          "duration": 40,
+          "point": [1.5, 2.1, 3.5],
+          "direction": "down",
+          "item": "createpackage:parallel_card"
+        },
+        {
+          "type": "show_controls",
+          "duration": 40,
+          "point": [3.5, 4.1, 2.5],
+          "direction": "down",
+          "item": "createpackage:parallel_card"
+        },
+        {
+          "type": "text",
+          "duration": 70,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "point": [1.5, 2.2, 3.5],
+          "text": {
+            "en_us": "Parallel Cards upgrade Advanced Package Distributors and Kinetic Pattern Providers.",
+            "zh_cn": "并行卡用于升级高级封包分发器和动力样板供应器。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 75
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [0, 1, 1]
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [1, 1, 1]
+        },
+        {
+          "type": "show_section_and_merge",
+          "direction": "down",
+          "blockPos": [0, 1, 1],
+          "blockPos2": [1, 1, 1]
+        },
+        {
+          "type": "highlight_section",
+          "color": "green",
+          "duration": 55,
+          "blockPos": [0, 1, 1],
+          "blockPos2": [0, 1, 1]
+        },
+        {
+          "type": "highlight_section",
+          "color": "blue",
+          "duration": 55,
+          "blockPos": [1, 1, 1],
+          "blockPos2": [1, 1, 1]
+        },
+        {
+          "type": "text",
+          "duration": 80,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "point": [1.5, 2.2, 3.5],
+          "text": {
+            "en_us": "In an Advanced Distributor, one Parallel Card provides 4 concurrent jobs and two provide 8; the capacity is configurable.",
+            "zh_cn": "在高级分发器中，1 张并行卡提供 4 个并行，2 张提供 8 个并行；容量可在配置中调整。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 85
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [4, 1, 1]
+        },
+        {
+          "type": "set_block",
+          "block": "create:deployer",
+          "blockProperties": { "facing": "down" },
+          "blockPos": [4, 3, 1]
+        },
+        {
+          "type": "show_section_and_merge",
+          "direction": "down",
+          "blockPos": [4, 1, 1],
+          "blockPos2": [4, 3, 1]
+        },
+        {
+          "type": "highlight_section",
+          "color": "green",
+          "duration": 55,
+          "blockPos": [4, 1, 2],
+          "blockPos2": [4, 3, 2]
+        },
+        {
+          "type": "highlight_section",
+          "color": "output",
+          "duration": 55,
+          "blockPos": [4, 1, 1],
+          "blockPos2": [4, 3, 1]
+        },
+        {
+          "type": "show_controls",
+          "duration": 40,
+          "point": [4.5, 4.1, 1.5],
+          "direction": "down",
+          "item": "createpackage:machine_linker"
+        },
+        {
+          "type": "text",
+          "duration": 80,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "point": [4.5, 3.6, 1.5],
+          "text": {
+            "en_us": "In a Kinetic Pattern Provider, one card allows up to 16 active matching machines; two cards allow up to 32.",
+            "zh_cn": "在动力样板供应器中，1 张并行卡最多 16 台同类型活动机器，2 张最多 32 台。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 90
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,198 @@
+{
+  "id": "createpackage:package_distributors",
+  "items": [
+    "createpackage:package_distributor",
+    "createpackage:basic_package_distributor",
+    "createpackage:advanced_package_distributor",
+    "createpackage:incomplete_package_distributor"
+  ],
+  "title": {
+    "en_us": "Create Package Distributors",
+    "zh_cn": "机械动力封包分发器"
+  },
+  "tags": ["createpackage:create_package"],
+  "editable": false,
+  "scenes": [
+    {
+      "id": "overview",
+      "title": {
+        "en_us": "Create Package Distributors",
+        "zh_cn": "机械动力封包分发器"
+      },
+      "steps": [
+        {
+          "type": "encapsulate_bounds",
+          "bounds": [5, 4, 5]
+        },
+        {
+          "type": "set_block",
+          "block": "createpackage:package_distributor",
+          "blockPos": [1, 1, 0]
+        },
+        {
+          "type": "set_block",
+          "block": "createpackage:basic_package_distributor",
+          "blockPos": [2, 1, 0]
+        },
+        {
+          "type": "set_block",
+          "block": "createpackage:advanced_package_distributor",
+          "blockPos": [3, 1, 0]
+        },
+        {
+          "type": "show_section_and_merge",
+          "direction": "down",
+          "blockPos": [1, 1, 0],
+          "blockPos2": [3, 1, 0]
+        },
+        {
+          "type": "idle",
+          "duration": 8
+        },
+        {
+          "type": "highlight_section",
+          "color": "blue",
+          "duration": 55,
+          "blockPos": [1, 1, 0],
+          "blockPos2": [3, 1, 0]
+        },
+        {
+          "type": "text",
+          "duration": 70,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [2.5, 2.2, 0.5],
+          "text": {
+            "en_us": "Package Distributors hand a full AE2 processing pattern to a real Create sequenced assembly line.",
+            "zh_cn": "封包分发器会把一整份 AE2 处理样板交给真实的 Create 序列组装流水线。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 75
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [0, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [1, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [2, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [3, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:deployer",
+          "blockProperties": { "facing": "down" },
+          "blockPos": [1, 3, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:spout",
+          "blockPos": [2, 3, 2]
+        },
+        {
+          "type": "show_section_and_merge",
+          "direction": "down",
+          "blockPos": [0, 1, 2],
+          "blockPos2": [3, 3, 2]
+        },
+        {
+          "type": "idle",
+          "duration": 8
+        },
+        {
+          "type": "highlight_section",
+          "color": "green",
+          "duration": 60,
+          "blockPos": [0, 1, 2],
+          "blockPos2": [0, 1, 2]
+        },
+        {
+          "type": "highlight_section",
+          "color": "white",
+          "duration": 60,
+          "blockPos": [1, 1, 2],
+          "blockPos2": [2, 3, 2]
+        },
+        {
+          "type": "highlight_section",
+          "color": "output",
+          "duration": 60,
+          "blockPos": [3, 1, 2],
+          "blockPos2": [3, 1, 2]
+        },
+        {
+          "type": "text",
+          "duration": 80,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "point": [1.5, 3.6, 2.5],
+          "text": {
+            "en_us": "The route starts at an input depot or belt, visits deployers and spouts in order, and ends at the recovery position.",
+            "zh_cn": "路线从起点料盘或传送带开始，按顺序经过机械手和注液器，最后到达产物回收位置。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 80
+        },
+        {
+          "type": "show_controls",
+          "duration": 45,
+          "point": [2.5, 2.1, 0.5],
+          "direction": "down",
+          "item": "ae2:processing_pattern"
+        },
+        {
+          "type": "show_controls",
+          "duration": 45,
+          "point": [3.5, 2.1, 0.5],
+          "direction": "down",
+          "item": "createpackage:mechanical_package_pattern"
+        },
+        {
+          "type": "highlight_section",
+          "color": "green",
+          "duration": 55,
+          "blockPos": [2, 1, 0],
+          "blockPos2": [2, 1, 0]
+        },
+        {
+          "type": "highlight_section",
+          "color": "output",
+          "duration": 55,
+          "blockPos": [3, 1, 0],
+          "blockPos2": [3, 1, 0]
+        },
+        {
+          "type": "text",
+          "duration": 80,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "point": [3.5, 2.2, 0.5],
+          "text": {
+            "en_us": "Basic Distributors store AE2 patterns directly. Advanced Distributors read the saved route from each Mechanical Package Pattern.",
+            "zh_cn": "基础分发器直接保存 AE2 样板。高级分发器从每张机械封包样板读取已保存路线。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 90
+        }
+      ]
+    }
+  ]
+}

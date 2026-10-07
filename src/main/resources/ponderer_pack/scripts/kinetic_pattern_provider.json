@@ -1,0 +1,209 @@
+{
+  "id": "createpackage:kinetic_pattern_provider",
+  "items": [
+    "createpackage:kinetic_pattern_provider",
+    "createpackage:extended_kinetic_pattern_provider"
+  ],
+  "title": {
+    "en_us": "Kinetic Pattern Provider",
+    "zh_cn": "动力样板供应器"
+  },
+  "tags": ["createpackage:create_package"],
+  "editable": false,
+  "scenes": [
+    {
+      "id": "overview",
+      "title": {
+        "en_us": "Kinetic Pattern Provider",
+        "zh_cn": "动力样板供应器"
+      },
+      "steps": [
+        {
+          "type": "encapsulate_bounds",
+          "bounds": [5, 4, 5]
+        },
+        {
+          "type": "set_block",
+          "block": "create:andesite_casing",
+          "blockPos": [1, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:andesite_casing",
+          "blockPos": [1, 2, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "createpackage:kinetic_pattern_provider",
+          "blockProperties": { "push_direction": "east" },
+          "blockPos": [1, 3, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [2, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:deployer",
+          "blockProperties": { "facing": "down" },
+          "blockPos": [2, 3, 2]
+        },
+        {
+          "type": "show_section_and_merge",
+          "direction": "down",
+          "blockPos": [1, 1, 2],
+          "blockPos2": [2, 3, 2]
+        },
+        {
+          "type": "idle",
+          "duration": 8
+        },
+        {
+          "type": "highlight_section",
+          "color": "blue",
+          "duration": 55,
+          "blockPos": [1, 3, 2],
+          "blockPos2": [1, 3, 2]
+        },
+        {
+          "type": "highlight_section",
+          "color": "green",
+          "duration": 55,
+          "blockPos": [2, 1, 2],
+          "blockPos2": [2, 3, 2]
+        },
+        {
+          "type": "text",
+          "duration": 70,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [1.5, 3.6, 2.5],
+          "text": {
+            "en_us": "Kinetic Pattern Providers face one Create machine and supply its working position, held items, or fluids.",
+            "zh_cn": "动力样板供应器对准单台 Create 机器，并向机器工作位、手持物品或流体库存供料。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 70
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [3, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:deployer",
+          "blockProperties": { "facing": "down" },
+          "blockPos": [3, 3, 2]
+        },
+        {
+          "type": "show_section_and_merge",
+          "direction": "down",
+          "blockPos": [3, 1, 2],
+          "blockPos2": [3, 3, 2]
+        },
+        {
+          "type": "show_controls",
+          "duration": 40,
+          "point": [1.5, 4.1, 2.5],
+          "direction": "down",
+          "item": "create:wrench"
+        },
+        {
+          "type": "idle",
+          "duration": 20
+        },
+        {
+          "type": "show_controls",
+          "duration": 40,
+          "point": [1.5, 4.1, 2.5],
+          "direction": "down",
+          "item": "createpackage:parallel_card"
+        },
+        {
+          "type": "show_controls",
+          "duration": 40,
+          "point": [3.5, 4.1, 2.5],
+          "direction": "down",
+          "item": "createpackage:machine_linker"
+        },
+        {
+          "type": "highlight_section",
+          "color": "output",
+          "duration": 55,
+          "blockPos": [3, 1, 2],
+          "blockPos2": [3, 3, 2]
+        },
+        {
+          "type": "text",
+          "duration": 80,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "point": [3.5, 3.6, 2.5],
+          "text": {
+            "en_us": "Set the target side with a wrench. Add Parallel Cards and link matching machines with the Machine Linker for multi-machine dispatch.",
+            "zh_cn": "用扳手设置目标面。放入并行卡后，可用机器链接器链接同类型机器来实现多机器分发。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 90
+        },
+        {
+          "type": "replace_blocks",
+          "block": "minecraft:air",
+          "blockPos": [1, 1, 2],
+          "blockPos2": [3, 3, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:millstone",
+          "blockPos": [2, 1, 2]
+        },
+        {
+          "type": "set_block",
+          "block": "create:depot",
+          "blockPos": [2, 1, 3]
+        },
+        {
+          "type": "set_block",
+          "block": "createpackage:kinetic_pattern_provider",
+          "blockProperties": { "push_direction": "east" },
+          "blockPos": [1, 1, 2]
+        },
+        {
+          "type": "show_section_and_merge",
+          "direction": "down",
+          "blockPos": [1, 1, 2],
+          "blockPos2": [2, 1, 3]
+        },
+        {
+          "type": "highlight_section",
+          "color": "output",
+          "duration": 60,
+          "blockPos": [2, 1, 3],
+          "blockPos2": [2, 1, 3]
+        },
+        {
+          "type": "text",
+          "duration": 80,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "point": [2.5, 2.1, 3.5],
+          "text": {
+            "en_us": "Saws, millstones, and crushing wheels still need a recoverable output belt, depot, or inventory at the machine output.",
+            "zh_cn": "动力锯、石磨和粉碎轮仍需要在机器输出位置放置可回收的传送带、料盘或库存。"
+          }
+        },
+        {
+          "type": "idle",
+          "duration": 90
+        }
+      ]
+    }
+  ]
+}
