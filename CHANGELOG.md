@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 ## v0.0.4
 
@@ -16,6 +16,7 @@
 - Added: Missing refill inputs with network patterns are auto-ordered after each failed refill retry.
 - Added: Refill wait ends early when a watched AE crafting job for the missing input finishes.
 - Optimized: Removed unused imports, fields, and methods flagged by the IDE.
+- Fixed: Ponder scenes now match their captions, with correct machine facing and camera-friendly placement.
 
 ### 中文
 
@@ -31,6 +32,7 @@
 - 新增：补刷缺料且网络已有样板时自动下单，每次重试失败后再尝试。
 - 新增：监听到缺料的 AE 合成任务完成后立即结束等待并尝试补刷。
 - 优化：清理未使用的导入、字段和方法。
+- 修复：Ponder 场景与字幕对齐，并纠正机器朝向和镜头遮挡。
 
 ## 2026-07-25
 
