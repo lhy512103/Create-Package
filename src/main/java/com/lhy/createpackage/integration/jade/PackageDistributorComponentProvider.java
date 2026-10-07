@@ -45,6 +45,9 @@ public final class PackageDistributorComponentProvider implements IBlockComponen
         for (Component line : distributor.getMissingRefillLines()) {
             tooltip.add(line);
         }
+        for (Component line : distributor.getRefillRetryLines()) {
+            tooltip.add(line);
+        }
         for (Component line : distributor.getDiagnostics()
                 .tooltipLines("tooltip." + CreatePackage.MODID + ".package_distributor")) {
             tooltip.add(line.copy().withStyle(ChatFormatting.RED));
@@ -123,7 +126,7 @@ public final class PackageDistributorComponentProvider implements IBlockComponen
         return switch (status) {
             case "ready", "completed" -> ChatFormatting.GREEN;
             case "working" -> ChatFormatting.AQUA;
-            case "busy", "waiting_reflow_input", "waiting_target_space", "refill_target_full" -> ChatFormatting.YELLOW;
+            case "busy", "waiting_reflow_input", "waiting_refill_inputs", "waiting_target_space", "refill_target_full" -> ChatFormatting.YELLOW;
             default -> ChatFormatting.RED;
         };
     }
