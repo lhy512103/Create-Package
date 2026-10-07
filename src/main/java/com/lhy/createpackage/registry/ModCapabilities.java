@@ -1,7 +1,5 @@
 package com.lhy.createpackage.registry;
 
-import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
-
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
 import appeng.api.AECapabilities;

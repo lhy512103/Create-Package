@@ -24,7 +24,6 @@ import com.lhy.createpackage.content.crafting.NetworkIO;
 import com.lhy.createpackage.content.crafting.PatternStacks;
 import com.lhy.createpackage.content.crafting.RefillCraftingOrders;
 import com.lhy.createpackage.content.crafting.SupplyAction;
-import com.lhy.createpackage.content.crafting.SupplyActions;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternData;
 import com.lhy.createpackage.content.pattern.RoutedMechanicalPackagePatternDetails;
 import com.lhy.createpackage.content.recipe.AssemblyPlan;
@@ -66,7 +65,7 @@ import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.crafting.ICraftingWatcherNode;
-import appeng.api.networking.security.IActionHost;
+
 import appeng.api.networking.ticking.IGridTickable;
 import appeng.api.networking.ticking.TickRateModulation;
 import appeng.api.networking.ticking.TickingRequest;
@@ -91,15 +90,13 @@ import appeng.me.helpers.MachineSource;
  * what it receives. Distribution and result recovery are added in later milestones.
  */
 public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
-        implements ICraftingMachine, IActionHost, IHaveGoggleInformation {
+        implements ICraftingMachine, IHaveGoggleInformation {
 
     private static final String NBT_LINKED_MACHINES = "linkedMachines";
     private static final String NBT_JOB = "job";
     private static final String NBT_JOBS = "jobs";
     private static final String NBT_LAST_STATUS = "lastStatus";
-    private static final int DEFAULT_MAX_JOB_TICKS = 20 * 60 * 10;
     private static final int DEFAULT_ROUND_OUTPUT_TIMEOUT_TICKS = 20 * 60;
-    private static final int DEFAULT_REFILL_RETRY_TICKS = 20 * 5;
     private static final int MAX_TOOLTIP_LINKS = 12;
     private static final Map<UUID, Long> ENCODER_LOGIN_NOTICE_GENERATIONS = new ConcurrentHashMap<>();
 
@@ -1694,10 +1691,6 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
     }
 
     private static void addRefillInput(List<GenericStack> inputs, FluidStack stack) {
-        PatternStacks.addRefillInput(inputs, stack);
-    }
-
-    private static void addRefillInput(List<GenericStack> inputs, GenericStack stack) {
         PatternStacks.addRefillInput(inputs, stack);
     }
 

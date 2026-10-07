@@ -30,12 +30,6 @@ import com.lhy.createpackage.registry.ModBlockEntities;
 import com.lhy.createpackage.registry.ModItems;
 import com.lhy.createpackage.registry.ModMenuTypes;
 import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
-import com.simibubi.create.content.kinetics.belt.behaviour.DirectBeltInputBehaviour;
-import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
-import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
-import com.simibubi.create.content.kinetics.saw.SawBlock;
-import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
-import com.simibubi.create.foundation.blockEntity.behaviour.filtering.FilteringBehaviour;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -53,11 +47,9 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -112,7 +104,6 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     private static final int MAX_PARALLEL_CARDS = 2;
     private static final int PARALLEL_MACHINES_PER_CARD = 16;
     private static final int MAX_TOOLTIP_TARGETS = 6;
-    private static final int DEFAULT_MAX_JOB_TICKS = 20 * 60 * 5;
     private static final int DEFAULT_ROUND_OUTPUT_TIMEOUT_TICKS = 20 * 60;
     private static final int SMART_BATCH_GATHER_TICKS = 0;
 
@@ -917,18 +908,6 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             return candidate.remaining < currentBest.remaining;
         }
         return candidate.ticks > currentBest.ticks;
-    }
-
-    private boolean canAppendToActiveJob(IPatternDetails patternDetails, KeyCounter[] inputs) {
-        if (level == null || level.isClientSide()) {
-            return activeJobs.isEmpty();
-        }
-        GenericStack primary = patternDetails.getPrimaryOutput();
-        if (primary == null || primary.what() == null) {
-            return false;
-        }
-        List<GenericStack> flattenedInputs = PatternStacks.flattenInputs(inputs);
-        return selectDispatchTarget(patternDetails, primary.what(), primary.amount(), flattenedInputs) != null;
     }
 
     @Nullable
@@ -2093,10 +2072,6 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         return InventoryAccess.fluidHandler(level, pos);
     }
 
-    private ItemStack insertItem(BlockPos target, ItemStack stack, boolean simulate) {
-        return InventoryAccess.insertItem(level, target, stack, simulate);
-    }
-
     private NetworkIO networkIO() {
         return new NetworkIO(getMainNode().getGrid(), actionSource);
     }
@@ -2107,10 +2082,6 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     private long extractFromNetwork(AEKey what, long amount, Actionable mode) {
         return networkIO().extract(what, amount, mode);
-    }
-
-    private String roleKey(ResourceLocation id) {
-        return CreateMachineIds.kineticRoleKey(id);
     }
 
     private boolean isBasin(BlockPos pos) {
