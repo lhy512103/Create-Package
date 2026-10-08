@@ -23,6 +23,7 @@
 - Fixed: Segments of the same Ponder scene shared one localization id, so their captions could overwrite each other.
 - Fixed: Kinetic Pattern Provider keeps scanning for ejected outputs while a small craft is still running.
 - Fixed: Small depot and basin crafts are no longer dropped when AE stops requesting the output before the machine finishes.
+- Fixed: Non-consumed pattern inputs, such as an inscriber press, are no longer pulled out of the machine during a small craft.
 - Fixed: Upgrade panels stay visible when ExtendedAE Plus blocks a second setupUpgrades call.
 - Added: Config switch for auto-ordering missing refill inputs, off by default.
 
@@ -47,6 +48,7 @@
 - 修复：同一思索的各分段共用本地化键，字幕可能互相覆盖，现在每段使用独立键。
 - 修复：动力样板供应器少量发配时持续扫描弹出产物，避免产物飞出回收范围。
 - 修复：少量发配到置物台或工作盆时，不再因为 AE 已停止请求就提前结束任务，产物会继续回收。
+- 修复：样板里的不消耗物品（例如压印模板）在少量发配时不再被当成产物抽走。
 - 修复：有 ExtendedAE Plus 时升级槽和底板不再被藏掉。
 - 新增：补刷缺料自动下单配置开关，默认关闭。
 

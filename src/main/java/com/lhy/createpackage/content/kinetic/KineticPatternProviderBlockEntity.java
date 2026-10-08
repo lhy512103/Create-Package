@@ -705,14 +705,29 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
         AEKey primaryOutput = primary.what();
 
-        List<GenericStack> flattenedInputs = PatternStacks.flattenInputs(inputs);
+        List<GenericStack> allInputs = PatternStacks.flattenInputs(inputs);
+        List<GenericStack> craftingInputs = PatternStacks.copyStacks(allInputs);
+        List<GenericStack> returnedInputs = PatternStacks.extractFullyReturned(craftingInputs, patternDetails.getOutputs(),
+                primaryOutput);
+        List<GenericStack> collectableOutputs = PatternStacks.collectableOutputs(patternDetails.getOutputs(), returnedInputs);
+        boolean returnNonConsumed = !returnedInputs.isEmpty() && !craftingInputs.isEmpty();
+        List<GenericStack> flattenedInputs = returnNonConsumed ? craftingInputs : allInputs;
+        List<GenericStack> patternOutputs = returnNonConsumed ? collectableOutputs : patternDetails.getOutputs();
         boolean debug = debugLoggingEnabled();
         if (debug) {
-            debugLog("push requested output={} amount={} inputs={} active={}/{} smart={} targets={}",
-                    primaryOutput, primary.amount(), flattenedInputs, activeJobs.size(),
+            debugLog("push requested output={} amount={} inputs={} returned={} active={}/{} smart={} targets={}",
+                    primaryOutput, primary.amount(), flattenedInputs, returnedInputs, activeJobs.size(),
                     maxActiveJobsFromLinkedMachines(), smartDoubling, targetMachinePositions());
         }
-        DispatchTarget target = selectDispatchTarget(patternDetails, primaryOutput, primary.amount(), flattenedInputs);
+        DispatchTarget target = selectDispatchTarget(patternDetails, primaryOutput, primary.amount(), flattenedInputs,
+                patternOutputs);
+        if (returnNonConsumed && (target == null || target.plan() == null || !target.plan().isSuccess()
+                || !target.plan().simulate())) {
+            returnNonConsumed = false;
+            flattenedInputs = allInputs;
+            patternOutputs = patternDetails.getOutputs();
+            target = selectDispatchTarget(patternDetails, primaryOutput, primary.amount(), flattenedInputs, patternOutputs);
+        }
         if (target == null) {
             if (debug) {
                 debugLog("push rejected: no dispatch target output={} amount={} active={}/{}",
@@ -738,6 +753,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 return false;
             }
             PatternStacks.consumeInputs(inputs);
+            if (returnNonConsumed) {
+                returnNonConsumedInputs(returnedInputs);
+            }
             queuePendingPattern(target.job(), primary.amount(), flattenedInputs);
             lastStatusKey = "working";
             saveAndSync();
@@ -746,6 +764,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
         if (shouldQueueSmartBatch(plan, flattenedInputs)) {
             PatternStacks.consumeInputs(inputs);
+            if (returnNonConsumed) {
+                returnNonConsumedInputs(returnedInputs);
+            }
             if (target.job() == null) {
                 KineticJob job = new KineticJob(primaryOutput, patternDetails.getDefinition(), primary.amount(),
                         plan.machinePos(), plan.outputPos(), plan.outputEndpoints(), plan.machineRole(), plan.patternOutputs(),
@@ -790,6 +811,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
 
         PatternStacks.consumeInputs(inputs);
+        if (returnNonConsumed) {
+            returnNonConsumedInputs(returnedInputs);
+        }
         diagnostics.clear();
         if (target.job() == null) {
             KineticJob job = new KineticJob(primaryOutput, patternDetails.getDefinition(), primary.amount(),
@@ -838,15 +862,25 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     @Nullable
+    private void returnNonConsumedInputs(List<GenericStack> returnedInputs) {
+        for (GenericStack stack : returnedInputs) {
+            long inserted = insertIntoNetwork(stack.what(), stack.amount(), Actionable.MODULATE);
+            long leftover = stack.amount() - Math.max(0, inserted);
+            if (leftover > 0) {
+                logic.getReturnInv().insert(stack.what(), leftover, Actionable.MODULATE, actionSource);
+            }
+        }
+    }
+
     private DispatchTarget selectDispatchTarget(IPatternDetails patternDetails, AEKey primaryOutput,
-            long outputAmount, List<GenericStack> inputs) {
+            long outputAmount, List<GenericStack> inputs, List<GenericStack> patternOutputs) {
         MachinePlanFactory.Plan firstFailure = null;
         if (activeJobs.size() < maxActiveJobsFromLinkedMachines()) {
             for (BlockPos machinePos : targetMachinePositions()) {
                 if (isMachineBusy(machinePos)) {
                     continue;
                 }
-                MachinePlanFactory.Plan plan = createPlanAt(machinePos, primaryOutput, outputAmount, patternDetails.getOutputs(), inputs);
+                MachinePlanFactory.Plan plan = createPlanAt(machinePos, primaryOutput, outputAmount, patternOutputs, inputs);
                 if (plan != null && plan.simulate()) {
                     return new DispatchTarget(null, plan, false);
                 }
@@ -856,7 +890,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             }
         }
 
-        DispatchTarget appendTarget = selectAppendDispatchTarget(patternDetails, outputAmount, inputs);
+        DispatchTarget appendTarget = selectAppendDispatchTarget(patternDetails, outputAmount, inputs, patternOutputs);
         if (appendTarget != null) {
             return appendTarget;
         }
@@ -865,13 +899,13 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     @Nullable
     private DispatchTarget selectAppendDispatchTarget(IPatternDetails patternDetails, long outputAmount,
-            List<GenericStack> inputs) {
+            List<GenericStack> inputs, List<GenericStack> patternOutputs) {
         KineticJob bestImmediateJob = null;
         MachinePlanFactory.Plan bestImmediatePlan = null;
         KineticJob bestQueuedJob = null;
         MachinePlanFactory.Plan bestQueuedPlan = null;
         for (KineticJob job : activeJobs) {
-            MachinePlanFactory.Plan plan = planForAppend(job, patternDetails, outputAmount, inputs);
+            MachinePlanFactory.Plan plan = planForAppend(job, patternDetails, outputAmount, inputs, patternOutputs);
             if (plan == null) {
                 continue;
             }
@@ -924,7 +958,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     @Nullable
     private MachinePlanFactory.Plan planForAppend(KineticJob job, IPatternDetails patternDetails, long outputAmount,
-            List<GenericStack> inputs) {
+            List<GenericStack> inputs, List<GenericStack> patternOutputs) {
         if (!smartDoubling) {
             return null;
         }
@@ -939,7 +973,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         if (!Objects.equals(patternDetails.getDefinition(), job.patternDefinition)) {
             return null;
         }
-        MachinePlanFactory.Plan plan = createPlanAt(job.machinePos, job.primaryOutput, outputAmount, patternDetails.getOutputs(), inputs);
+        MachinePlanFactory.Plan plan = createPlanAt(job.machinePos, job.primaryOutput, outputAmount, patternOutputs, inputs);
         if (plan == null
                 || !Objects.equals(plan.outputEndpoints(), job.outputEndpoints)
                 || !Objects.equals(plan.machineRole(), job.machineRole)
