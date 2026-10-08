@@ -743,6 +743,21 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             return false;
         }
         if (!plan.simulate()) {
+            if (target.job() == null && outputContainsPatternInput(plan, flattenedInputs)) {
+                PatternStacks.consumeInputs(inputs);
+                returnNonConsumedInputs(flattenedInputs);
+                KineticJob job = new KineticJob(primaryOutput, patternDetails.getDefinition(), primary.amount(),
+                        plan.machinePos(), plan.outputPos(), plan.outputEndpoints(), plan.machineRole(),
+                        plan.patternOutputs(), plan.refillInputs(), plan.collectUnexpectedOutputs());
+                job.roundsStarted = 1;
+                job.markOutputStart(level.getGameTime());
+                captureBaseline(job);
+                activeJobs.add(job);
+                lastStatusKey = "working";
+                saveAndSync();
+                wakeTicker();
+                return true;
+            }
             if (target.job() == null || !target.allowQueue()) {
                 if (debug) {
                     debugLog("push rejected: target simulation failed machine={} role={} output={} amount={}",
@@ -821,6 +836,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                     plan.refillInputs(), plan.collectUnexpectedOutputs());
             job.roundsStarted = 1;
             job.markOutputStart(level.getGameTime());
+            captureBaseline(job);
             activeJobs.add(job);
             if (debug) {
                 debugLog("push started job machine={} role={} output={} amount={} active={}/{}",
@@ -832,6 +848,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             job.remaining = PatternStacks.safeAdd(job.remaining, primary.amount());
             job.queuedPatterns++;
             job.roundsStarted++;
+            addBaseline(job, flattenedInputs);
             job.roundHasOutput = false;
             job.roundTicks = 0;
             job.lastRefillAttemptTicks = 0;
@@ -862,6 +879,114 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     @Nullable
+    private boolean outputContainsPatternInput(MachinePlanFactory.Plan plan, List<GenericStack> inputs) {
+        if (plan == null || inputs.isEmpty()) {
+            return false;
+        }
+        for (MachineEndpoint endpoint : plan.outputEndpoints()) {
+            if (endpoint.medium() == MachineEndpoint.Medium.ITEM
+                    || endpoint.medium() == MachineEndpoint.Medium.SMART_ITEM_OUTPUT
+                    || endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_ITEM_OUTPUT) {
+                IItemHandler handler = itemOutputHandler(endpoint);
+                if (handler == null) {
+                    continue;
+                }
+                for (int slot = 0; slot < handler.getSlots(); slot++) {
+                    AEItemKey key = AEItemKey.of(handler.getStackInSlot(slot));
+                    if (key != null && containsInput(inputs, key)) {
+                        return true;
+                    }
+                }
+            } else if (endpoint.medium() == MachineEndpoint.Medium.FLUID
+                    || endpoint.medium() == MachineEndpoint.Medium.SMART_FLUID_OUTPUT
+                    || endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_FLUID_OUTPUT) {
+                IFluidHandler handler = fluidOutputHandler(endpoint);
+                if (handler == null) {
+                    continue;
+                }
+                for (int tank = 0; tank < handler.getTanks(); tank++) {
+                    AEFluidKey key = AEFluidKey.of(handler.getFluidInTank(tank));
+                    if (key != null && containsInput(inputs, key)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsInput(List<GenericStack> inputs, AEKey key) {
+        for (GenericStack input : inputs) {
+            if (input != null && key.equals(input.what())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void captureBaseline(KineticJob job) {
+        job.baseline.clear();
+        for (MachineEndpoint endpoint : job.outputEndpoints) {
+            if (endpoint.medium() == MachineEndpoint.Medium.ITEM
+                    || endpoint.medium() == MachineEndpoint.Medium.SMART_ITEM_OUTPUT
+                    || endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_ITEM_OUTPUT) {
+                IItemHandler handler = itemOutputHandler(endpoint);
+                if (handler == null) {
+                    continue;
+                }
+                for (int slot = 0; slot < handler.getSlots(); slot++) {
+                    AEItemKey key = AEItemKey.of(handler.getStackInSlot(slot));
+                    if (key != null) {
+                        PatternStacks.addStack(job.baseline, new GenericStack(key, handler.getStackInSlot(slot).getCount()));
+                    }
+                }
+            } else if (endpoint.medium() == MachineEndpoint.Medium.FLUID
+                    || endpoint.medium() == MachineEndpoint.Medium.SMART_FLUID_OUTPUT
+                    || endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_FLUID_OUTPUT) {
+                IFluidHandler handler = fluidOutputHandler(endpoint);
+                if (handler == null) {
+                    continue;
+                }
+                for (int tank = 0; tank < handler.getTanks(); tank++) {
+                    FluidStack fluid = handler.getFluidInTank(tank);
+                    AEFluidKey key = AEFluidKey.of(fluid);
+                    if (key != null && !fluid.isEmpty()) {
+                        PatternStacks.addStack(job.baseline, new GenericStack(key, fluid.getAmount()));
+                    }
+                }
+            }
+        }
+        job.baselineCaptured = true;
+    }
+
+    private static void addBaseline(KineticJob job, List<GenericStack> inputs) {
+        for (GenericStack input : inputs) {
+            if (input != null && input.amount() > 0) {
+                PatternStacks.addStack(job.baseline, input);
+            }
+        }
+        job.baselineCaptured = true;
+    }
+
+    private static long claimBaseline(List<GenericStack> baseline, AEKey key, long available) {
+        long ignored = 0;
+        for (int i = 0; i < baseline.size() && ignored < available; i++) {
+            GenericStack stack = baseline.get(i);
+            if (stack == null || stack.amount() <= 0 || !key.equals(stack.what())) {
+                continue;
+            }
+            long use = Math.min(stack.amount(), available - ignored);
+            ignored += use;
+            long left = stack.amount() - use;
+            if (left <= 0) {
+                baseline.remove(i--);
+            } else {
+                baseline.set(i, new GenericStack(key, left));
+            }
+        }
+        return available - ignored;
+    }
+
     private void returnNonConsumedInputs(List<GenericStack> returnedInputs) {
         for (GenericStack stack : returnedInputs) {
             long inserted = insertIntoNetwork(stack.what(), stack.amount(), Actionable.MODULATE);
@@ -1199,6 +1324,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
         job.pendingDispatchTicks = 0;
         job.roundsStarted += batch.patternCount();
+        addBaseline(job, batch.plan().refillInputs());
         job.roundTicks = 0;
         job.lastRefillAttemptTicks = 0;
         job.nextRefillGameTime = 0;
@@ -1620,6 +1746,10 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     private boolean collectOutputs(KineticJob job) {
         OutputCollection collected = new OutputCollection();
         flushPendingNetworkOutputs(job, collected);
+        if (!job.baselineCaptured) {
+            captureBaseline(job);
+        }
+        List<GenericStack> baseline = PatternStacks.copyStacks(job.baseline);
         if (job.outputEndpoints.isEmpty()) {
             if (!collected.didWork) {
                 rememberStatus("missing_output");
@@ -1630,11 +1760,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             if (endpoint.medium() == MachineEndpoint.Medium.ITEM
                     || endpoint.medium() == MachineEndpoint.Medium.SMART_ITEM_OUTPUT
                     || endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_ITEM_OUTPUT) {
-                collectItemOutput(job, endpoint, collected);
+                collectItemOutput(job, endpoint, collected, baseline);
             } else if (endpoint.medium() == MachineEndpoint.Medium.FLUID
                     || endpoint.medium() == MachineEndpoint.Medium.SMART_FLUID_OUTPUT
                     || endpoint.medium() == MachineEndpoint.Medium.CRUCIBLE_FLUID_OUTPUT) {
-                collectFluidOutput(job, endpoint, collected);
+                collectFluidOutput(job, endpoint, collected, baseline);
             } else {
                 collectDroppedItemOutput(job, endpoint, collected);
             }
@@ -1665,7 +1795,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         return collected.didWork;
     }
 
-    private void collectItemOutput(KineticJob job, MachineEndpoint endpoint, OutputCollection collected) {
+    private void collectItemOutput(KineticJob job, MachineEndpoint endpoint, OutputCollection collected,
+            List<GenericStack> baseline) {
         IItemHandler handler = itemOutputHandler(endpoint);
         if (handler == null) {
             return;
@@ -1680,6 +1811,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             if (key == null || (!job.collectUnexpectedOutputs && !isExpectedOutput(job, key))) {
                 continue;
             }
+            long collectable = claimBaseline(baseline, key, available.getCount());
+            if (collectable <= 0) {
+                continue;
+            }
+            available = available.copyWithCount((int) collectable);
             long accepted = insertIntoNetwork(key, available.getCount(), Actionable.SIMULATE);
             if (accepted <= 0) {
                 continue;
@@ -1740,7 +1876,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         return new AABB(endpoint.pos()).inflate(3.0);
     }
 
-    private void collectFluidOutput(KineticJob job, MachineEndpoint endpoint, OutputCollection collected) {
+    private void collectFluidOutput(KineticJob job, MachineEndpoint endpoint, OutputCollection collected,
+            List<GenericStack> baseline) {
         IFluidHandler handler = fluidOutputHandler(endpoint);
         if (handler == null) {
             return;
@@ -1759,6 +1896,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             if (key == null || (!job.collectUnexpectedOutputs && !isExpectedOutput(job, key))) {
                 continue;
             }
+            long collectable = claimBaseline(baseline, key, available.getAmount());
+            if (collectable <= 0) {
+                continue;
+            }
+            available = available.copyWithAmount((int) collectable);
             long accepted = insertIntoNetwork(key, available.getAmount(), Actionable.SIMULATE);
             if (accepted <= 0) {
                 continue;
@@ -2041,6 +2183,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
         job.markOutputStart(level.getGameTime());
         job.roundsStarted++;
+        addBaseline(job, job.refillInputs);
         job.roundTicks = 0;
         job.lastRefillAttemptTicks = 0;
         job.nextRefillGameTime = 0;
@@ -2472,6 +2615,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         private String statusKey = "working";
         private final List<PendingDispatch> pendingDispatches = new ArrayList<>();
         private final List<GenericStack> pendingNetworkOutputs = new ArrayList<>();
+        private final List<GenericStack> baseline = new ArrayList<>();
+        private boolean baselineCaptured;
         private int pendingDispatchTicks;
         private long outputStartTime = -1;
 
@@ -2539,6 +2684,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             tag.putInt(NBT_PENDING_DISPATCH_TICKS, pendingDispatchTicks);
             tag.putLong(NBT_OUTPUT_START_TIME, outputStartTime);
             tag.put(NBT_PENDING_NETWORK_OUTPUTS, writeStackList(registries, pendingNetworkOutputs));
+            tag.putBoolean("baselineCaptured", baselineCaptured);
+            tag.put("baseline", writeStackList(registries, baseline));
             if (!pendingDispatches.isEmpty()) {
                 net.minecraft.nbt.ListTag pendingTags = new net.minecraft.nbt.ListTag();
                 for (PendingDispatch pending : pendingDispatches) {
@@ -2590,6 +2737,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             job.pendingDispatchTicks = tag.getInt(NBT_PENDING_DISPATCH_TICKS);
             job.outputStartTime = tag.contains(NBT_OUTPUT_START_TIME) ? tag.getLong(NBT_OUTPUT_START_TIME) : -1;
             job.pendingNetworkOutputs.addAll(readStackList(tag, registries, NBT_PENDING_NETWORK_OUTPUTS));
+            job.baselineCaptured = tag.getBoolean("baselineCaptured");
+            job.baseline.addAll(readStackList(tag, registries, "baseline"));
             var pendingTags = tag.getList(NBT_PENDING_DISPATCHES, net.minecraft.nbt.Tag.TAG_COMPOUND);
             for (int i = 0; i < pendingTags.size(); i++) {
                 CompoundTag pendingTag = pendingTags.getCompound(i);
