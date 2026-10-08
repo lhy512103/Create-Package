@@ -109,6 +109,9 @@ public final class PondererJsonScenes {
         }
         ResourceLocation sceneId = dsl.id == null ? null : ResourceLocation.tryParse(dsl.id);
         String path = sceneId == null ? "scene" : sceneId.getPath();
+        if (segment.id != null && !segment.id.isBlank()) {
+            path = path + "_" + segment.id;
+        }
         scene.title(path, title);
         scene.configureBasePlate(0, 0, 5);
         scene.scaleSceneView(0.9f);
