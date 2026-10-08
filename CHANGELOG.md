@@ -26,6 +26,7 @@
 - Fixed: Non-consumed pattern inputs, such as an inscriber press, are no longer pulled out of the machine during a small craft.
 - Fixed: Materials already sitting in the machine are not treated as outputs, and a small craft still collects the real product.
 - Added: Kinetic Pattern Provider can feed a Mechanical Crafter arrow chain and collect from its output face.
+- Added: A mismatched Mechanical Crafter layout is aligned to the pattern and wrench-linked before crafting.
 - Fixed: Upgrade panels stay visible when ExtendedAE Plus blocks a second setupUpgrades call.
 - Added: Config switch for auto-ordering missing refill inputs, off by default.
 
@@ -53,6 +54,7 @@
 - 修复：样板里的不消耗物品（例如压印模板）在少量发配时不再被当成产物抽走。
 - 修复：机器里预先放好的材料不会被当成产物抽走，少量发配仍会回收真正的产物。
 - 新增：动力样板供应器可按箭头链给动力合成器投料，并从出货面回收产物。
+- 新增：动力合成器箭头和配方对不上时，会按样板重排箭头并自动拼成一组。
 - 修复：有 ExtendedAE Plus 时升级槽和底板不再被藏掉。
 - 新增：补刷缺料自动下单配置开关，默认关闭。
 

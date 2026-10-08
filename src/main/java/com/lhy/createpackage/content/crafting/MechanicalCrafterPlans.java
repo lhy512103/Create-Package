@@ -10,6 +10,8 @@ import java.util.Set;
 import org.jetbrains.annotations.Nullable;
 
 import com.simibubi.create.content.kinetics.base.HorizontalKineticBlock;
+import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
+import com.simibubi.create.content.kinetics.crafter.ConnectedInputHandler;
 import com.simibubi.create.content.kinetics.crafter.MechanicalCrafterBlock;
 import com.simibubi.create.content.kinetics.crafter.MechanicalCrafterBlockEntity;
 import com.simibubi.create.content.kinetics.crafter.RecipeGridHandler;
@@ -56,14 +58,6 @@ public final class MechanicalCrafterPlans {
 
     public static MachinePlanFactory.Plan plan(Level level, BlockPos origin, AEKey primaryOutput, long outputAmount,
             List<GenericStack> patternOutputs) {
-        Grid grid = resolve(level, origin);
-        if (grid == null) {
-            return MachinePlanFactory.Plan.failure("crafter_arrows");
-        }
-        MechanicalCrafterBlockEntity sink = crafter(level, grid.sink);
-        if (sink == null || sink.getSpeed() == 0) {
-            return MachinePlanFactory.Plan.failure("crafter_not_powered");
-        }
         IPatternDetails pattern = PATTERN.get();
         if (!(pattern instanceof AEProcessingPattern processing)) {
             return MachinePlanFactory.Plan.failure("crafter_pattern_shape");
@@ -74,6 +68,18 @@ public final class MechanicalCrafterPlans {
         }
         if (cells.isEmpty()) {
             return MachinePlanFactory.Plan.failure("missing_item_input");
+        }
+        Grid grid = resolve(level, origin);
+        if (!matches(grid, cells)) {
+            alignToPattern(level, origin, cells);
+            grid = resolve(level, origin);
+        }
+        if (grid == null) {
+            return MachinePlanFactory.Plan.failure("crafter_arrows");
+        }
+        MechanicalCrafterBlockEntity sinkEntity = crafter(level, grid.sink);
+        if (sinkEntity == null || sinkEntity.getSpeed() == 0) {
+            return MachinePlanFactory.Plan.failure("crafter_not_powered");
         }
 
         Map<Long, CrafterCell> byCoord = new HashMap<>();
@@ -126,6 +132,267 @@ public final class MechanicalCrafterPlans {
         }
         return new MachinePlanFactory.Plan(grid.sink, grid.outputPos, outputs, "mechanical_crafter",
                 new ActionList(actions), declared, List.of(), true, "working", null);
+    }
+
+    private static boolean matches(@Nullable Grid grid, List<PatternCell> cells) {
+        if (grid == null) {
+            return false;
+        }
+        int maxX = 0;
+        int maxY = 0;
+        Map<Long, CrafterCell> byCoord = new HashMap<>();
+        for (CrafterCell cell : grid.cells) {
+            byCoord.put(pack(cell.x, cell.y), cell);
+            maxX = Math.max(maxX, cell.x);
+            maxY = Math.max(maxY, cell.y);
+        }
+        int patternWidth = 0;
+        int patternHeight = 0;
+        for (PatternCell cell : cells) {
+            patternWidth = Math.max(patternWidth, cell.x);
+            patternHeight = Math.max(patternHeight, cell.y);
+        }
+        if (patternWidth != maxX || patternHeight != maxY) {
+            return false;
+        }
+        Set<Long> filled = new HashSet<>();
+        for (PatternCell cell : cells) {
+            if (byCoord.get(pack(cell.x, maxY - cell.y)) == null) {
+                return false;
+            }
+            filled.add(pack(cell.x, maxY - cell.y));
+        }
+        for (CrafterCell cell : grid.cells) {
+            if (!filled.contains(pack(cell.x, cell.y))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static void alignToPattern(Level level, BlockPos origin, List<PatternCell> cells) {
+        MechanicalCrafterBlockEntity originCrafter = crafter(level, origin);
+        if (originCrafter == null) {
+            return;
+        }
+        Direction facing = originCrafter.getBlockState().getValue(HorizontalKineticBlock.HORIZONTAL_FACING);
+        BlockState sample = originCrafter.getBlockState();
+        Direction plusX = MechanicalCrafterBlock.getTargetDirection(sample.setValue(MechanicalCrafterBlock.POINTING, Pointing.LEFT))
+                .getOpposite();
+        Direction plusY = MechanicalCrafterBlock.getTargetDirection(sample.setValue(MechanicalCrafterBlock.POINTING, Pointing.UP));
+        Map<Long, BlockPos> cluster = new HashMap<>();
+        List<BlockPos> pending = new ArrayList<>();
+        pending.add(origin.immutable());
+        cluster.put(pack(0, 0), origin.immutable());
+        Map<BlockPos, int[]> worldCoord = new HashMap<>();
+        worldCoord.put(origin.immutable(), new int[] { 0, 0 });
+        for (int index = 0; index < pending.size(); index++) {
+            BlockPos current = pending.get(index);
+            for (Direction direction : Direction.values()) {
+                if (direction.getAxis() == facing.getAxis()) {
+                    continue;
+                }
+                BlockPos next = current.relative(direction);
+                MechanicalCrafterBlockEntity neighbor = crafter(level, next);
+                if (neighbor == null || neighbor.getBlockState().getValue(HorizontalKineticBlock.HORIZONTAL_FACING) != facing
+                        || worldCoord.containsKey(next)) {
+                    continue;
+                }
+                int x = axisDelta(origin, next, plusX);
+                int y = axisDelta(origin, next, plusY);
+                worldCoord.put(next.immutable(), new int[] { x, y });
+                cluster.put(pack(x, y), next.immutable());
+                pending.add(next.immutable());
+            }
+        }
+        int[] originCoord = worldCoord.get(origin.immutable());
+        int maxPatternY = 0;
+        for (PatternCell cell : cells) {
+            maxPatternY = Math.max(maxPatternY, cell.y);
+        }
+        int offsetX = 0;
+        int offsetY = 0;
+        boolean found = false;
+        for (PatternCell anchor : cells) {
+            int createY = maxPatternY - anchor.y;
+            int candidateX = originCoord[0] - anchor.x;
+            int candidateY = originCoord[1] - createY;
+            boolean fits = true;
+            for (PatternCell cell : cells) {
+                if (!cluster.containsKey(pack(cell.x + candidateX, maxPatternY - cell.y + candidateY))) {
+                    fits = false;
+                    break;
+                }
+            }
+            if (fits) {
+                offsetX = candidateX;
+                offsetY = candidateY;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return;
+        }
+        Map<Long, BlockPos> matched = new HashMap<>();
+        for (PatternCell cell : cells) {
+            int createY = maxPatternY - cell.y;
+            BlockPos pos = cluster.get(pack(cell.x + offsetX, createY + offsetY));
+            matched.put(pack(cell.x, createY), pos);
+            MechanicalCrafterBlockEntity be = crafter(level, pos);
+            if (be == null || !be.getInventory().getStackInSlot(0).isEmpty()) {
+                return;
+            }
+        }
+        BlockPos sink = chooseSink(level, origin, matched);
+        if (!routeArrows(level, facing, matched, sink)) {
+            return;
+        }
+        connectGroup(level, facing, matched, sink);
+    }
+
+    private static BlockPos chooseSink(Level level, BlockPos origin, Map<Long, BlockPos> matched) {
+        Set<BlockPos> positions = Set.copyOf(matched.values());
+        for (BlockPos pos : positions) {
+            MechanicalCrafterBlockEntity be = crafter(level, pos);
+            if (be == null) {
+                continue;
+            }
+            Direction current = MechanicalCrafterBlock.getTargetDirection(be.getBlockState());
+            BlockPos outside = pos.relative(current);
+            if (!positions.contains(outside) && InventoryAccess.itemHandler(level, outside, null) != null) {
+                return pos;
+            }
+        }
+        if (positions.contains(origin)) {
+            return origin.immutable();
+        }
+        return positions.iterator().next();
+    }
+
+    private static boolean routeArrows(Level level, Direction facing, Map<Long, BlockPos> matched, BlockPos sink) {
+        Map<BlockPos, BlockPos> parent = new HashMap<>();
+        List<BlockPos> pending = new ArrayList<>();
+        parent.put(sink, null);
+        pending.add(sink);
+        for (int index = 0; index < pending.size(); index++) {
+            BlockPos current = pending.get(index);
+            for (Direction direction : Direction.values()) {
+                if (direction.getAxis() == facing.getAxis()) {
+                    continue;
+                }
+                BlockPos next = current.relative(direction);
+                if (!matched.containsValue(next) || parent.containsKey(next)) {
+                    continue;
+                }
+                parent.put(next, current);
+                pending.add(next);
+            }
+        }
+        if (parent.size() != matched.size()) {
+            return false;
+        }
+        for (Map.Entry<BlockPos, BlockPos> entry : parent.entrySet()) {
+            Direction targetDirection = entry.getValue() == null
+                    ? outputDirection(level, entry.getKey(), facing, parent.keySet())
+                    : directionTo(entry.getKey(), entry.getValue());
+            if (targetDirection == null) {
+                return false;
+            }
+            pointAt(level, entry.getKey(), facing, targetDirection);
+        }
+        return true;
+    }
+
+    @Nullable
+    private static Direction outputDirection(Level level, BlockPos sink, Direction facing, Set<BlockPos> matched) {
+        MechanicalCrafterBlockEntity be = crafter(level, sink);
+        if (be == null) {
+            return null;
+        }
+        Direction current = MechanicalCrafterBlock.getTargetDirection(be.getBlockState());
+        if (!matched.contains(sink.relative(current))) {
+            return current;
+        }
+        Direction fallback = null;
+        for (Pointing pointing : Pointing.values()) {
+            Direction direction = MechanicalCrafterBlock.getTargetDirection(
+                    be.getBlockState().setValue(MechanicalCrafterBlock.POINTING, pointing));
+            if (matched.contains(sink.relative(direction))) {
+                continue;
+            }
+            if (InventoryAccess.itemHandler(level, sink.relative(direction), null) != null) {
+                return direction;
+            }
+            if (fallback == null) {
+                fallback = direction;
+            }
+        }
+        return fallback == null ? current : fallback;
+    }
+
+    private static void connectGroup(Level level, Direction facing, Map<Long, BlockPos> matched, BlockPos sink) {
+        Set<BlockPos> visited = new HashSet<>();
+        List<BlockPos> pending = new ArrayList<>();
+        visited.add(sink);
+        pending.add(sink);
+        for (int index = 0; index < pending.size(); index++) {
+            BlockPos current = pending.get(index);
+            for (Direction direction : Direction.values()) {
+                if (direction.getAxis() == facing.getAxis()) {
+                    continue;
+                }
+                BlockPos next = current.relative(direction);
+                if (!matched.containsValue(next) || !visited.add(next)) {
+                    continue;
+                }
+                pending.add(next);
+                if (ConnectedInputHandler.shouldConnect(level, current, direction, direction) && !sameGroup(level, current, next)) {
+                    ConnectedInputHandler.toggleConnection(level, current, next);
+                }
+            }
+        }
+    }
+
+    private static boolean sameGroup(Level level, BlockPos left, BlockPos right) {
+        MechanicalCrafterBlockEntity leftCrafter = crafter(level, left);
+        MechanicalCrafterBlockEntity rightCrafter = crafter(level, right);
+        if (leftCrafter == null || rightCrafter == null) {
+            return false;
+        }
+        var leftInventories = leftCrafter.getInput().getInventories(level, left);
+        var rightInventories = rightCrafter.getInput().getInventories(level, right);
+        return !leftInventories.isEmpty() && !rightInventories.isEmpty() && leftInventories.get(0) == rightInventories.get(0);
+    }
+
+    private static void pointAt(Level level, BlockPos pos, Direction facing, Direction targetDirection) {
+        MechanicalCrafterBlockEntity be = crafter(level, pos);
+        if (be == null) {
+            return;
+        }
+        Pointing pointing = MechanicalCrafterBlock.pointingFromFacing(targetDirection, facing);
+        BlockState state = be.getBlockState();
+        if (state.getValue(MechanicalCrafterBlock.POINTING) == pointing) {
+            return;
+        }
+        KineticBlockEntity.switchToBlockState(level, pos, state.setValue(MechanicalCrafterBlock.POINTING, pointing));
+    }
+
+    @Nullable
+    private static Direction directionTo(BlockPos from, BlockPos to) {
+        for (Direction direction : Direction.values()) {
+            if (from.relative(direction).equals(to)) {
+                return direction;
+            }
+        }
+        return null;
+    }
+
+    private static int axisDelta(BlockPos origin, BlockPos pos, Direction axis) {
+        BlockPos step = BlockPos.ZERO.relative(axis);
+        return (pos.getX() - origin.getX()) * step.getX()
+                + (pos.getY() - origin.getY()) * step.getY()
+                + (pos.getZ() - origin.getZ()) * step.getZ();
     }
 
     @Nullable
