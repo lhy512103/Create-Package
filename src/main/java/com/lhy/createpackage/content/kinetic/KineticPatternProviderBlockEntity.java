@@ -21,6 +21,7 @@ import com.lhy.createpackage.content.crafting.FailureDiagnostics;
 import com.lhy.createpackage.content.crafting.InventoryAccess;
 import com.lhy.createpackage.content.crafting.MachineEndpoint;
 import com.lhy.createpackage.content.crafting.MachinePlanFactory;
+import com.lhy.createpackage.content.crafting.MechanicalCrafterPlans;
 import com.lhy.createpackage.content.crafting.NetworkIO;
 import com.lhy.createpackage.content.crafting.PatternStacks;
 import com.lhy.createpackage.content.crafting.RefillCraftingOrders;
@@ -690,6 +691,15 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     private boolean pushKineticPattern(IPatternDetails patternDetails, KeyCounter[] inputs) {
+        MechanicalCrafterPlans.usePattern(patternDetails);
+        try {
+            return pushKineticPatternPlanned(patternDetails, inputs);
+        } finally {
+            MechanicalCrafterPlans.clearPattern();
+        }
+    }
+
+    private boolean pushKineticPatternPlanned(IPatternDetails patternDetails, KeyCounter[] inputs) {
         if (level == null || level.isClientSide()) {
             return false;
         }
@@ -743,6 +753,10 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             return false;
         }
         if (!plan.simulate()) {
+            if ("mechanical_crafter".equals(plan.machineRole())) {
+                rememberStatus("waiting_target_space");
+                return false;
+            }
             if (target.job() == null && outputContainsPatternInput(plan, flattenedInputs)) {
                 PatternStacks.consumeInputs(inputs);
                 returnNonConsumedInputs(flattenedInputs);
@@ -1138,7 +1152,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     private boolean isMachineBusy(BlockPos machinePos) {
         for (KineticJob job : activeJobs) {
-            if (job.machinePos.equals(machinePos)) {
+            if (job.machinePos.equals(machinePos) || MechanicalCrafterPlans.sameGrid(level, machinePos, job.machinePos)) {
                 return true;
             }
         }
@@ -1434,6 +1448,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     private boolean supportsSmartStackBatch(MachinePlanFactory.Plan plan) {
+        if ("mechanical_crafter".equals(plan.machineRole())) {
+            return false;
+        }
         if ("press".equals(plan.machineRole())) {
             // Depot press: single item. Basin press: multi item/fluid inserts.
             if (isBasin(plan.outputPos())) {

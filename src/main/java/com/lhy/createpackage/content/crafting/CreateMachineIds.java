@@ -30,6 +30,7 @@ public final class CreateMachineIds {
     public static final ResourceLocation DEPOT = create("depot");
     public static final ResourceLocation BELT = create("belt");
     public static final ResourceLocation MILLSTONE = create("millstone");
+    public static final ResourceLocation MECHANICAL_CRAFTER = create("mechanical_crafter");
     public static final ResourceLocation CRUSHING_WHEEL = create("crushing_wheel");
     public static final ResourceLocation CRUSHING_CONTROLLER = create("crushing_wheel_controller");
     public static final ResourceLocation ROLLING_MILL = addon(CREATE_ADDITION, "rolling_mill");
@@ -103,6 +104,10 @@ public final class CreateMachineIds {
 
     public static boolean isSpout(@Nullable ResourceLocation id) {
         return SPOUT.equals(id) || isCreateMoreMachines(id, "_spout");
+    }
+
+    public static boolean isMechanicalCrafter(@Nullable ResourceLocation id) {
+        return MECHANICAL_CRAFTER.equals(id);
     }
 
     public static boolean isMechanicalPress(@Nullable ResourceLocation id) {
@@ -314,6 +319,9 @@ public final class CreateMachineIds {
         }
         if (isSpout(id)) {
             return "spout";
+        }
+        if (isMechanicalCrafter(id)) {
+            return "mechanical_crafter";
         }
         if (isMechanicalPress(id)) {
             return "press";

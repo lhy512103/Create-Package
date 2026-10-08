@@ -323,5 +323,9 @@
   "tooltip.createpackage.kinetic_pattern_provider.status.missing_compressor_recipe": "未找到与该样板匹配的压缩配方",
   "tooltip.createpackage.kinetic_pattern_provider.status.missing_laser_carrier": "激光加工机正下方需要置物台或传送带",
   "tooltip.createpackage.kinetic_pattern_provider.status.tesla_coil_must_face_up": "特斯拉线圈必须朝上，并置于置物台或传送带上方",
-  "tooltip.createpackage.kinetic_pattern_provider.status.unsupported_split_fluid_outputs": "暂不支持蒸馏槽的分层流体输出"
+  "tooltip.createpackage.kinetic_pattern_provider.status.unsupported_split_fluid_outputs": "暂不支持蒸馏槽的分层流体输出",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_arrows": "动力合成器箭头没有收成一条链",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_not_powered": "动力合成器没有转速",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_pattern_shape": "样板不是按格子摆放的处理样板，或某一格超过 1 个",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_shape": "样板格子和动力合成器的箭头形状对不上"
 }

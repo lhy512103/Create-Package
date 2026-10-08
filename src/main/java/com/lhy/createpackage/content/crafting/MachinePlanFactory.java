@@ -153,6 +153,9 @@ public final class MachinePlanFactory {
         if (machineId == null) {
             return Plan.failure("unsupported_machine");
         }
+        if (CreateMachineIds.isMechanicalCrafter(machineId)) {
+            return MechanicalCrafterPlans.plan(level, machinePos, primaryOutput, outputAmount, patternOutputs);
+        }
         List<GenericStack> workingInputs = new ArrayList<>(inputs);
         Context context = new Context(level, machinePos, machineId, primaryOutput, outputAmount,
                 new ArrayList<>(patternOutputs), workingInputs, PatternStacks.copyStacks(inputs));

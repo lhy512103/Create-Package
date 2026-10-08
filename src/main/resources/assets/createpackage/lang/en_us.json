@@ -323,5 +323,9 @@
   "tooltip.createpackage.kinetic_pattern_provider.status.missing_compressor_recipe": "No matching pressurizing recipe was found for this pattern",
   "tooltip.createpackage.kinetic_pattern_provider.status.missing_laser_carrier": "A Depot or Belt is required directly below the Laser",
   "tooltip.createpackage.kinetic_pattern_provider.status.tesla_coil_must_face_up": "Tesla Coil must face upward over a Depot or Belt",
-  "tooltip.createpackage.kinetic_pattern_provider.status.unsupported_split_fluid_outputs": "Distillation Tank split outputs are not supported yet"
+  "tooltip.createpackage.kinetic_pattern_provider.status.unsupported_split_fluid_outputs": "Distillation Tank split outputs are not supported yet",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_arrows": "Mechanical Crafter arrows do not form one chain",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_not_powered": "Mechanical Crafters have no rotation speed",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_pattern_shape": "Pattern must be a positioned processing pattern with one item per slot",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_shape": "Pattern grid does not match the Mechanical Crafter arrow shape"
 }
