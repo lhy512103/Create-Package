@@ -818,7 +818,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
 
     private boolean retryRefillRoundNow(DistributionJob job, String reason) {
         boolean started = startRefillRound(job, reason);
-        if (!started && "waiting_refill_inputs".equals(job.statusKey)) {
+        if (!started && "waiting_refill_inputs".equals(job.statusKey) && Config.enableRefillAutoCraft()) {
             refillCraftingOrders.requestMissing(level, getMainNode().getGrid(), actionSource, job.refillInputs,
                     job.primaryOutput);
         }

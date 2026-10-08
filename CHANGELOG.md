@@ -19,6 +19,10 @@
 - Fixed: Ponder scenes now match their captions, with correct machine facing and camera-friendly placement.
 - Added: Ponder scenes rewritten in the Ponderer JSON DSL and loaded at runtime.
 - Added: Local patched Ponderer 1.10.4.1 as a runtime dependency, compatible with JEI 19.51.
+- Changed: Package Distributor Ponder scenes split into focused segments (overview, setup, Create route, Basic, Advanced, common mistakes) with corrected machine positions.
+- Fixed: Segments of the same Ponder scene shared one localization id, so their captions could overwrite each other.
+- Fixed: Kinetic Pattern Provider keeps scanning for ejected outputs while a small craft is still running.
+- Added: Config switch for auto-ordering missing refill inputs, off by default.
 
 ### 中文
 
@@ -37,6 +41,10 @@
 - 修复：Ponder 场景与字幕对齐，并纠正机器朝向和镜头遮挡。
 - 新增：思索场景改为 Ponderer JSON DSL 并在运行时加载。
 - 新增：运行时依赖改为本地修补版 Ponderer 1.10.4.1，兼容 JEI 19.51。
+- 优化：封包分发器思索场景重写为独立分段（总览、接入方式、装配路线、基础款、高级款、常见注意事项），并修正机器位置。
+- 修复：同一思索的各分段共用本地化键，字幕可能互相覆盖，现在每段使用独立键。
+- 修复：动力样板供应器少量发配时持续扫描弹出产物，避免产物飞出回收范围。
+- 新增：补刷缺料自动下单配置开关，默认关闭。
 
 ## 2026-07-25
 

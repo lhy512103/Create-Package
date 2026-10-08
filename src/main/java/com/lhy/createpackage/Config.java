@@ -67,6 +67,11 @@ public class Config {
                     + "attempt a refill round.")
             .define("enableProbabilisticEmptyRefill", true);
 
+    public static final ModConfigSpec.BooleanValue ENABLE_REFILL_AUTO_CRAFT = BUILDER
+            .comment("When a probabilistic refill is missing inputs that already have AE2 patterns, automatically "
+                    + "order those crafts into network storage. Off by default.")
+            .define("enableRefillAutoCraft", false);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     private Config() {
@@ -118,6 +123,10 @@ public class Config {
 
     public static boolean enableProbabilisticEmptyRefill() {
         return safeBool(ENABLE_PROBABILISTIC_EMPTY_REFILL, true);
+    }
+
+    public static boolean enableRefillAutoCraft() {
+        return safeBool(ENABLE_REFILL_AUTO_CRAFT, false);
     }
 
     public static boolean debugLoggingEnabled() {

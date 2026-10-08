@@ -278,6 +278,8 @@
   "createpackage.configuration.autoRouteAllowLShaped.tooltip": "当没有纯直线走廊时，允许重建同高度单拐弯 L 形路线。",
   "createpackage.configuration.extendedKineticProviderPageMultiplier": "扩展供应器样板页数",
   "createpackage.configuration.extendedKineticProviderPageMultiplier.tooltip": "扩展动力样板供应器可使用的 36 槽样板页数量。调低后，已有样板的高页仍可访问，清空后才会缩回配置页数。",
+  "createpackage.configuration.enableRefillAutoCraft": "补刷缺料时自动下单",
+  "createpackage.configuration.enableRefillAutoCraft.tooltip": "概率补刷缺少的材料如果在 AE 网络里已有样板，就自动向网络下单。默认关闭。",
   "createpackage.configuration.enableProbabilisticEmptyRefill": "启用空产出概率补刷",
   "createpackage.configuration.enableProbabilisticEmptyRefill.tooltip": "启用后，空产出超时会视为概率失败并尝试补刷。",
   "message.createpackage.auto_route.no_tool": "请手持机器连接器、机械样板转换器或机械封包样板再使用自动路线",

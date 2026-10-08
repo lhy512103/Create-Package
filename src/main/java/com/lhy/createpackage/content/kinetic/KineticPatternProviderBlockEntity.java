@@ -494,7 +494,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     @Override
     public TickingRequest getTickingRequest(IGridNode node) {
-        return new TickingRequest(5, 20, activeJobs.isEmpty() && !hasReturnInventoryWork());
+        return new TickingRequest(1, 20, activeJobs.isEmpty() && !hasReturnInventoryWork());
     }
 
     @Override
@@ -506,10 +506,22 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         if (!activeJobs.isEmpty()) {
             didWork |= tickJobs(ticksSinceLastCall);
         }
-        if (!activeJobs.isEmpty() || hasReturnInventoryWork()) {
+        if (hasReturnInventoryWork() || hasOutputToCollect()) {
+            return TickRateModulation.URGENT;
+        }
+        if (!activeJobs.isEmpty()) {
             return didWork ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
         }
         return TickRateModulation.SLEEP;
+    }
+
+    private boolean hasOutputToCollect() {
+        for (KineticJob job : activeJobs) {
+            if (job.remaining > 0 && !job.returningPendingDispatches()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public FailureDiagnostics getDiagnostics() {
@@ -1688,7 +1700,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     private static AABB droppedItemCollectionArea(MachineEndpoint endpoint) {
         // Ejected items keep moving; cover enough travel for providers waking a few ticks after the spawn.
-        return new AABB(endpoint.pos()).inflate(1.5);
+        return new AABB(endpoint.pos()).inflate(3.0);
     }
 
     private void collectFluidOutput(KineticJob job, MachineEndpoint endpoint, OutputCollection collected) {
@@ -1920,7 +1932,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     private boolean retryRefillRoundNow(KineticJob job, String reason) {
         boolean started = startRefillRound(job, reason);
-        if (!started && "waiting_refill_inputs".equals(job.statusKey)) {
+        if (!started && "waiting_refill_inputs".equals(job.statusKey) && Config.enableRefillAutoCraft()) {
             refillCraftingOrders.requestMissing(level, getMainNode().getGrid(), actionSource, job.refillInputs,
                     job.primaryOutput);
         }

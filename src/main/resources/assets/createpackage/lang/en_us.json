@@ -278,6 +278,8 @@
   "createpackage.configuration.autoRouteAllowLShaped.tooltip": "Allow G-key auto-route to rebuild one-bend same-Y corridors when a pure straight path is unavailable.",
   "createpackage.configuration.extendedKineticProviderPageMultiplier": "Extended Provider Pattern Pages",
   "createpackage.configuration.extendedKineticProviderPageMultiplier.tooltip": "Number of 36-slot pattern pages available in an Extended Kinetic Pattern Provider. Occupied higher pages remain accessible after reducing this value and disappear only after being emptied.",
+  "createpackage.configuration.enableRefillAutoCraft": "Auto-craft Missing Refill Inputs",
+  "createpackage.configuration.enableRefillAutoCraft.tooltip": "When a probabilistic refill is missing inputs that already have AE2 patterns, order those crafts. Off by default.",
   "createpackage.configuration.enableProbabilisticEmptyRefill": "Enable Probabilistic Empty Refill",
   "createpackage.configuration.enableProbabilisticEmptyRefill.tooltip": "When enabled, craft bridges treat a full empty-output timeout as a failed probability roll and attempt a refill round.",
   "message.createpackage.auto_route.no_tool": "Hold a Machine Linker, Mechanical Pattern Converter, or Mechanical Package Pattern to auto-route",
