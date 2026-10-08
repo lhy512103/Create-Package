@@ -12,6 +12,7 @@ import appeng.menu.SlotSemantics;
 import appeng.menu.ToolboxMenu;
 import appeng.menu.implementations.PatternProviderMenu;
 import appeng.menu.slot.AppEngSlot;
+import appeng.menu.slot.RestrictedInputSlot;
 
 /**
  * Shared pattern-provider menu: bind this machine's upgrade inventory (hiding addon-injected
@@ -50,6 +51,11 @@ public abstract class CreatePackagePatternProviderMenu extends PatternProviderMe
                 return;
             }
         }
-        setupUpgrades(hostUpgrades);
+        // ExtendedAE Plus cancels AEBaseMenu.setupUpgrades once any upgrade slot exists.
+        // Add this machine's slots directly so the panel is not left empty.
+        for (int slot = 0; slot < hostUpgrades.size(); slot++) {
+            addSlot(new RestrictedInputSlot(RestrictedInputSlot.PlacableItemType.UPGRADES, hostUpgrades, slot),
+                    SlotSemantics.UPGRADE);
+        }
     }
 }

@@ -1079,7 +1079,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 didWork = true;
                 continue;
             }
-            if (isCraftingJobNoLongerWaiting(job)) {
+            if (isCraftingJobNoLongerWaiting(job) && job.roundsStarted <= 0) {
                 job.statusKey = "cancelled";
                 didWork = returnPendingDispatches(job) || didWork;
                 if (!job.hasPendingDispatches() && job.pendingNetworkOutputs.isEmpty()) {
@@ -1088,6 +1088,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                     didWork = true;
                 }
                 continue;
+            }
+            if (isCraftingJobNoLongerWaiting(job) && job.hasPendingDispatches()) {
+                didWork = returnPendingDispatches(job) || didWork;
             }
             if (job.returningPendingDispatches()) {
                 didWork = returnPendingDispatches(job) || didWork;

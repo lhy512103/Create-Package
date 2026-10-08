@@ -651,7 +651,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         boolean finished = false;
         for (int i = 0; i < activeJobs.size(); i++) {
             DistributionJob job = activeJobs.get(i);
-            if (isCraftingJobNoLongerWaiting(job)) {
+            if (isCraftingJobNoLongerWaiting(job) && job.roundsStarted <= 0) {
                 clearMissingRefillInput(job);
                 boolean returnedSupplies = returnPendingSupplies(job);
                 boolean flushedOutputs = flushPendingNetworkOutputs(job);
