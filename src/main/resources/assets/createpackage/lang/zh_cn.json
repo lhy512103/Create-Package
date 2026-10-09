@@ -326,6 +326,6 @@
   "tooltip.createpackage.kinetic_pattern_provider.status.unsupported_split_fluid_outputs": "暂不支持蒸馏槽的分层流体输出",
   "tooltip.createpackage.kinetic_pattern_provider.status.crafter_arrows": "动力合成器箭头没有收成一条链",
   "tooltip.createpackage.kinetic_pattern_provider.status.crafter_not_powered": "动力合成器没有转速",
-  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_pattern_shape": "样板不是按格子摆放的处理样板，或某一格超过 1 个",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_pattern_shape": "样板材料数量对不上动力合成配方",
   "tooltip.createpackage.kinetic_pattern_provider.status.crafter_shape": "样板格子和动力合成器的箭头形状对不上"
 }

@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.content.kinetics.base.HorizontalKineticBlock;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
 import com.simibubi.create.content.kinetics.crafter.ConnectedInputHandler;
@@ -26,6 +27,7 @@ import net.createmod.catnip.math.Pointing;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -62,7 +64,10 @@ public final class MechanicalCrafterPlans {
         if (!(pattern instanceof AEProcessingPattern processing)) {
             return MachinePlanFactory.Plan.failure("crafter_pattern_shape");
         }
-        List<PatternCell> cells = patternCells(processing.getSparseInputs());
+        List<PatternCell> cells = cellsFromRecipe(level, processing, primaryOutput, outputAmount);
+        if (cells == null) {
+            cells = patternCells(processing.getSparseInputs());
+        }
         if (cells == null) {
             return MachinePlanFactory.Plan.failure("crafter_pattern_shape");
         }
@@ -248,6 +253,7 @@ public final class MechanicalCrafterPlans {
         if (!routeArrows(level, facing, matched, sink)) {
             return;
         }
+        pointExtrasAway(level, facing, cluster, matched);
         connectGroup(level, facing, matched, sink);
     }
 
@@ -472,6 +478,115 @@ public final class MechanicalCrafterPlans {
         }
         Direction outputDirection = MechanicalCrafterBlock.getTargetDirection(sinkCrafter.getBlockState());
         return new Grid(sink, sink.relative(outputDirection).immutable(), cells);
+    }
+
+    @Nullable
+    private static List<PatternCell> cellsFromRecipe(Level level, AEProcessingPattern pattern, AEKey primaryOutput,
+            long outputAmount) {
+        if (!(primaryOutput instanceof AEItemKey primaryItem) || outputAmount <= 0) {
+            return null;
+        }
+        Map<AEItemKey, Integer> pool = new HashMap<>();
+        for (GenericStack stack : pattern.getSparseInputs()) {
+            if (stack == null || stack.amount() <= 0 || stack.what() == null) {
+                continue;
+            }
+            if (!(stack.what() instanceof AEItemKey key) || stack.amount() > Integer.MAX_VALUE) {
+                return null;
+            }
+            pool.merge(key, (int) stack.amount(), Integer::sum);
+        }
+        List<PatternCell> matched = null;
+        for (var holder : level.getRecipeManager().getAllRecipesFor(AllRecipeTypes.MECHANICAL_CRAFTING.getType())) {
+            Object value = holder.value();
+            if (!(value instanceof com.simibubi.create.content.kinetics.crafter.MechanicalCraftingRecipe recipe)) {
+                continue;
+            }
+            ItemStack result = recipe.getResultItem(level.registryAccess());
+            AEItemKey resultKey = AEItemKey.of(result);
+            if (result.isEmpty() || result.getCount() != outputAmount || resultKey == null || !resultKey.equals(primaryItem)) {
+                continue;
+            }
+            List<PatternCell> cells = assignRecipe(recipe, pool);
+            if (cells == null) {
+                continue;
+            }
+            if (matched != null) {
+                return null;
+            }
+            matched = cells;
+        }
+        return matched;
+    }
+
+    @Nullable
+    private static List<PatternCell> assignRecipe(com.simibubi.create.content.kinetics.crafter.MechanicalCraftingRecipe recipe,
+            Map<AEItemKey, Integer> pool) {
+        Map<AEItemKey, Integer> remaining = new HashMap<>(pool);
+        List<PatternCell> cells = new ArrayList<>();
+        int width = recipe.getWidth();
+        int height = recipe.getHeight();
+        List<Ingredient> ingredients = recipe.getIngredients();
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Ingredient ingredient = ingredients.get(x + y * width);
+                if (ingredient.isEmpty()) {
+                    continue;
+                }
+                AEItemKey match = null;
+                for (Map.Entry<AEItemKey, Integer> entry : remaining.entrySet()) {
+                    if (entry.getValue() <= 0 || !ingredient.test(entry.getKey().toStack(1))) {
+                        continue;
+                    }
+                    match = entry.getKey();
+                    break;
+                }
+                if (match == null) {
+                    return null;
+                }
+                remaining.put(match, remaining.get(match) - 1);
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                cells.add(new PatternCell(x, y, new GenericStack(match, 1)));
+            }
+        }
+        for (int count : remaining.values()) {
+            if (count != 0) {
+                return null;
+            }
+        }
+        if (cells.isEmpty()) {
+            return null;
+        }
+        List<PatternCell> normalized = new ArrayList<>();
+        for (PatternCell cell : cells) {
+            normalized.add(new PatternCell(cell.x - minX, cell.y - minY, cell.stack));
+        }
+        return normalized;
+    }
+
+    private static void pointExtrasAway(Level level, Direction facing, Map<Long, BlockPos> cluster,
+            Map<Long, BlockPos> matched) {
+        Set<BlockPos> used = Set.copyOf(matched.values());
+        for (BlockPos pos : cluster.values()) {
+            if (used.contains(pos)) {
+                continue;
+            }
+            MechanicalCrafterBlockEntity be = crafter(level, pos);
+            if (be == null || !be.getInventory().getStackInSlot(0).isEmpty()) {
+                continue;
+            }
+            Direction current = MechanicalCrafterBlock.getTargetDirection(be.getBlockState());
+            if (!used.contains(pos.relative(current))) {
+                continue;
+            }
+            Direction away = outputDirection(level, pos, facing, used);
+            if (away != null) {
+                pointAt(level, pos, facing, away);
+            }
+        }
     }
 
     @Nullable
