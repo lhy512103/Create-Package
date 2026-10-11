@@ -278,7 +278,6 @@ public final class PondererJsonScenes {
         return state;
     }
 
-    @SuppressWarnings("unchecked")
     private static <T extends Comparable<T>> BlockState setProperty(BlockState state, Property<T> property, String value) {
         Optional<T> parsed = property.getValue(value);
         return parsed.map(t -> state.setValue(property, t)).orElse(state);
