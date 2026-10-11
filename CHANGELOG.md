@@ -4,6 +4,7 @@
 
 ### English
 
+
 - Added: Kinetic Pattern Provider support for Enchantment Industry grindstone sanding.
 - Added: Runtime mods aligned with MEST, including its extra AE and processing mods.
 - Fixed: Deployer patterns no longer fail when a non-consumed tool is already in the machine.
@@ -26,12 +27,12 @@
 - Fixed: Non-consumed pattern inputs, such as an inscriber press, are no longer pulled out of the machine during a small craft.
 - Fixed: Materials already sitting in the machine are not treated as outputs, and a small craft still collects the real product.
 - Added: Kinetic Pattern Provider can feed a Mechanical Crafter arrow chain and collect from its output face.
-- Added: A mismatched Mechanical Crafter layout is aligned to the pattern and wrench-linked before crafting.
 - Fixed: Stacked processing-pattern inputs follow the mechanical crafting recipe, and empty recipe corners stay out of the arrow chain.
 - Fixed: Upgrade panels stay visible when ExtendedAE Plus blocks a second setupUpgrades call.
 - Added: Config switch for auto-ordering missing refill inputs, off by default.
 
 ### 中文
+
 
 - 新增：动力样板供应器支持附魔工业动力砂轮打磨。
 - 新增：运行时依赖与 MEST 对齐，并补上其额外模组。

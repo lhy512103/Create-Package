@@ -143,7 +143,7 @@ public final class MachinePlanFactory {
     private MachinePlanFactory() {
     }
 
-    public static Plan create(Level level, BlockPos machinePos, AEKey primaryOutput, long outputAmount,
+    public static Plan create(Level level, BlockPos machinePos, BlockPos providerPos, AEKey primaryOutput, long outputAmount,
             List<GenericStack> patternOutputs, List<GenericStack> inputs) {
         if (level == null || !level.isLoaded(machinePos)) {
             return Plan.failure("missing_machine");
@@ -154,7 +154,7 @@ public final class MachinePlanFactory {
             return Plan.failure("unsupported_machine");
         }
         if (CreateMachineIds.isMechanicalCrafter(machineId)) {
-            return MechanicalCrafterPlans.plan(level, machinePos, primaryOutput, outputAmount, patternOutputs);
+            return MechanicalCrafterPlans.plan(level, machinePos, providerPos, primaryOutput, outputAmount, patternOutputs);
         }
         List<GenericStack> workingInputs = new ArrayList<>(inputs);
         Context context = new Context(level, machinePos, machineId, primaryOutput, outputAmount,

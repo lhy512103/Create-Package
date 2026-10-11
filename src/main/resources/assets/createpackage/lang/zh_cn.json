@@ -324,7 +324,11 @@
   "tooltip.createpackage.kinetic_pattern_provider.status.missing_laser_carrier": "激光加工机正下方需要置物台或传送带",
   "tooltip.createpackage.kinetic_pattern_provider.status.tesla_coil_must_face_up": "特斯拉线圈必须朝上，并置于置物台或传送带上方",
   "tooltip.createpackage.kinetic_pattern_provider.status.unsupported_split_fluid_outputs": "暂不支持蒸馏槽的分层流体输出",
-  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_arrows": "动力合成器箭头没有收成一条链",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_output_not_provider": "动力合成器旁边没有可用的出货容器，请在合成器组旁紧挨着放一个箱子、置物台等容器，或让它紧挨动力样板供应器",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_shape_missing": "场地里的动力合成器不够摆出这份配方",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_occupied": "配方要用的动力合成器里还有材料，等它们清空后再投料",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_disconnected": "配方格子之间不相连，动力合成器接不成一条箭头链",
+  "tooltip.createpackage.kinetic_pattern_provider.status.crafter_extra_blocked": "多出来的动力合成器没有空位可指，会插进配方链里",
   "tooltip.createpackage.kinetic_pattern_provider.status.crafter_not_powered": "动力合成器没有转速",
   "tooltip.createpackage.kinetic_pattern_provider.status.crafter_pattern_shape": "样板材料数量对不上动力合成配方",
   "tooltip.createpackage.kinetic_pattern_provider.status.crafter_shape": "样板格子和动力合成器的箭头形状对不上"

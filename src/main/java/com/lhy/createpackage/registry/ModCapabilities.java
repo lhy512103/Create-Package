@@ -34,6 +34,11 @@ public final class ModCapabilities {
             RegisterCapabilitiesEvent event, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
         // AE2 cables only auto-register this host for AE2's own block-entity types.
         event.registerBlockEntity(AECapabilities.IN_WORLD_GRID_NODE_HOST, type, (be, context) -> be);
+
+        // Same registration AE2 gives its own Pattern Provider: the return slots. AE adapts a registered generic
+        // inventory into item and fluid handlers, so a Mechanical Crafter can hand its product to the provider and AE
+        // returns it to the network.
+        event.registerBlockEntity(AECapabilities.GENERIC_INTERNAL_INV, type, (be, context) -> be.getLogic().getReturnInv());
     }
 
     private ModCapabilities() {}

@@ -3,6 +3,7 @@ package com.lhy.createpackage.content.kinetic;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -763,6 +764,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 KineticJob job = new KineticJob(primaryOutput, patternDetails.getDefinition(), primary.amount(),
                         plan.machinePos(), plan.outputPos(), plan.outputEndpoints(), plan.machineRole(),
                         plan.patternOutputs(), plan.refillInputs(), plan.collectUnexpectedOutputs());
+                claimGroup(job, plan);
                 job.roundsStarted = 1;
                 job.markOutputStart(level.getGameTime());
                 captureBaseline(job);
@@ -800,6 +802,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 KineticJob job = new KineticJob(primaryOutput, patternDetails.getDefinition(), primary.amount(),
                         plan.machinePos(), plan.outputPos(), plan.outputEndpoints(), plan.machineRole(), plan.patternOutputs(),
                         plan.refillInputs(), plan.collectUnexpectedOutputs());
+                claimGroup(job, plan);
                 job.pendingDispatches.add(new KineticJob.PendingDispatch(primary.amount(), PatternStacks.copyStacks(flattenedInputs)));
                 job.pendingDispatchTicks = SMART_BATCH_GATHER_TICKS;
                 activeJobs.add(job);
@@ -848,6 +851,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             KineticJob job = new KineticJob(primaryOutput, patternDetails.getDefinition(), primary.amount(),
                     plan.machinePos(), plan.outputPos(), plan.outputEndpoints(), plan.machineRole(), plan.patternOutputs(),
                     plan.refillInputs(), plan.collectUnexpectedOutputs());
+            claimGroup(job, plan);
             job.roundsStarted = 1;
             job.markOutputStart(level.getGameTime());
             captureBaseline(job);
@@ -878,6 +882,18 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         saveAndSync();
         wakeTicker();
         return true;
+    }
+
+    /**
+     * A Mechanical Crafter job owns the whole chain it was planned on, and the container its product lands in. Both
+     * are read after the arrows were rewritten, so they match what Create will actually run.
+     */
+    private void claimGroup(KineticJob job, MachinePlanFactory.Plan plan) {
+        if (!"mechanical_crafter".equals(plan.machineRole())) {
+            return;
+        }
+        job.claimedCells = MechanicalCrafterPlans.chainCells(level, plan.machinePos());
+        job.claimedContainer = plan.outputPos().equals(getBlockPos()) ? null : plan.outputPos();
     }
 
     private void queuePendingPattern(KineticJob job, long outputAmount, List<GenericStack> inputs) {
@@ -1152,7 +1168,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
     private boolean isMachineBusy(BlockPos machinePos) {
         for (KineticJob job : activeJobs) {
-            if (job.machinePos.equals(machinePos) || MechanicalCrafterPlans.sameGrid(level, machinePos, job.machinePos)) {
+            if (job.machinePos.equals(machinePos) || job.claimedCells.contains(machinePos)) {
                 return true;
             }
         }
@@ -1205,7 +1221,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     @Nullable
     private MachinePlanFactory.Plan createPlanForMachine(BlockPos machinePos, AEKey primaryOutput, long outputAmount,
             List<GenericStack> patternOutputs, List<GenericStack> inputs) {
-        MachinePlanFactory.Plan plan = MachinePlanFactory.create(level, machinePos, primaryOutput, outputAmount,
+        MachinePlanFactory.Plan plan = MachinePlanFactory.create(level, machinePos, getBlockPos(), primaryOutput, outputAmount,
                 patternOutputs, inputs);
         if (!plan.isSuccess()) {
             rememberStatus(plan.statusKey() == null ? "unsupported_machine" : plan.statusKey());
@@ -1248,6 +1264,17 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 }
                 activeJobs.remove(i--);
                 lastStatusKey = activeJobs.isEmpty() ? "completed" : "working";
+                requestCraftingUpdate();
+                didWork = true;
+                continue;
+            }
+            if (crafterJobAbandoned(job)) {
+                if (debugLoggingEnabled()) {
+                    debugLog("crafter job released: AE no longer requests it and nothing is left to collect machine={} "
+                            + "output={} remaining={}", job.machinePos, job.primaryOutput, job.remaining);
+                }
+                activeJobs.remove(i--);
+                lastStatusKey = activeJobs.isEmpty() ? "cancelled" : "working";
                 requestCraftingUpdate();
                 didWork = true;
                 continue;
@@ -1299,6 +1326,24 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             saveAndSync();
         }
         return didWork;
+    }
+
+    /**
+     * A Mechanical Crafter job has no machine inventory to scan, so it only finishes when AE credits a product. If
+     * the AE craft is gone and neither the crafters nor the return slots hold anything for it, the job can never
+     * finish, so release the provider instead of leaving it blocked until the hard timeout.
+     */
+    private boolean crafterJobAbandoned(KineticJob job) {
+        if (!"mechanical_crafter".equals(job.machineRole)
+                || job.remaining <= 0
+                || job.hasPendingDispatches()
+                || !job.pendingNetworkOutputs.isEmpty()
+                || !isCraftingJobNoLongerWaiting(job)
+                || !logic.getReturnInv().isEmpty()
+                || hasCollectableOutput(job)) {
+            return false;
+        }
+        return !MechanicalCrafterPlans.chainHoldsItems(level, job.machinePos);
     }
 
     private boolean dispatchPendingPattern(KineticJob job) {
@@ -1768,7 +1813,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
         List<GenericStack> baseline = PatternStacks.copyStacks(job.baseline);
         if (job.outputEndpoints.isEmpty()) {
-            if (!collected.didWork) {
+            // A Mechanical Crafter chain delivers into the provider's own return slots, so there is nothing to scan:
+            // creditCrafterProducts counts the product when AE moves it into the network.
+            if (!collected.didWork && !"mechanical_crafter".equals(job.machineRole)) {
                 rememberStatus("missing_output");
             }
             return collected.didWork;
@@ -2240,8 +2287,37 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         if (level == null || !level.isLoaded(machinePos)) {
             return MachinePlanFactory.Plan.failure("missing_machine");
         }
-        return MachinePlanFactory.create(level, machinePos, primaryOutput, outputAmount, patternOutputs,
-                PatternStacks.copyStacks(inputs));
+        MechanicalCrafterPlans.useClaimed(claimedCrafters(machinePos), claimedContainers(machinePos));
+        try {
+            return MachinePlanFactory.create(level, machinePos, getBlockPos(), primaryOutput, outputAmount,
+                    patternOutputs, PatternStacks.copyStacks(inputs));
+        } finally {
+            MechanicalCrafterPlans.useClaimed(null, null);
+        }
+    }
+
+    /**
+     * Crafters and output containers that other running jobs use. A job planning for the same machine it already
+     * owns (a re-plan, a refill, a queued batch) keeps its own cells, so only the other jobs are excluded.
+     */
+    private Set<BlockPos> claimedCrafters(BlockPos machinePos) {
+        Set<BlockPos> claimed = new HashSet<>();
+        for (KineticJob job : activeJobs) {
+            if (!job.machinePos.equals(machinePos)) {
+                claimed.addAll(job.claimedCells);
+            }
+        }
+        return claimed;
+    }
+
+    private Set<BlockPos> claimedContainers(BlockPos machinePos) {
+        Set<BlockPos> claimed = new HashSet<>();
+        for (KineticJob job : activeJobs) {
+            if (!job.machinePos.equals(machinePos) && job.claimedContainer != null) {
+                claimed.add(job.claimedContainer);
+            }
+        }
+        return claimed;
     }
 
     private boolean isCraftingJobNoLongerWaiting(KineticJob job) {
@@ -2385,12 +2461,35 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         boolean didWork = logic.getReturnInv().injectIntoNetwork(
                 grid.getStorageService().getInventory(),
                 actionSource,
-                returned -> {
-                });
+                this::creditCrafterProducts);
         if (didWork) {
             saveAndSync();
         }
         return didWork;
+    }
+
+    /**
+     * A Mechanical Crafter chain pushes its product into the provider's own return slots, and AE moves it into the
+     * network from there. The job never sees the item leave an inventory it scans, so the delivery is credited here.
+     */
+    private void creditCrafterProducts(GenericStack returned) {
+        if (returned == null || returned.what() == null || returned.amount() <= 0) {
+            return;
+        }
+        for (KineticJob job : activeJobs) {
+            if (!"mechanical_crafter".equals(job.machineRole) || !job.outputEndpoints.isEmpty()
+                    || !returned.what().equals(job.primaryOutput) || job.remaining <= 0) {
+                continue;
+            }
+            OutputCollection collected = new OutputCollection();
+            recordCollectedOutput(job, returned.what(), returned.amount(), collected);
+            if (debugLoggingEnabled()) {
+                debugLog("crafter product credited output={} amount={} remaining={}", returned.what(), returned.amount(),
+                        job.remaining);
+            }
+            requestCraftingUpdate();
+            return;
+        }
     }
 
     private AeStatus currentAeStatus() {
@@ -2636,6 +2735,10 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         private boolean baselineCaptured;
         private int pendingDispatchTicks;
         private long outputStartTime = -1;
+        // Mechanical crafter groups only: every crafter of the group's chain, and the container its product lands in.
+        private Set<BlockPos> claimedCells = Set.of();
+        @Nullable
+        private BlockPos claimedContainer;
 
         private KineticJob(AEKey primaryOutput, @Nullable AEItemKey patternDefinition, long remaining, BlockPos machinePos,
                 BlockPos outputPos, List<MachineEndpoint> outputEndpoints, String machineRole,
@@ -2700,6 +2803,12 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             tag.put(NBT_REFILL_INPUTS, writeStackList(registries, refillInputs));
             tag.putInt(NBT_PENDING_DISPATCH_TICKS, pendingDispatchTicks);
             tag.putLong(NBT_OUTPUT_START_TIME, outputStartTime);
+            if (!claimedCells.isEmpty()) {
+                tag.putLongArray("claimedCells", claimedCells.stream().mapToLong(BlockPos::asLong).toArray());
+            }
+            if (claimedContainer != null) {
+                tag.putLong("claimedContainer", claimedContainer.asLong());
+            }
             tag.put(NBT_PENDING_NETWORK_OUTPUTS, writeStackList(registries, pendingNetworkOutputs));
             tag.putBoolean("baselineCaptured", baselineCaptured);
             tag.put("baseline", writeStackList(registries, baseline));
@@ -2753,6 +2862,16 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             job.statusKey = tag.contains(NBT_JOB_STATUS) ? tag.getString(NBT_JOB_STATUS) : "working";
             job.pendingDispatchTicks = tag.getInt(NBT_PENDING_DISPATCH_TICKS);
             job.outputStartTime = tag.contains(NBT_OUTPUT_START_TIME) ? tag.getLong(NBT_OUTPUT_START_TIME) : -1;
+            if (tag.contains("claimedCells")) {
+                Set<BlockPos> cells = new HashSet<>();
+                for (long packed : tag.getLongArray("claimedCells")) {
+                    cells.add(BlockPos.of(packed));
+                }
+                job.claimedCells = Set.copyOf(cells);
+            }
+            if (tag.contains("claimedContainer")) {
+                job.claimedContainer = BlockPos.of(tag.getLong("claimedContainer"));
+            }
             job.pendingNetworkOutputs.addAll(readStackList(tag, registries, NBT_PENDING_NETWORK_OUTPUTS));
             job.baselineCaptured = tag.getBoolean("baselineCaptured");
             job.baseline.addAll(readStackList(tag, registries, "baseline"));
