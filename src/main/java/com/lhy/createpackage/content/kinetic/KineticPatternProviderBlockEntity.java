@@ -1231,15 +1231,32 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         return plan;
     }
 
+    private static int jobStep(KineticJob job, long now, int ticksSinceLastCall) {
+        int reported = Math.max(1, ticksSinceLastCall);
+        if (job.lastAdvanceGameTime < 0) {
+            // First tick of this job: it has existed for this single tick, however long the provider slept before.
+            job.lastAdvanceGameTime = now;
+            return 1;
+        }
+        int alive = (int) Math.max(1, Math.min(Integer.MAX_VALUE, now - job.lastAdvanceGameTime));
+        job.lastAdvanceGameTime = now;
+        return Math.min(reported, alive);
+    }
+
     private boolean tickJobs(int ticksSinceLastCall) {
         if (activeJobs.isEmpty() || level == null || level.isClientSide()) {
             return false;
         }
-        int step = Math.max(1, ticksSinceLastCall);
         boolean earlyRefill = refillCraftingOrders.takeCraftFinished();
         boolean didWork = false;
+        long now = level.getGameTime();
         for (int i = 0; i < activeJobs.size(); i++) {
             KineticJob job = activeJobs.get(i);
+            // AE reports the time since this provider was last ticked, and a sleeping provider is not ticked at all.
+            // A job pushed right after a long idle stretch would otherwise be credited the whole stretch on its first
+            // tick and trip the empty-output refill and the hard timeout immediately. Count only the time this job
+            // has been alive, capped by what AE reports.
+            int step = jobStep(job, now, ticksSinceLastCall);
             job.ticks += step;
             job.roundTicks += step;
             if (job.pendingDispatchTicks > 0) {
@@ -2735,6 +2752,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         private boolean baselineCaptured;
         private int pendingDispatchTicks;
         private long outputStartTime = -1;
+        // Game time this job was last advanced at. Not saved: a job read back from disk or created now starts counting
+        // from the moment it is first ticked, so the time the provider spent asleep is never credited to it.
+        private long lastAdvanceGameTime = -1;
         // Mechanical crafter groups only: every crafter of the group's chain, and the container its product lands in.
         private Set<BlockPos> claimedCells = Set.of();
         @Nullable
