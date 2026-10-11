@@ -69,7 +69,6 @@ import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
 import appeng.api.networking.crafting.ICraftingProvider;
-import appeng.api.networking.crafting.ICraftingWatcherNode;
 import appeng.api.networking.ticking.IGridTickable;
 import appeng.api.networking.ticking.TickRateModulation;
 import appeng.api.networking.ticking.TickingRequest;
@@ -114,7 +113,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     private final Item providerItem;
     private final MenuType<? extends KineticPatternProviderMenu> providerMenuType;
     private final MachineSource actionSource = new MachineSource(this);
-    private final RefillCraftingOrders refillCraftingOrders = new RefillCraftingOrders(() -> getMainNode().getNode());
+    private final RefillCraftingOrders refillCraftingOrders = new RefillCraftingOrders();
     private final List<KineticJob> activeJobs = new ArrayList<>();
     private final List<BlockPos> linkedMachines = new ArrayList<>();
     private final FailureDiagnostics diagnostics = new FailureDiagnostics();
@@ -144,8 +143,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 .setFlags(GridFlags.REQUIRE_CHANNEL)
                 .setIdlePowerUsage(1.0)
                 .addService(IGridTickable.class, this)
-                .addService(ICraftingProvider.class, logic)
-                .addService(ICraftingWatcherNode.class, refillCraftingOrders);
+                .addService(ICraftingProvider.class, logic);
     }
 
     @Override
@@ -1247,7 +1245,6 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         if (activeJobs.isEmpty() || level == null || level.isClientSide()) {
             return false;
         }
-        boolean earlyRefill = refillCraftingOrders.takeCraftFinished();
         boolean didWork = false;
         long now = level.getGameTime();
         for (int i = 0; i < activeJobs.size(); i++) {
@@ -1321,7 +1318,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
                 didWork = dispatchPendingPattern(job) || didWork;
             } else if (job.waitingForRefill()) {
                 refillCraftingOrders.tickPending(getMainNode().getGrid(), actionSource);
-                didWork = retryRefillRound(job, collected, earlyRefill) || didWork;
+                didWork = retryRefillRound(job, collected) || didWork;
             } else if (!job.roundHasOutput
                     && Config.enableProbabilisticEmptyRefill()
                     && job.roundTicks > emptyOutputRefillTimeoutTicks()) {
@@ -2180,11 +2177,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         return Math.max(64, stack.getCount());
     }
 
-    private boolean retryRefillRound(KineticJob job, boolean targetChanged, boolean earlyRefill) {
+    private boolean retryRefillRound(KineticJob job, boolean targetChanged) {
         if (targetChanged && "refill_target_full".equals(job.statusKey)) {
             return retryRefillRoundNow(job, "target_freed");
         }
-        if (!earlyRefill && job.roundTicks - job.lastRefillAttemptTicks < Config.refillRetryTicks()) {
+        if (job.roundTicks - job.lastRefillAttemptTicks < Config.refillRetryTicks()) {
             return false;
         }
         return retryRefillRoundNow(job, job.statusKey);
@@ -2270,23 +2267,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         job.nextRefillGameTime = 0;
         job.roundHasOutput = false;
         rememberJobStatus(job, "working");
-        if (!hasWaitingRefillJob()) {
-            refillCraftingOrders.watchNone();
-        }
         CreatePackage.LOGGER.info("[Kinetic Pattern Provider @ {}] refilled {} after {} (round {})",
                 getBlockPos(), job.primaryOutput, reason, job.roundsStarted);
         saveAndSync();
         wakeTicker();
         return true;
-    }
-
-    private boolean hasWaitingRefillJob() {
-        for (KineticJob job : activeJobs) {
-            if (job.waitingForRefill()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private long primaryPatternOutputAmount(KineticJob job) {

@@ -64,7 +64,6 @@ import appeng.api.networking.GridFlags;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
-import appeng.api.networking.crafting.ICraftingWatcherNode;
 
 import appeng.api.networking.ticking.IGridTickable;
 import appeng.api.networking.ticking.TickRateModulation;
@@ -107,7 +106,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
      */
     private final List<BlockPos> linkedMachines = new ArrayList<>();
     private final MachineSource actionSource = new MachineSource(this);
-    private final RefillCraftingOrders refillCraftingOrders = new RefillCraftingOrders(() -> getMainNode().getNode());
+    private final RefillCraftingOrders refillCraftingOrders = new RefillCraftingOrders();
 
     private final List<DistributionJob> activeJobs = new ArrayList<>();
     private final FailureDiagnostics diagnostics = new FailureDiagnostics();
@@ -140,8 +139,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         this.getMainNode()
                 .setVisualRepresentation(visualItem)
                 .setFlags(GridFlags.REQUIRE_CHANNEL)
-                .setIdlePowerUsage(1.0)
-                .addService(ICraftingWatcherNode.class, refillCraftingOrders);
+                .setIdlePowerUsage(1.0);
         if (installTicker) {
             this.getMainNode().addService(IGridTickable.class, new DistributorTicker());
         }
@@ -645,7 +643,6 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
             return false;
         }
         int step = Math.max(1, ticksSinceLastCall);
-        boolean earlyRefill = refillCraftingOrders.takeCraftFinished();
 
         boolean didWork = false;
         boolean finished = false;
@@ -670,7 +667,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
                 didWork = true;
                 continue;
             }
-            didWork = tickJob(job, step, earlyRefill) || didWork;
+            didWork = tickJob(job, step) || didWork;
             if (job.primaryRemaining <= 0 && job.pendingNetworkOutputs.isEmpty()) {
                 clearMissingRefillInput(job);
                 didWork = returnPendingSupplies(job) || didWork;
@@ -697,7 +694,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return grid != null && grid.getCraftingService().getRequestedAmount(job.primaryOutput) <= 0;
     }
 
-    private boolean tickJob(DistributionJob job, int step, boolean earlyRefill) {
+    private boolean tickJob(DistributionJob job, int step) {
         job.ticks += step;
         job.roundTicks += step;
         boolean waitingForRefill = job.waitingForRefill();
@@ -711,7 +708,7 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         }
         if (waitingForRefill) {
             refillCraftingOrders.tickPending(getMainNode().getGrid(), actionSource);
-            didWork = retryRefillRound(job, earlyRefill) || didWork;
+            didWork = retryRefillRound(job) || didWork;
         } else if (!waitingForReflow && !waitingForTargetSpace && job.pendingSupplies.isEmpty()
                 && job.awaitingFinalOutput && !job.roundHasOutput
                 && Config.enableProbabilisticEmptyRefill()
@@ -809,8 +806,8 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         return didWork;
     }
 
-    private boolean retryRefillRound(DistributionJob job, boolean earlyRefill) {
-        if (!earlyRefill && job.roundTicks - job.lastRefillAttemptTicks < Config.refillRetryTicks()) {
+    private boolean retryRefillRound(DistributionJob job) {
+        if (job.roundTicks - job.lastRefillAttemptTicks < Config.refillRetryTicks()) {
             return false;
         }
         return retryRefillRoundNow(job, job.statusKey);
@@ -1104,23 +1101,11 @@ public class PackageDistributorBlockEntity extends AENetworkedBlockEntity
         job.roundHasOutput = false;
         job.awaitingFinalOutput = job.loops <= 1;
         rememberJobStatus(job, "working");
-        if (!hasWaitingRefillJob()) {
-            refillCraftingOrders.watchNone();
-        }
         CreatePackage.LOGGER.info("[Distributor @ {}] refilled recipe {} after {} (round {})",
                 getBlockPos(), job.recipeId, reason, job.roundsStarted);
         saveAndSync();
         wakeTicker();
         return true;
-    }
-
-    private boolean hasWaitingRefillJob() {
-        for (DistributionJob job : activeJobs) {
-            if (job.waitingForRefill()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void setMissingRefillInput(DistributionJob job, GenericStack missing, String reason) {
