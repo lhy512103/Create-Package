@@ -5,6 +5,7 @@
 ### English
 
 
+- Changed: Advanced Package Distributor now has 36 pattern slots in a 9-by-4 grid, using the Extended Kinetic Pattern Provider background.
 - Added: Kinetic Pattern Provider support for Enchantment Industry grindstone sanding.
 - Added: Runtime mods aligned with MEST, including its extra AE and processing mods.
 - Fixed: Deployer patterns no longer fail when a non-consumed tool is already in the machine.
@@ -33,6 +34,7 @@
 ### 中文
 
 
+- 调整：高级封包分发器的样板槽位扩展为 36 格（9 列 × 4 行），使用扩展动力样板供应器的界面背景。
 - 新增：动力样板供应器支持附魔工业动力砂轮打磨。
 - 新增：运行时依赖与 MEST 对齐，并补上其额外模组。
 - 修复：机械手已预放不消耗施加物时不再误报缺料。
