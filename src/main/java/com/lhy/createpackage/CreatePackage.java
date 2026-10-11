@@ -89,6 +89,7 @@ public class CreatePackage {
                     com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity.MAX_PARALLEL_CARDS);
             Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.EXTENDED_KINETIC_PATTERN_PROVIDER.get(),
                     com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity.MAX_PARALLEL_CARDS);
+            com.lhy.createpackage.compat.Ae2UtilityCompat.registerUpgrades();
             if (ModList.get().isLoaded("ftbultimine")) {
                 com.lhy.createpackage.integration.ftbultimine.FtbUltimineCompat.register();
             }

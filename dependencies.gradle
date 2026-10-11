@@ -2,6 +2,7 @@ dependencies {
     // === Compile-time APIs (what this mod integrates against) ===
     // AE2 — autocrafting / pattern provider / crafting machine APIs
     compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    compileOnly "curse.maven:ae2-utility-1521605:${ae2_utility_file}"
     // Create — sequenced assembly recipe types + machine block entities / capabilities
     compileOnly "com.simibubi.create:create-1.21.1:${create_version}"
     compileOnly "net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}"
@@ -37,11 +38,11 @@ dependencies {
     // === Local runtime: AE2 addons ===
     localRuntime "curse.maven:advancedae-1084104:${advancedae_file}"
     localRuntime "curse.maven:ae2-crystal-science-1435174:${ae2_crystal_science_file}"
-    // AE2 Utility 1.7.2+ mixins RecipeSlot.displayOverrides (JEI 19.57). Plus 1.6.x still
-    // constructs mezz.jei.gui.input.handlers.CombinedInputHandler (JEI ≤19.51). Cannot load both.
-    // localRuntime "curse.maven:ae2-utility-1521605:${ae2_utility_file}"
+    localRuntime "curse.maven:ae2-utility-1521605:${ae2_utility_file}"
     localRuntime "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
-    localRuntime "curse.maven:extendedae-plus-1337639:${extendedae_plus_file}"
+    if (!providers.gradleProperty('compatWithoutPlus').isPresent()) {
+        localRuntime "curse.maven:extendedae-plus-1337639:${extendedae_plus_file}"
+    }
     localRuntime "curse.maven:applied-energistics-2-wireless-terminals-459929:${ae2wt_terminals_file}"
     localRuntime "curse.maven:ae2-wcwt-1546802:${ae2_wcwt_file}"
     localRuntime "curse.maven:applied-flux-965012:${applied_flux_file}"

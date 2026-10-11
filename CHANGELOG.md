@@ -4,7 +4,10 @@
 
 ### English
 
+- Changed: Upgrade cards now share exactly four slots. Supported machines accept at most four Parallel Cards and one NBT Tear Card, subject to the four-slot total; the tooltip lists available upgrades. Legacy dedicated cards move into free shared slots or drop beside the block if full.
 
+- Added: AE2 Utility 1.8 NBT Tear Card slots for built-in providers, including ExtendedAE Plus compatibility. Distributor output accounting, AE CPU returns and refill selection honor the card's rules; ordinary distributors inherit the external provider's rule for each job.
+- Changed: Local runtime uses the AE2 Utility 1.8.0 build and JECharacters CurseForge file 8771217.
 - Changed: Advanced Package Distributor Parallel Cards now default to 16 jobs per card (32 with two), matching Kinetic Pattern Providers.
 - Changed: Advanced Package Distributor now has 36 pattern slots in a 9-by-4 grid, using the Extended Kinetic Pattern Provider background.
 - Added: Kinetic Pattern Provider support for Enchantment Industry grindstone sanding.
@@ -34,7 +37,10 @@
 
 ### 中文
 
+- 调整：升级卡共用总计 4 个槽位，支持机型的并行卡上限 4 张、NBT 撕裂卡上限 1 张，由玩家自行搭配；提示统一显示“可用升级”列表。旧专用槽卡片移入空余通用槽，满槽时掉落在方块旁。
 
+- 新增：兼容 AE2 Utility 1.8 的 NBT 撕裂卡，内置样板供应器的卡槽可与 ExtendedAE Plus 共存；分发器产物计数、AE CPU 回传和补料选择遵循卡片规则，普通分发器按作业继承外接供应器的规则。
+- 调整：开发运行时加载本地 AE2 Utility 1.8.0，JECharacters 更新到 CurseForge 文件 8771217。
 - 调整：高级封包分发器每张并行卡默认提供 16 并行，两张为 32，与动力样板供应器一致。
 - 调整：高级封包分发器的样板槽位扩展为 36 格（9 列 × 4 行），使用扩展动力样板供应器的界面背景。
 - 新增：动力样板供应器支持附魔工业动力砂轮打磨。

@@ -26,6 +26,13 @@ sourceSets.main.resources {
     exclude("src/generated/**/.cache") // datagen cache files
 }
 
+// Opt-in integration checks run inside NeoForge with the actual addon mixins applied.
+// These sources and fixtures are not included in normal builds/releases.
+if (providers.gradleProperty('compatGameTests').isPresent()) {
+    sourceSets.main.java.srcDir('src/gameTest/java')
+    sourceSets.main.resources.srcDir('src/gameTest/resources')
+}
+
 repositories {
     mavenCentral()
     maven {
@@ -177,6 +184,7 @@ neoForge {
         // The gametest system is also enabled by default for other run configs under the /test command.
         gameTestServer {
             type = "gameTestServer"
+            gameDirectory = project.file('run-gametest')
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 

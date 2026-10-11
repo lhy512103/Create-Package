@@ -6,6 +6,7 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.compat.Ae2UtilityCompat;
 import com.lhy.createpackage.compat.ExtendedAePlusCompat;
 import com.lhy.createpackage.registry.ModBlockEntities;
 import com.lhy.createpackage.registry.ModItems;
@@ -82,6 +83,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
         super.onReady();
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
         logic.updatePatterns();
+        Ae2UtilityCompat.migrateLegacyCard(this, getUpgrades());
         // Keep cards from older addon-owned inventories accessible without discarding leftovers.
         IUpgradeInventory legacy = ExtendedAePlusCompat.patternLogicUpgrades(logic);
         if (legacy != null && legacy != upgrades) {
@@ -219,6 +221,12 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     }
 
     private final class InternalPatternProviderLogic extends PatternProviderLogic {
+        // Implements Utility's mixin-provided interface method at runtime. No addon is required to load this class.
+        @SuppressWarnings("unused") // Called through NbtTearLogicAccess after Mixin transforms the superclass.
+        public ItemStack ae2utility$getEffectiveTearCardStack() {
+            return Ae2UtilityCompat.findInstalledCard(BasicPackageDistributorBlockEntity.this.getUpgrades());
+        }
+
         private InternalPatternProviderLogic() {
             super(getMainNode(), BasicPackageDistributorBlockEntity.this);
         }

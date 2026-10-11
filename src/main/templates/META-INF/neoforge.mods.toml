@@ -95,6 +95,14 @@ ${mod_description}
     ordering="AFTER"
     side="BOTH"
 
+# AE2 Utility - optional NBT tear-card integration.
+[[dependencies.${mod_id}]]
+    modId="ae2utility"
+    type="optional"
+    versionRange="[1.8.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
 # Create - required, this mod drives Create sequenced-assembly machines.
 [[dependencies.${mod_id}]]
     modId="create"

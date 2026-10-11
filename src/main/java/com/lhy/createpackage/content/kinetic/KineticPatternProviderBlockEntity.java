@@ -12,6 +12,7 @@ import java.util.Set;
 import org.jetbrains.annotations.Nullable;
 
 import com.lhy.createpackage.Config;
+import com.lhy.createpackage.compat.Ae2UtilityCompat;
 import com.lhy.createpackage.CreatePackage;
 import com.lhy.createpackage.compat.ExtendedAePlusCompat;
 import com.lhy.createpackage.content.crafting.ActionList;
@@ -159,6 +160,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         super.onReady();
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
         logic.updatePatterns();
+        Ae2UtilityCompat.migrateLegacyCard(this, getUpgrades());
         if (level != null && !level.isClientSide()) {
             migrateHostUpgradesIntoLogic();
             normalizeLinkedMachines();
@@ -690,6 +692,9 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     private boolean pushKineticPattern(IPatternDetails patternDetails, KeyCounter[] inputs) {
+        if (!Ae2UtilityCompat.acceptsProcessingInputs(Ae2UtilityCompat.captureTearCard(logic), patternDetails, inputs)) {
+            return false;
+        }
         MechanicalCrafterPlans.usePattern(patternDetails);
         try {
             return pushKineticPatternPlanned(patternDetails, inputs);
@@ -2086,12 +2091,12 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         collected.didWork = true;
     }
 
-    private static void recordCollectedOutput(KineticJob job, AEKey key, long amount, OutputCollection collected) {
+    private void recordCollectedOutput(KineticJob job, AEKey key, long amount, OutputCollection collected) {
         job.roundHasOutput = true;
         job.roundTicks = 0;
         job.lastRefillAttemptTicks = 0;
         job.nextRefillGameTime = 0;
-        if (key.equals(job.primaryOutput)) {
+        if (Ae2UtilityCompat.matches(logic, job.primaryOutput, key)) {
             job.remaining = Math.max(0, job.remaining - amount);
             collected.primary += amount;
         } else {
@@ -2108,7 +2113,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     private boolean isExpectedOutput(KineticJob job, AEKey key) {
-        return ExpectedOutputMatcher.matches(job.primaryOutput, job.patternOutputs, GenericStack::what, key);
+        return ExpectedOutputMatcher.matches(job.primaryOutput, job.patternOutputs, GenericStack::what, key,
+                (expected, actual) -> Ae2UtilityCompat.matches(logic, expected, actual));
     }
 
     private boolean shouldCompletePartialOutputJob(KineticJob job) {
@@ -2213,8 +2219,12 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             return false;
         }
 
+        ItemStack tearCard = Ae2UtilityCompat.captureTearCard(logic);
+        List<GenericStack> refillInputs = tearCard.isEmpty() ? job.refillInputs
+                : networkIO().resolveInputs(job.refillInputs,
+                        (expected, actual) -> Ae2UtilityCompat.matches(tearCard, expected, actual));
         MachinePlanFactory.Plan refill = createPlanAt(job.machinePos, job.primaryOutput,
-                primaryPatternOutputAmount(job), job.patternOutputs, job.refillInputs);
+                primaryPatternOutputAmount(job), job.patternOutputs, refillInputs);
         if (refill == null) {
             markRefillAttempt(job);
             return false;
@@ -2225,7 +2235,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             return false;
         }
 
-        for (GenericStack input : job.refillInputs) {
+        for (GenericStack input : refillInputs) {
             long available = extractFromNetwork(input.what(), input.amount(), Actionable.SIMULATE);
             if (available < input.amount()) {
                 rememberJobStatus(job, "waiting_refill_inputs");
@@ -2239,7 +2249,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             return false;
         }
 
-        for (GenericStack input : job.refillInputs) {
+        for (GenericStack input : refillInputs) {
             long extracted = extractFromNetwork(input.what(), input.amount(), Actionable.MODULATE);
             if (extracted < input.amount()) {
                 if (extracted > 0) {
@@ -2251,7 +2261,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
             }
         }
         if (!refill.execute().success()) {
-            for (GenericStack input : job.refillInputs) {
+            for (GenericStack input : refillInputs) {
                 insertIntoNetwork(input.what(), input.amount(), Actionable.MODULATE);
             }
             rememberJobStatus(job, "refill_target_full");
@@ -2261,7 +2271,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
 
         job.markOutputStart(level.getGameTime());
         job.roundsStarted++;
-        addBaseline(job, job.refillInputs);
+        addBaseline(job, refillInputs);
         job.roundTicks = 0;
         job.lastRefillAttemptTicks = 0;
         job.nextRefillGameTime = 0;
@@ -2364,7 +2374,8 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     private long insertIntoNetwork(AEKey what, long amount, Actionable mode) {
-        return networkIO().insert(what, amount, mode);
+        return Ae2UtilityCompat.withTearCard(Ae2UtilityCompat.captureTearCard(logic),
+                () -> networkIO().insert(what, amount, mode));
     }
 
     private long extractFromNetwork(AEKey what, long amount, Actionable mode) {
@@ -2460,10 +2471,11 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         if (grid == null) {
             return false;
         }
-        boolean didWork = logic.getReturnInv().injectIntoNetwork(
+        boolean didWork = Ae2UtilityCompat.withTearCard(Ae2UtilityCompat.captureTearCard(logic),
+                () -> logic.getReturnInv().injectIntoNetwork(
                 grid.getStorageService().getInventory(),
                 actionSource,
-                this::creditCrafterProducts);
+                this::creditCrafterProducts));
         if (didWork) {
             saveAndSync();
         }
@@ -2480,7 +2492,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
         }
         for (KineticJob job : activeJobs) {
             if (!"mechanical_crafter".equals(job.machineRole) || !job.outputEndpoints.isEmpty()
-                    || !returned.what().equals(job.primaryOutput) || job.remaining <= 0) {
+                    || !Ae2UtilityCompat.matches(logic, job.primaryOutput, returned.what()) || job.remaining <= 0) {
                 continue;
             }
             OutputCollection collected = new OutputCollection();
@@ -2962,6 +2974,12 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     }
 
     private final class InternalPatternProviderLogic extends PatternProviderLogic {
+        // Implements Utility's mixin-provided interface method at runtime. No addon is required to load this class.
+        @SuppressWarnings("unused") // Called through NbtTearLogicAccess after Mixin transforms the superclass.
+        public ItemStack ae2utility$getEffectiveTearCardStack() {
+            return Ae2UtilityCompat.findInstalledCard(KineticPatternProviderBlockEntity.this.getUpgrades());
+        }
+
         private InternalPatternProviderLogic(int patternSlots) {
             super(getMainNode(), KineticPatternProviderBlockEntity.this, patternSlots);
         }
