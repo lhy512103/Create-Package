@@ -55,8 +55,11 @@ import appeng.util.SettingsFrom;
  */
 public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockEntity
         implements PatternProviderLogicHost, IUpgradeableObject {
+    private static final String NBT_HOST_UPGRADES = "createpackage_upgrades";
 
     private final InternalPatternProviderLogic logic = new InternalPatternProviderLogic();
+    private final IUpgradeInventory upgrades = UpgradeInventories.forMachine(
+            ModItems.BASIC_PACKAGE_DISTRIBUTOR.get(), 4, this::saveAndSync);
     private final CombinedTicker combinedTicker = new CombinedTicker();
 
     public BasicPackageDistributorBlockEntity(BlockPos pos, BlockState blockState) {
@@ -79,12 +82,23 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
         super.onReady();
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
         logic.updatePatterns();
+        // Keep cards from older addon-owned inventories accessible without discarding leftovers.
+        IUpgradeInventory legacy = ExtendedAePlusCompat.patternLogicUpgrades(logic);
+        if (legacy != null && legacy != upgrades) {
+            for (int slot = 0; slot < legacy.size(); slot++) {
+                ItemStack stack = legacy.getStackInSlot(slot);
+                if (!stack.isEmpty()) {
+                    legacy.setItemDirect(slot, upgrades.addItems(stack));
+                }
+            }
+        }
     }
 
     @Override
     public void saveAdditional(CompoundTag data, HolderLookup.Provider registries) {
         super.saveAdditional(data, registries);
         logic.writeToNBT(data, registries);
+        upgrades.writeToNBT(data, NBT_HOST_UPGRADES, registries);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
     }
 
@@ -93,6 +107,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
         super.loadTag(data, registries);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
         logic.readFromNBT(data, registries);
+        upgrades.readFromNBT(data, NBT_HOST_UPGRADES, registries);
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
     }
 
@@ -100,12 +115,18 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     public void addAdditionalDrops(Level level, BlockPos pos, List<ItemStack> drops) {
         super.addAdditionalDrops(level, pos, drops);
         logic.addDrops(drops);
+        for (ItemStack upgrade : upgrades) {
+            if (!upgrade.isEmpty()) {
+                drops.add(upgrade);
+            }
+        }
     }
 
     @Override
     public void clearContent() {
         super.clearContent();
         logic.clearContent();
+        upgrades.clear();
     }
 
     @Override
@@ -115,8 +136,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
 
     @Override
     public IUpgradeInventory getUpgrades() {
-        IUpgradeInventory fromLogic = ExtendedAePlusCompat.patternLogicUpgrades(logic);
-        return fromLogic != null ? fromLogic : UpgradeInventories.empty();
+        return upgrades;
     }
 
     @Override

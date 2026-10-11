@@ -129,8 +129,8 @@
           "placeNearTarget": true,
           "point": [1.5, 2.2, 3.5],
           "text": {
-            "en_us": "In an Advanced Distributor, one Parallel Card provides 16 concurrent jobs and two provide 32; the capacity is configurable.",
-            "zh_cn": "在高级分发器中，1 张并行卡提供 16 个并行，2 张提供 32 个并行；容量可在配置中调整。"
+            "en_us": "In an Advanced Distributor, one Parallel Card provides 16 concurrent jobs and four provide 64; the capacity is configurable.",
+            "zh_cn": "在高级分发器中，1 张并行卡提供 16 个并行，4 张提供 64 个并行；容量可在配置中调整。"
           }
         },
         {
@@ -182,8 +182,8 @@
           "placeNearTarget": true,
           "point": [4.5, 3.6, 1.5],
           "text": {
-            "en_us": "In a Kinetic Pattern Provider, one card allows up to 16 active matching machines; two cards allow up to 32.",
-            "zh_cn": "在动力样板供应器中，1 张并行卡最多 16 台同类型活动机器，2 张最多 32 台。"
+            "en_us": "In a Kinetic Pattern Provider, one card allows up to 16 active matching machines; four cards allow up to 64.",
+            "zh_cn": "在动力样板供应器中，1 张并行卡最多 16 台同类型活动机器，4 张最多 64 台。"
           }
         },
         {

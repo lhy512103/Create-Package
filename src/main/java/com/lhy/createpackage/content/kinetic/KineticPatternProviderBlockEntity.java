@@ -102,7 +102,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkedBlockEntity
     private static final String NBT_UPGRADES = "upgrades";
     private static final String NBT_PARALLEL_UPGRADES = "parallel_upgrades";
     private static final String NBT_LINKED_MACHINES = "linkedMachines";
-    private static final int MAX_PARALLEL_CARDS = 2;
+    public static final int MAX_PARALLEL_CARDS = 4;
     private static final int PARALLEL_MACHINES_PER_CARD = 16;
     private static final int MAX_TOOLTIP_TARGETS = 6;
     private static final int DEFAULT_ROUND_OUTPUT_TIMEOUT_TICKS = 20 * 60;

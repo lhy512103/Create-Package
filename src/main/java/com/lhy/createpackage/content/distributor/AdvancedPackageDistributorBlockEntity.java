@@ -66,7 +66,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     private static final String NBT_PARALLEL_UPGRADES = "parallel_upgrades";
     private static final String NBT_LAST_FAILURE_ROUTE = "lastFailureRoute";
     private static final String NBT_LAST_FAILURE_SLOT = "lastFailureSlot";
-    private static final int MAX_PARALLEL_CARDS = 2;
+    public static final int MAX_PARALLEL_CARDS = 4;
 
     private final InternalPatternProviderLogic logic = new InternalPatternProviderLogic();
     private final IUpgradeInventory upgrades = UpgradeInventories.forMachine(

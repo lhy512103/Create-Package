@@ -25,6 +25,8 @@ Install <ItemLink id="parallel_card" />s, select the provider with a <ItemLink i
 * 0 cards: front machine only
 * 1 card: up to 16 active machines
 * 2 cards: up to 32 active machines
+* 3 cards: up to 48 active machines
+* 4 cards: up to 64 active machines
 
 New jobs go to idle linked machines first.
 
