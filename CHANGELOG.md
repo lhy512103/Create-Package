@@ -5,6 +5,7 @@
 ### English
 
 
+- Changed: Advanced Package Distributor Parallel Cards now default to 16 jobs per card (32 with two), matching Kinetic Pattern Providers.
 - Changed: Advanced Package Distributor now has 36 pattern slots in a 9-by-4 grid, using the Extended Kinetic Pattern Provider background.
 - Added: Kinetic Pattern Provider support for Enchantment Industry grindstone sanding.
 - Added: Runtime mods aligned with MEST, including its extra AE and processing mods.
@@ -34,6 +35,7 @@
 ### 中文
 
 
+- 调整：高级封包分发器每张并行卡默认提供 16 并行，两张为 32，与动力样板供应器一致。
 - 调整：高级封包分发器的样板槽位扩展为 36 格（9 列 × 4 行），使用扩展动力样板供应器的界面背景。
 - 新增：动力样板供应器支持附魔工业动力砂轮打磨。
 - 新增：运行时依赖与 MEST 对齐，并补上其额外模组。

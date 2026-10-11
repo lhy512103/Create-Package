@@ -240,7 +240,7 @@
   "createpackage.ponder.mechanical_route_tools.text_3": "Converted Mechanical Package Patterns store the original AE2 pattern plus the marked Create route for Advanced Distributors.",
   "createpackage.ponder.parallel_card.header": "Parallel Card",
   "createpackage.ponder.parallel_card.text_1": "Parallel Cards upgrade Advanced Package Distributors and Kinetic Pattern Providers.",
-  "createpackage.ponder.parallel_card.text_2": "In an Advanced Distributor, one Parallel Card provides 4 concurrent jobs and two provide 8; the capacity is configurable.",
+  "createpackage.ponder.parallel_card.text_2": "In an Advanced Distributor, one Parallel Card provides 16 concurrent jobs and two provide 32; the capacity is configurable.",
   "createpackage.ponder.parallel_card.text_3": "In a Kinetic Pattern Provider, one card allows up to 16 active matching machines; two cards allow up to 32.",
   "createpackage.configuration.title": "Create Package Configs",
   "createpackage.configuration.advancedDistributorParallelCardCapacity": "Advanced Distributor Parallel Card Capacity",

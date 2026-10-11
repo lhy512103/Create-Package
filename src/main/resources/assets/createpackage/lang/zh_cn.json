@@ -240,7 +240,7 @@
   "createpackage.ponder.mechanical_route_tools.text_3": "转换后的机械封包样板会保存原 AE2 样板和已标记的 Create 路线，供高级分发器使用。",
   "createpackage.ponder.parallel_card.header": "并行卡",
   "createpackage.ponder.parallel_card.text_1": "并行卡用于升级高级封包分发器和动力样板供应器。",
-  "createpackage.ponder.parallel_card.text_2": "在高级分发器中，1 张并行卡提供 4 个并行，2 张提供 8 个并行；容量可在配置中调整。",
+  "createpackage.ponder.parallel_card.text_2": "在高级分发器中，1 张并行卡提供 16 个并行，2 张提供 32 个并行；容量可在配置中调整。",
   "createpackage.ponder.parallel_card.text_3": "在动力样板供应器中，1 张并行卡最多 16 台同类型活动机器，2 张最多 32 台。",
   "createpackage.configuration.title": "机械动力封包配置",
   "createpackage.configuration.advancedDistributorParallelCardCapacity": "高级分发器每张并行卡容量",

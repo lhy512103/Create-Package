@@ -21,10 +21,10 @@ item_ids:
 提高互不重叠的机械封包路线并发数：
 
 * 0 张 → 1 个作业
-* 1 张 → 4 个作业
-* 2 张 → 8 个作业
+* 1 张 → 16 个作业
+* 2 张 → 32 个作业
 
-默认每张卡提供 4 个作业位，可通过服务端配置 `advancedDistributorParallelCardCapacity` 调整。不会让同一条或相互重叠的物理流水线同时运行多份作业。
+默认每张卡提供 16 个作业位，可通过服务端配置 `advancedDistributorParallelCardCapacity` 调整。不会让同一条或相互重叠的物理流水线同时运行多份作业。
 
 ## 动力样板供应器
 

@@ -24,8 +24,9 @@ public class Config {
             .defineInRange("missingRefillNoticeIntervalSeconds", 30, 1, 60 * 30);
 
     public static final ModConfigSpec.IntValue ADVANCED_DISTRIBUTOR_PARALLEL_CARD_CAPACITY = BUILDER
-            .comment("Number of active jobs provided by each Parallel Card in an Advanced Package Distributor.")
-            .defineInRange("advancedDistributorParallelCardCapacity", 4, 1, 64);
+            .comment("Number of active jobs provided by each Parallel Card in an Advanced Package Distributor. "
+                    + "Defaults to 16, matching the Kinetic Pattern Provider.")
+            .defineInRange("advancedDistributorParallelCardCapacity", 16, 1, 64);
 
     public static final ModConfigSpec.IntValue DISTRIBUTOR_MAX_JOB_TICKS = BUILDER
             .comment("Hard timeout for one package-distributor craft job before it is marked timed out.")
@@ -86,7 +87,7 @@ public class Config {
     }
 
     public static int advancedDistributorParallelCardCapacity() {
-        return safeInt(ADVANCED_DISTRIBUTOR_PARALLEL_CARD_CAPACITY, 4);
+        return safeInt(ADVANCED_DISTRIBUTOR_PARALLEL_CARD_CAPACITY, 16);
     }
 
     public static int distributorMaxJobTicks() {

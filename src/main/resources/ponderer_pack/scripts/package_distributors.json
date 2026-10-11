@@ -360,8 +360,8 @@
           "placeNearTarget": true,
           "point": [2.5, 3.0, 1.5],
           "text": {
-            "en_us": "Parallel Cards run more lines at once. By default each card gives 4 jobs, so 2 cards give up to 8. Lines must not share depots or machines.",
-            "zh_cn": "并行卡可同时运行更多路线。默认每张卡提供 4 个作业，两张最多 8 个。不同路线之间不能共享料盘或机器。"
+            "en_us": "Parallel Cards run more lines at once. By default each card gives 16 jobs, so 2 cards give up to 32. Lines must not share depots or machines.",
+            "zh_cn": "并行卡可同时运行更多路线。默认每张卡提供 16 个作业，两张最多 32 个。不同路线之间不能共享料盘或机器。"
           }
         },
         { "type": "idle", "duration": 100 }
