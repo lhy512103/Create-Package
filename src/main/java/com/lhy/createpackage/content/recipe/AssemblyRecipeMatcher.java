@@ -2,6 +2,7 @@ package com.lhy.createpackage.content.recipe;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiPredicate;
 
 import com.simibubi.create.AllRecipeTypes;
 import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe;
@@ -42,6 +43,11 @@ public final class AssemblyRecipeMatcher {
      */
     public static List<Match> findCandidates(Level level, ItemStack primaryOutput, List<ItemStack> patternInputs,
             List<FluidStack> patternFluids) {
+        return findCandidates(level, primaryOutput, patternInputs, patternFluids, ItemStack::isSameItemSameComponents);
+    }
+
+    public static List<Match> findCandidates(Level level, ItemStack primaryOutput, List<ItemStack> patternInputs,
+            List<FluidStack> patternFluids, BiPredicate<ItemStack, ItemStack> outputMatcher) {
         List<Match> result = new ArrayList<>();
         if (primaryOutput.isEmpty()) {
             return result;
@@ -57,7 +63,7 @@ public final class AssemblyRecipeMatcher {
         for (RecipeHolder<SequencedAssemblyRecipe> holder : all) {
             SequencedAssemblyRecipe recipe = holder.value();
             ItemStack out = recipe.getResultItem(level.registryAccess());
-            if (!ItemStack.isSameItemSameComponents(out, primaryOutput)) {
+            if (!outputMatcher.test(primaryOutput, out)) {
                 continue;
             }
             if (!patternInputs.isEmpty() && !baseInputMatches(recipe, patternInputs)) {

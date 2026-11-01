@@ -1,4 +1,42 @@
-﻿# Changelog
+# Changelog
+
+## v1.0.0
+
+### English
+
+- Changed: Upgrade card tooltips now consistently show an "Available Upgrades" list.
+- Added: AE2 Utility 1.8 NBT Tear Card support, with built-in pattern-provider upgrade slots compatible with ExtendedAE Plus.
+- Changed: Advanced Package Distributor Parallel Cards now default to 16 concurrent jobs per card, or 32 with two cards.
+- Changed: Advanced Package Distributor pattern storage expanded to 36 slots (9 columns × 4 rows).
+- Added: Kinetic Pattern Provider support for Create Enchantment Industry Mechanical Grindstone sanding.
+- Fixed: Deployers no longer report missing ingredients when a non-consumed held item is already loaded.
+- Fixed: Extended Kinetic Pattern Providers disconnecting from AE cables after rejoining a world or rotating them with a wrench.
+- Fixed: MEST terminal network-tool slots missing from both Kinetic Pattern Provider screens.
+- Fixed: Empty-output waits on Package Distributors and Kinetic Pattern Providers now use actual game ticks.
+- Fixed: Basic and Advanced Package Distributor upgrade slots now use the same inventory as sneak-right-click insertion.
+- Added: Goggles show the refill-retry countdown on Package Distributors and both Kinetic Pattern Provider variants.
+- Optimized: Rewrote all machine Ponder scenes and corrected machine positions.
+- Fixed: Upgrade slots and their background remain visible with ExtendedAE Plus installed.
+- Added: A configuration option to automatically order missing refill ingredients, disabled by default.
+- Added: Kinetic Pattern Providers automatically recognize Mechanical Crafter layouts and support binding multiple machine locations.
+
+### 中文
+
+- 调整：升级卡提示统一显示“可用升级”列表。
+- 新增：兼容 AE2 Utility 1.8 的 NBT 撕裂卡，内置样板供应器的卡槽可与 ExtendedAE Plus 共存。
+- 调整：高级封包分发器每张并行卡默认提供 16 并行，两张为 32。
+- 调整：高级封包分发器的样板槽位扩展为 36 格（9 列 × 4 行）。
+- 新增：动力样板供应器支持附魔工业模组动力砂轮打磨。
+- 修复：机械手已预放不消耗施加物时不再误报缺料。
+- 修复：扩展动力样板供应器重进或扳手转向后与 AE 线缆断连。
+- 修复：两个动力样板供应器界面不显示 MEST 终端网络工具槽。
+- 修复：封包分发器和动力样板供应器的空产出等待改为按游戏真实 tick 计时。
+- 修复：基础/高级封包分发器升级槽与蹲下右键放入使用同一库存。
+- 新增：封包分发器和两种动力样板供应器护目镜显示补刷重试倒计时。
+- 优化：各机器思索场景全部重写，并修正机器位置。
+- 修复：有 ExtendedAE Plus 时升级槽和底板不再被藏掉。
+- 新增：补刷缺料自动下单配置开关，默认关闭。
+- 新增：动力样板供应器支持自动识别动力合成器以及多点位绑定。
 
 ## 2026-07-25
 

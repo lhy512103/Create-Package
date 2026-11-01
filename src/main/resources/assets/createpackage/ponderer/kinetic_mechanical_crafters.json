@@ -1,0 +1,429 @@
+{
+  "id": "createpackage:kinetic_mechanical_crafters",
+  "items": ["createpackage:kinetic_pattern_provider", "createpackage:extended_kinetic_pattern_provider", "create:mechanical_crafter"],
+  "title": {"en_us": "Special Target: Mechanical Crafters", "zh_cn": "特殊目标：动力合成器"},
+  "tags": ["createpackage:create_package"],
+  "editable": false,
+  "scenes": [
+    {
+      "id": "auto_layout",
+      "title": {"en_us": "Mechanical Crafters: Recognition and Automatic Layout", "zh_cn": "动力合成器：识别与自动排布"},
+      "basePlateSize": 9,
+      "viewScale": 0.6,
+      "steps": [
+        {"type": "encapsulate_bounds", "bounds": [9, 8, 9]},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 1, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 1, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 1, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 2, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 2, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 3, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 3, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 3, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 3, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 3, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 3, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 3, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 4, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 4, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 4, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 4, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 4, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 4, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 4, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 5, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 5, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 5, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 5, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 5, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 5, 4], "speed": 32},
+        {"type": "set_block", "block": "create:cogwheel", "blockPos": [7, 3, 4], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [7, 3, 5], "blockProperties": {"facing": "north"}},
+        {"type": "set_kinetic_speed", "blockPos": [7, 3, 4], "speed": 32},
+        {"type": "set_kinetic_speed", "blockPos": [7, 3, 5], "speed": 32},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [1, 3, 4], "blockProperties": {"push_direction": "east"}},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [0, 3, 4]},
+        {"type": "show_section", "blockPos": [0, 1, 3], "blockPos2": [7, 6, 6], "direction": "down"},
+        {"type": "idle", "duration": 20},
+        {"type": "highlight_section", "blockPos": [2, 1, 4], "color": "blue", "duration": 110, "blockPos2": [6, 5, 4]},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Build a four-neighbor connected wall of Mechanical Crafters, all facing the same direction and in one plane. This real crushing-wheel recipe uses a 5x5 shape without its four corners: 21 crafters.",
+            "zh_cn": "先搭同朝向、同一平面、上下左右连通的动力合成器墙。本例是真实粉碎轮配方：5×5 去掉四角，共 21 格。"
+          },
+          "point": [
+            4.5,
+            5.8,
+            4.5
+          ],
+          "duration": 130,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140},
+        {"type": "highlight_section", "blockPos": [7, 3, 4], "color": "green", "duration": 110, "blockPos2": [7, 3, 5]},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Power the integrated cogwheels through an adjacent cogwheel. A shaft or motor directly behind a crafter is not a shaft connection. Neighboring gears rotate in opposite directions, as shown.",
+            "zh_cn": "动力从相邻齿轮啮合传入。合成器背面不是可直连的轴端，不能把马达或传动杆直接贴背面当作接好动力；相邻齿轮按图交替反转。"
+          },
+          "point": [
+            7.5,
+            3.8,
+            4.5
+          ],
+          "duration": 130,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140},
+        {"type": "show_line", "point": [1.5, 3.5, 4.5], "point2": [2.5, 3.5, 4.5], "color": "input", "duration": 90},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "The provider must touch a crafter and have its target face point at that block. ALL has no target. It can recognize the connected wall from that one entrance; no G scan or linker selection is required for the front group.",
+            "zh_cn": "供应器必须紧贴一格合成器，目标面指向它；ALL 没有目标。它会从这一格识别同朝向连通墙，正面这一组无需链接器，也不用按 G 扫描。"
+          },
+          "point": [
+            1.5,
+            3.8,
+            4.5
+          ],
+          "duration": 135,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 145},
+        {"type": "show_controls", "action": "right", "point": [1.5, 3.8, 4.5], "direction": "down", "duration": 45},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Encode an AE2 PROCESSING pattern, not a normal crafting pattern: 16 Andesite Alloy + 4 matching Planks + 1 matching Stone -> 2 Crushing Wheels. The adapter obtains the large layout from the real recipe; do not force it into a 3x3 pattern.",
+            "zh_cn": "在 AE2 编码为处理样板，而非普通合成样板：16 安山合金＋4 份符合配方的木板＋1 份石头 → 2 粉碎轮。适配器从真实配方还原大网格，不用硬塞进 3×3。"
+          },
+          "point": [
+            1.5,
+            3.8,
+            4.5
+          ],
+          "duration": 150,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 160},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "After a valid job passes planning, the provider arranges the required arrows and shared input groups and supplies each recipe cell. You do not need to hand-turn every arrow or merge inputs first.",
+            "zh_cn": "任务规划通过后，供应器会安排所需箭头、合并输入组，并给各配方格供料。无需先手动扳完所有箭头，也不用预先手动合并输入。"
+          },
+          "point": [
+            4.5,
+            3.8,
+            4.5
+          ],
+          "duration": 125,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 135},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 1, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 1, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 1, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 2, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 2, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 3, 4], "blockProperties": {"facing": "north", "pointing": "right"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 3, 4], "blockProperties": {"facing": "north", "pointing": "right"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 3, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 3, 4], "blockProperties": {"facing": "north", "pointing": "right"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 3, 4], "blockProperties": {"facing": "north", "pointing": "right"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 3, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 3, 4], "blockProperties": {"facing": "north", "pointing": "right"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 4, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 4, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 4, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 4, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 4, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 4, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 4, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 5, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 5, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 5, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 5, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 5, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 5, 4], "speed": 32},
+        {"type": "show_line", "point": [6.5, 3.5, 4.5], "point2": [1.5, 3.5, 4.5], "color": "output", "duration": 90},
+        {"type": "highlight_section", "blockPos": [1, 3, 4], "color": "output", "duration": 110},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Here the provider touches the edge IN the wall plane, so it can also receive the final product directly. This is different from a provider touching only the wall front or back.",
+            "zh_cn": "本图供应器位于合成器墙平面内的边缘，最终成品可直接送入供应器回网。仅贴在墙正面或背面时，不能沿这个方向直接出货。"
+          },
+          "point": [
+            1.5,
+            3.8,
+            4.5
+          ],
+          "duration": 125,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 135},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Keep ingredient cells uncovered and empty. Matching normal crafting-table recipes depend on Create server settings. If the wall is too small, disconnected, unpowered or occupied, check the specific Goggles/Jade rejection reason.",
+            "zh_cn": "材料格要去掉盖板并清空旧料。普通工作台配方是否可用还取决于 Create 服务端配置。格数不足、断开、没动力或被占用时，可看护目镜/Jade 的具体拒绝原因。"
+          },
+          "point": [
+            4.5,
+            4.8,
+            4.5
+          ],
+          "duration": 140,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 150}
+      ]
+    },
+    {
+      "id": "output_and_parallel",
+      "title": {"en_us": "Mechanical Crafters: Outputs and Independent Groups", "zh_cn": "动力合成器：出口与独立组并行"},
+      "basePlateSize": 9,
+      "viewScale": 0.6,
+      "steps": [
+        {"type": "encapsulate_bounds", "bounds": [9, 8, 9]},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 1, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 1, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 1, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 2, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 2, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 3, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 3, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 3, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 3, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 3, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 3, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 3, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 4, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 4, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 4, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 4, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 4, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 4, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 4, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 5, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 5, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 5, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 5, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 5, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 5, 4], "speed": 32},
+        {"type": "set_block", "block": "minecraft:chest", "blockPos": [7, 3, 4], "blockProperties": {"facing": "north"}},
+        {"type": "set_block", "block": "create:cogwheel", "blockPos": [4, 6, 4], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [4, 6, 5], "blockProperties": {"facing": "north"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 6, 4], "speed": 32},
+        {"type": "set_kinetic_speed", "blockPos": [4, 6, 5], "speed": 32},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [4, 3, 5], "blockProperties": {"push_direction": "north"}},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [4, 3, 6]},
+        {"type": "show_section", "blockPos": [1, 1, 3], "blockPos2": [7, 6, 6], "direction": "down"},
+        {"type": "idle", "duration": 20},
+        {"type": "highlight_section", "blockPos": [4, 3, 5], "color": "blue", "duration": 110},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "A provider behind the wall can target the crafter in front of it, but crafter arrows move only within the wall plane. Target recognition and a usable product exit are separate requirements.",
+            "zh_cn": "供应器放在墙背面，仍能识别面前合成器；但出货箭头只在墙平面内移动。因此“识别了目标”和“有可用出口”是两件事。"
+          },
+          "point": [
+            4.5,
+            3.8,
+            5.5
+          ],
+          "duration": 130,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140},
+        {"type": "highlight_section", "blockPos": [7, 3, 4], "color": "output", "duration": 110},
+        {"type": "show_line", "point": [6.5, 3.5, 4.5], "point2": [7.5, 3.5, 4.5], "color": "output", "duration": 90},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Put a chest or Depot directly next to an edge crafter IN the wall plane. It need not touch the provider. The provider plans toward that outlet and collects its products remotely.",
+            "zh_cn": "在墙平面内，紧挨边缘合成器放箱子或料盘。它不用贴着供应器；供应器会把出货链导向该出口，并从那里远程回收。"
+          },
+          "point": [
+            7.5,
+            3.8,
+            4.5
+          ],
+          "duration": 130,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 1, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 1, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 1, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 1, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 2, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 2, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 2, 4], "blockProperties": {"facing": "north", "pointing": "up"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 2, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 3, 4], "blockProperties": {"facing": "north", "pointing": "left"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 3, 4], "blockProperties": {"facing": "north", "pointing": "left"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 3, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 3, 4], "blockProperties": {"facing": "north", "pointing": "left"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 3, 4], "blockProperties": {"facing": "north", "pointing": "left"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 3, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 3, 4], "blockProperties": {"facing": "north", "pointing": "left"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 3, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [2, 4, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 4, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 4, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 4, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 4, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 4, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [6, 4, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 4, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [3, 5, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 5, 4], "speed": 32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [4, 5, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 5, 4], "speed": -32},
+        {"type": "set_block", "block": "create:mechanical_crafter", "blockPos": [5, 5, 4], "blockProperties": {"facing": "north", "pointing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [5, 5, 4], "speed": 32},
+        {"type": "set_block", "block": "minecraft:air", "blockPos": [7, 3, 4]},
+        {"type": "highlight_section", "blockPos": [7, 3, 4], "color": "red", "duration": 110},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Without this accessible inventory, planning reports no usable output container. Dropping a chest nearby, above the wall or behind it does not create a valid in-plane exit.",
+            "zh_cn": "去掉这个可接收库存，就会报没有可用出货容器。仅在附近、墙上方或背后随意放箱子，并不等于有可用的平面出口。"
+          },
+          "point": [
+            7.5,
+            3.8,
+            4.5
+          ],
+          "duration": 125,
+          "color": "red",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 135},
+        {"type": "set_block", "block": "minecraft:chest", "blockPos": [7, 3, 4], "blockProperties": {"facing": "north"}},
+        {"type": "indicate_success", "blockPos": [7, 3, 4]},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "For parallel work, separate complete crafter groups with air and give each its own outlet. Add a Parallel Card, select the provider with the linker, then link ONE representative crafter in each extra group. The front group is already present.",
+            "zh_cn": "并行时，把完整合成器组用空气分开，每组配独立出口。装并行卡、用链接器选供应器，再对每个额外组只链接一格代表；正面这一组已存在，不用重复加。"
+          },
+          "point": [
+            4.5,
+            3.8,
+            5.5
+          ],
+          "duration": 145,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 155},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Do not batch-link every block in one wall as though each were an independent machine. Stored links are coordinate-based; repeated members of the same working chain do not create extra production lines.",
+            "zh_cn": "不要把同一面墙每一格都批量绑定成独立机器。保存链接按坐标计数，同一条实际作业链的多个格子不会变成额外产线，还会浪费候选名额。"
+          },
+          "point": [
+            4.5,
+            3.8,
+            4.5
+          ],
+          "duration": 135,
+          "color": "red",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 145}
+      ]
+    }
+  ]
+}

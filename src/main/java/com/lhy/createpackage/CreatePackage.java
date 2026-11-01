@@ -61,6 +61,8 @@ public class CreatePackage {
         NeoForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onPlayerTick);
         NeoForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onContainerClose);
         NeoForge.EVENT_BUS.addListener(PackageDistributorBlockEntity::onPlayerLoggedIn);
+        NeoForge.EVENT_BUS.addListener(com.lhy.createpackage.content.crafting.MechanicalCrafterPlans::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(com.lhy.createpackage.content.crafting.MechanicalCrafterPlans::onNeighborNotify);
 
         // Register server-side behavior config.
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
@@ -83,9 +85,13 @@ public class CreatePackage {
             AEBaseBlockEntity.registerBlockEntityItem(
                     ModBlockEntities.EXTENDED_KINETIC_PATTERN_PROVIDER.get(),
                     ModItems.EXTENDED_KINETIC_PATTERN_PROVIDER.get());
-            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(), 2);
-            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.KINETIC_PATTERN_PROVIDER.get(), 2);
-            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.EXTENDED_KINETIC_PATTERN_PROVIDER.get(), 2);
+            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
+                    com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity.MAX_PARALLEL_CARDS);
+            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.KINETIC_PATTERN_PROVIDER.get(),
+                    com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity.MAX_PARALLEL_CARDS);
+            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.EXTENDED_KINETIC_PATTERN_PROVIDER.get(),
+                    com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity.MAX_PARALLEL_CARDS);
+            com.lhy.createpackage.compat.Ae2UtilityCompat.registerUpgrades();
             if (ModList.get().isLoaded("ftbultimine")) {
                 com.lhy.createpackage.integration.ftbultimine.FtbUltimineCompat.register();
             }

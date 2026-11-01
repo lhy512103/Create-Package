@@ -8,6 +8,7 @@ import java.util.Objects;
 import org.jetbrains.annotations.Nullable;
 
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.content.crafting.CreateMachineIds;
 import com.lhy.createpackage.content.distributor.PackageDistributorBlockEntity;
 import com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity;
 import com.lhy.createpackage.content.route.RouteTools;
@@ -53,6 +54,16 @@ public class MachineLinkerItem extends Item {
 
     public MachineLinkerItem(Properties properties) {
         super(properties);
+    }
+
+    /**
+     * Runs before the clicked block gets to react. Other mods' machines (a Mechanical Crafter takes the held item
+     * into its slot, a depot or basin takes it too) would otherwise swallow the click and {@link #useOn} would
+     * never be reached, so the linker takes the click itself and never lets the block see it.
+     */
+    @Override
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+        return useOn(context);
     }
 
     @Override
@@ -291,8 +302,9 @@ public class MachineLinkerItem extends Item {
         if (target == null || !level.isLoaded(target) || !level.isLoaded(clicked)) {
             return false;
         }
-        ResourceLocation targetId = BuiltInRegistries.BLOCK.getKey(level.getBlockState(target).getBlock());
-        ResourceLocation clickedId = BuiltInRegistries.BLOCK.getKey(level.getBlockState(clicked).getBlock());
+        BlockPos clickedMaster = CreateMachineIds.normalizeKineticMachinePos(level, clicked);
+        ResourceLocation targetId = CreateMachineIds.idOf(level, target);
+        ResourceLocation clickedId = CreateMachineIds.idOf(level, clickedMaster);
         return targetId != null && targetId.equals(clickedId);
     }
 

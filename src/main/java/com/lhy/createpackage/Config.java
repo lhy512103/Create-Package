@@ -13,8 +13,9 @@ public class Config {
             .define("enableDebugLogging", false);
 
     public static final ModConfigSpec.IntValue EMPTY_OUTPUT_REFILL_TIMEOUT_TICKS = BUILDER
-            .comment("How long a package distributor waits after starting a sequenced-assembly round before treating "
-                    + "no output as an empty probability result and attempting a refill.")
+            .comment("How long package distributors and kinetic pattern providers wait after starting a craft round "
+                    + "before treating no output as an empty probability result and attempting a refill. "
+                    + "This is real game ticks, independent of AE2's slower idle tick rate.")
             .defineInRange("emptyOutputRefillTimeoutTicks", 20 * 60, 20, 20 * 60 * 30);
 
     public static final ModConfigSpec.IntValue MISSING_REFILL_NOTICE_INTERVAL_SECONDS = BUILDER
@@ -23,8 +24,9 @@ public class Config {
             .defineInRange("missingRefillNoticeIntervalSeconds", 30, 1, 60 * 30);
 
     public static final ModConfigSpec.IntValue ADVANCED_DISTRIBUTOR_PARALLEL_CARD_CAPACITY = BUILDER
-            .comment("Number of active jobs provided by each Parallel Card in an Advanced Package Distributor.")
-            .defineInRange("advancedDistributorParallelCardCapacity", 4, 1, 64);
+            .comment("Number of active jobs provided by each Parallel Card in an Advanced Package Distributor. "
+                    + "Defaults to 16, matching the Kinetic Pattern Provider.")
+            .defineInRange("advancedDistributorParallelCardCapacity", 16, 1, 64);
 
     public static final ModConfigSpec.IntValue DISTRIBUTOR_MAX_JOB_TICKS = BUILDER
             .comment("Hard timeout for one package-distributor craft job before it is marked timed out.")
@@ -35,8 +37,8 @@ public class Config {
             .defineInRange("kineticMaxJobTicks", 20 * 60 * 5, 20 * 30, 20 * 60 * 60);
 
     public static final ModConfigSpec.IntValue REFILL_RETRY_TICKS = BUILDER
-            .comment("How often craft bridges retry a blocked probabilistic refill while waiting for materials or "
-                    + "target space.")
+            .comment("How often package distributors and kinetic pattern providers retry a blocked probabilistic "
+                    + "refill while waiting for materials or target space. This is real game ticks.")
             .defineInRange("refillRetryTicks", 20 * 5, 5, 20 * 60);
 
     public static final ModConfigSpec.IntValue PENDING_DISPATCH_RETRY_TICKS = BUILDER
@@ -66,6 +68,11 @@ public class Config {
                     + "attempt a refill round.")
             .define("enableProbabilisticEmptyRefill", true);
 
+    public static final ModConfigSpec.BooleanValue ENABLE_REFILL_AUTO_CRAFT = BUILDER
+            .comment("When a probabilistic refill is missing inputs that already have AE2 patterns, automatically "
+                    + "order those crafts into network storage. Off by default.")
+            .define("enableRefillAutoCraft", false);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 
     private Config() {
@@ -80,7 +87,7 @@ public class Config {
     }
 
     public static int advancedDistributorParallelCardCapacity() {
-        return safeInt(ADVANCED_DISTRIBUTOR_PARALLEL_CARD_CAPACITY, 4);
+        return safeInt(ADVANCED_DISTRIBUTOR_PARALLEL_CARD_CAPACITY, 16);
     }
 
     public static int distributorMaxJobTicks() {
@@ -117,6 +124,10 @@ public class Config {
 
     public static boolean enableProbabilisticEmptyRefill() {
         return safeBool(ENABLE_PROBABILISTIC_EMPTY_REFILL, true);
+    }
+
+    public static boolean enableRefillAutoCraft() {
+        return safeBool(ENABLE_REFILL_AUTO_CRAFT, false);
     }
 
     public static boolean debugLoggingEnabled() {

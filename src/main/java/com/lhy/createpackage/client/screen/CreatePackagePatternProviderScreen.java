@@ -1,6 +1,7 @@
 package com.lhy.createpackage.client.screen;
 
 import java.util.List;
+import java.util.ArrayList;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -84,15 +85,24 @@ public class CreatePackagePatternProviderScreen<C extends PatternProviderMenu> e
         lockReason = new LockReason(this);
         widgets.add("lockReason", lockReason);
 
-        if (!menu.getSlots(SlotSemantics.UPGRADE).isEmpty() && menu.getTarget() instanceof PatternProviderLogicHost host) {
-            widgets.add("upgrades", new UpgradesPanel(menu.getSlots(SlotSemantics.UPGRADE), () ->
-                    appeng.api.upgrades.Upgrades.getTooltipLinesForMachine(host.getTerminalIcon().getItem())));
+        var upgradeSlots = menu.getSlots(SlotSemantics.UPGRADE).stream()
+                .filter(slot -> !(slot instanceof appeng.menu.slot.AppEngSlot appEngSlot) || appEngSlot.isSlotEnabled())
+                .toList();
+        if (!upgradeSlots.isEmpty() && menu.getTarget() instanceof PatternProviderLogicHost host) {
+            var upgradesPanel = new UpgradesPanel(upgradeSlots, () -> {
+                var lines = new ArrayList<Component>();
+                lines.add(GuiText.CompatibleUpgrades.text());
+                lines.addAll(appeng.api.upgrades.Upgrades.getTooltipLinesForMachine(host.getTerminalIcon().getItem()));
+                return lines;
+            });
+            widgets.add("upgrades", upgradesPanel);
         }
         if (!menu.getSlots(SlotSemantics.TOOLBOX).isEmpty()) {
             var networkTool = NetworkToolItem.findNetworkToolInv(menu.getPlayer());
-            if (networkTool != null) {
-                widgets.add("toolbox", new ToolboxPanel(style, networkTool.getItemStack().getHoverName()));
-            }
+            Component toolboxName = networkTool != null
+                    ? networkTool.getItemStack().getHoverName()
+                    : GuiText.NetworkTool.text();
+            widgets.add("toolbox", new ToolboxPanel(style, toolboxName));
         }
     }
 

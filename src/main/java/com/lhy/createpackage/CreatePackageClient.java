@@ -59,7 +59,7 @@ public class CreatePackageClient {
         event.<AdvancedPackageDistributorMenu, AdvancedPackageDistributorScreen>register(
                 ModMenuTypes.ADVANCED_PACKAGE_DISTRIBUTOR.get(), (menu, playerInv, title) ->
                 new AdvancedPackageDistributorScreen(menu, playerInv, title,
-                        StyleManager.loadStyleDoc("/screens/createpackage_pattern_provider.json")));
+                        StyleManager.loadStyleDoc("/screens/createpackage_advanced_package_distributor.json")));
         event.<KineticPatternProviderMenu, CreatePackagePatternProviderScreen<KineticPatternProviderMenu>>register(
                 ModMenuTypes.KINETIC_PATTERN_PROVIDER.get(), (menu, playerInv, title) ->
                 new CreatePackagePatternProviderScreen<>(menu, playerInv, title,

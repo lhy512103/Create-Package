@@ -2,6 +2,7 @@ dependencies {
     // === Compile-time APIs (what this mod integrates against) ===
     // AE2 — autocrafting / pattern provider / crafting machine APIs
     compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    compileOnly "curse.maven:ae2-utility-1521605:${ae2_utility_file}"
     // Create — sequenced assembly recipe types + machine block entities / capabilities
     compileOnly "com.simibubi.create:create-1.21.1:${create_version}"
     compileOnly "net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}"
@@ -15,12 +16,20 @@ dependencies {
 
     // === Local runtime: core mods this mod depends on at runtime ===
     localRuntime "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    localRuntime "org.appliedenergistics:guideme:${guideme_version}"
     localRuntime "de.mari_023:ae2wtlib:${ae2wtlib_version}"
     localRuntime("curse.maven:create-328085:7963363") {
         // Prevent game-test crashes pulled in by Create's optional integrations.
         exclude group: "maven.modrinth", module: "journeymap"
         exclude group: "info.journeymap", module: "journeymap-api-neoforge"
     }
+    localRuntime "curse.maven:just-dire-things-1002348:${just_dire_things_file}"
+    localRuntime "curse.maven:appleskin-248787:${appleskin_file}"
+    localRuntime "curse.maven:patchouli-306770:${patchouli_file}"
+    localRuntime "curse.maven:titanium-287342:${titanium_file}"
+    localRuntime "curse.maven:spark-361579:${spark_file}"
+    localRuntime "maven.modrinth:modernfix:${modernfix_version}"
+    localRuntime "top.theillusivec4.curios:curios-neoforge:${curios_version}"
 
     // === Local runtime: recipe viewer ===
     localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
@@ -28,27 +37,61 @@ dependencies {
 
     // === Local runtime: AE2 addons ===
     localRuntime "curse.maven:advancedae-1084104:${advancedae_file}"
-    localRuntime "curse.maven:ae2-crystal-science-1435174:8112039"
+    localRuntime "curse.maven:ae2-crystal-science-1435174:${ae2_crystal_science_file}"
+    localRuntime "curse.maven:ae2-utility-1521605:${ae2_utility_file}"
     localRuntime "curse.maven:ex-pattern-provider-892005:${extendedae_file}"
-    localRuntime "curse.maven:extendedae-plus-1337639:${extendedae_plus_file}"
+    if (!providers.gradleProperty('compatWithoutPlus').isPresent()) {
+        localRuntime "curse.maven:extendedae-plus-1337639:${extendedae_plus_file}"
+    }
     localRuntime "curse.maven:applied-energistics-2-wireless-terminals-459929:${ae2wt_terminals_file}"
+    localRuntime "curse.maven:ae2-wcwt-1546802:${ae2_wcwt_file}"
     localRuntime "curse.maven:applied-flux-965012:${applied_flux_file}"
     localRuntime "curse.maven:applied-create-1474758:${applied_create_file}"
     localRuntime "curse.maven:mega-cells-622112:${mega_cells_file}"
     localRuntime "curse.maven:applied-mekanistics-574300:${applied_mekanistics_file}"
-    localRuntime "curse.maven:merequester-688367:7844592"
+    localRuntime "curse.maven:merequester-688367:${merequester_file}"
+    localRuntime "curse.maven:ae2-import-export-card-982512:${ae2_import_export_card_file}"
+    localRuntime "curse.maven:thunderbolt-core-1631756:${thunderbolt_core_file}"
+    localRuntime "curse.maven:ae2-lightning-tech-1527395:${ae2_lightning_tech_file}"
+    // localRuntime "curse.maven:data-energistics-1565514:${data_energistics_file}"
+    localRuntime "curse.maven:ldlib-626676:${ldlib_file}"
+    localRuntime "curse.maven:aeinfinitybooster-559313:${aeinfinitybooster_file}"
+    localRuntime "curse.maven:clientsort-1049891:${clientsort_file}"
+    localRuntime "curse.maven:inventory-essentials-368825:${inventory_essentials_file}"
+    localRuntime "curse.maven:balm-531761:${balm_file}"
 
     // === Local runtime: integration targets and shared libraries ===
     localRuntime "curse.maven:glodium-957920:${glodium_file}"
     localRuntime "curse.maven:geckolib-388172:${geckolib_file}"
     localRuntime "curse.maven:cloth-config-348521:${cloth_config_file}"
     localRuntime "curse.maven:polymorph-388800:${polymorph_file}"
-    localRuntime "curse.maven:brandons-core-231382:7130990"
-    localRuntime "curse.maven:codechicken-lib-1-8-242818:7281427"
-    localRuntime "curse.maven:draconic-evolution-223565:7584459"
-    localRuntime "curse.maven:productivebees-377897:8022994"
-    localRuntime "curse.maven:sophisticated-storage-619320:8249877"
-    localRuntime "curse.maven:sophisticated-core-618298:8272330"
+    localRuntime "curse.maven:brandons-core-231382:${brandons_core_file}"
+    localRuntime "curse.maven:codechicken-lib-1-8-242818:${codechicken_lib_file}"
+    localRuntime "curse.maven:draconic-evolution-223565:${draconic_evolution_file}"
+    localRuntime "curse.maven:productivebees-377897:${productive_bees_file}"
+    localRuntime "curse.maven:sophisticated-storage-619320:${sophisticated_storage_file}"
+    localRuntime "curse.maven:sophisticated-core-618298:${sophisticated_core_file}"
+    localRuntime "curse.maven:sophisticated-backpacks-422301:${sophisticated_backpacks_file}"
+    localRuntime "curse.maven:some-useless-things-1401600:${some_useless_things_file}"
+    localRuntime "curse.maven:allthecompressed-514045:${allthecompressed_file}"
+    localRuntime "curse.maven:ato-405593:${ato_file}"
+    localRuntime "curse.maven:allthemodium-364466:${allthemodium_file}"
+    localRuntime "curse.maven:industrial-foregoing-266515:${industrial_foregoing_file}"
+    localRuntime "curse.maven:ex-deorum-901420:${ex_deorum_file}"
+    localRuntime "curse.maven:just-dyna-things-1189855:${just_dyna_things_file}"
+    localRuntime "curse.maven:mystical-agriculture-246640:${mystical_agriculture_file}"
+    localRuntime "curse.maven:mystical-agradditions-256247:${mystical_agradditions_file}"
+    localRuntime "curse.maven:cucumber-272335:${cucumber_file}"
+    localRuntime "curse.maven:logistics-network-1448257:${logistics_network_file}"
+    localRuntime "curse.maven:bookshelf-228525:${bookshelf_file}"
+    localRuntime "curse.maven:placebo-283644:${placebo_file}"
+    localRuntime "curse.maven:prickle-1023259:${prickle_file}"
+    localRuntime "curse.maven:apothic-attributes-898963:${apothic_attributes_file}"
+    localRuntime "curse.maven:apothic-enchanting-1063926:${apothic_enchanting_file}"
+    localRuntime "curse.maven:apothic-spawners-986583:${apothic_spawners_file}"
+    localRuntime "curse.maven:apotheosis-313970:${apotheosis_file}"
+    localRuntime "curse.maven:enchantment-descriptions-250419:${enchantment_descriptions_file}"
+    localRuntime "curse.maven:hostile-neural-networks-552574:${hostile_neural_networks_file}"
     localRuntime "curse.maven:create-more-machines-1478956:8163651"
     localRuntime "curse.maven:createaddition-439890:8188476"
     localRuntime "curse.maven:create-diesel-generators-869316:8298898"
@@ -64,12 +107,10 @@ dependencies {
     localRuntime "dev.ftb.mods:ftb-library-neoforge:${ftb_library_version}"
     localRuntime "dev.ftb.mods:ftb-ultimine-neoforge:${ftb_ultimine_version}"
     localRuntime "maven.modrinth:jade:${jade_version}"
+    localRuntime files("${ponderer_jar}")
     localRuntime "curse.maven:mekanism-268560:${mekanism_file}"
     localRuntime "me.desht.pneumaticcraft:pneumaticcraft-repressurized:${pneumaticcraft_version}"
     localRuntime "thedarkcolour:kotlinforforge-neoforge:${kotlinforforge_version}"
-    localRuntime "curse.maven:spark-361579:${spark_file}"
-    localRuntime "maven.modrinth:modernfix:${modernfix_version}"
-    localRuntime "top.theillusivec4.curios:curios-neoforge:${curios_version}"
 
     // === Client-only local runtime: UI and input helpers ===
     clientLocalRuntime "curse.maven:ae2-jei-integration-1074338:${ae2jei_integration_file}"

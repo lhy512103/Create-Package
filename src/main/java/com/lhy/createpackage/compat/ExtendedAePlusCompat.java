@@ -1,8 +1,12 @@
 package com.lhy.createpackage.compat;
 
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.nbt.CompoundTag;
 
 import appeng.api.config.YesNo;
+import appeng.api.upgrades.IUpgradeInventory;
+import appeng.api.upgrades.IUpgradeableObject;
 import appeng.api.util.IConfigManager;
 
 public final class ExtendedAePlusCompat {
@@ -12,6 +16,36 @@ public final class ExtendedAePlusCompat {
     private static final String LEGACY_ADVANCED_BLOCKING = "epp_advanced_blocking";
 
     private ExtendedAePlusCompat() {
+    }
+
+    /**
+     * Applied Flux / ExtendedAE Plus attach upgrade inventories to {@code PatternProviderLogic}.
+     * Their menu mixins bind the visible upgrade slots to that inventory, so parallel-card
+     * sneak-insert and job logic must use the same instance instead of a second host inventory.
+     */
+    @Nullable
+    public static IUpgradeInventory patternLogicUpgrades(@Nullable Object logic) {
+        if (logic instanceof IUpgradeableObject upgradeable) {
+            IUpgradeInventory upgrades = upgradeable.getUpgrades();
+            if (upgrades != null && upgrades.size() > 0) {
+                return upgrades;
+            }
+        }
+        if (logic == null) {
+            return null;
+        }
+        try {
+            Class<?> type = Class.forName("com.extendedae_plus.api.bridge.CompatUpgradeProvider");
+            if (type.isInstance(logic)) {
+                Object result = type.getMethod("eap$getCompatUpgrades").invoke(logic);
+                if (result instanceof IUpgradeInventory upgrades && upgrades.size() > 0) {
+                    return upgrades;
+                }
+            }
+        } catch (ReflectiveOperationException ignored) {
+            // ExtendedAE Plus is optional at compile time.
+        }
+        return null;
     }
 
     public static void removeProviderSmartSettings(CompoundTag tag) {

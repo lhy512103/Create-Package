@@ -25,6 +25,7 @@ public final class CreatePackagePonderTags {
                 .add(id("basic_package_distributor"))
                 .add(id("advanced_package_distributor"))
                 .add(id("kinetic_pattern_provider"))
+                .add(id("extended_kinetic_pattern_provider"))
                 .add(id("machine_linker"))
                 .add(id("mechanical_pattern_converter"))
                 .add(id("mechanical_package_pattern"))

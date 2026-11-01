@@ -119,12 +119,13 @@ It embeds AE2 Pattern Provider behavior and faces one configured target side. Us
 
 Supported routing includes:
 
-- **Deployer**: first item input goes to the working position two blocks along the deployer's facing direction; second item input goes into the deployer's held-item inventory; output is recovered from the working position.
+- **Deployer**: first item input goes to the working position two blocks along the deployer's facing direction; second item input goes into the deployer's held-item inventory; output is recovered from the working position. If the held item is a non-consumed tool already placed in the deployer, it can be omitted from the processing pattern.
 - **Spout**: item input goes to the working position two blocks below the spout; fluid input goes into the spout; output is recovered from that working position.
 - **Mechanical Press**: with a basin two blocks below, all item and fluid inputs go into the basin and outputs are recovered from the basin. Without a basin, one item input goes to the depot, belt, or inventory two blocks below.
 - **Mechanical Mixer**: requires a basin two blocks below. Inputs and outputs use that basin.
 - **Mechanical Saw**: the saw must face up and be running. The provider sets the saw filter from the pattern's primary output, inserts the input, and recovers from the saw's fixed output side.
 - **Millstone**: input goes into the millstone and actual outputs, including probabilistic byproducts, are recovered.
+- **Create Enchantment Industry Mechanical Grindstone**: face the grindstone wheel or the Grindstone Drain below it. Item inputs go into the drain; outputs are recovered from the drain's ejection side. The wheel and drain must spin in opposite directions.
 - **Crushing Wheel**: target the `create:crushing_wheel_controller`, not the wheel block. The controller must output into a recoverable belt, depot, or inventory.
 - **Generic item handlers**: one item input goes into the target machine inventory and expected outputs are recovered from it.
 
@@ -359,12 +360,13 @@ Special thanks to **xiaoleng5261** for providing the models, textures, and match
 
 当前支持的路由规则：
 
-- **机械手**：第一个物品输入送到机械手朝向两格处的工作位置；第二个物品输入送入机械手手持物库存；产物从工作位置回收。
+- **机械手**：第一个物品输入送到机械手朝向两格处的工作位置；第二个物品输入送入机械手手持物库存；产物从工作位置回收。如果施加物是不消耗工具且已经预先放在机械手里，处理样板可以省略该施加物。
 - **注液器**：物品输入送到注液器下方两格的工作位置；流体输入送入注液器；产物从该工作位置回收。
 - **动力冲压机**：如果下方两格是工作盆，全部物品和流体输入进入工作盆，产物也从工作盆回收。没有工作盆时，按单物品模式送到下方两格的料盘、传送带或库存。
 - **动力搅拌器**：需要下方两格有工作盆。输入和输出都使用该工作盆。
 - **动力锯**：动力锯必须朝上且正在运行。供应器会按样板主产物设置动力锯过滤器，插入输入物，并从动力锯当前旋转方向决定的固定输出侧回收。
 - **石磨**：输入送入石磨，实际产物和出现的概率副产物都会回收。
+- **机械动力：附魔工业 动力砂轮**：对准砂轮或下方砂轮分液池均可。物品输入送入分液池，产物从分液池弹出侧回收。砂轮与分液池必须反向旋转。
 - **粉碎轮**：目标必须是 `create:crushing_wheel_controller`，不是普通粉碎轮方块。控制器需要把产物推到可回收的传送带、料盘或库存。
 - **通用物品处理器**：一个物品输入进入目标机器库存，预期产物从同一库存回收。
 

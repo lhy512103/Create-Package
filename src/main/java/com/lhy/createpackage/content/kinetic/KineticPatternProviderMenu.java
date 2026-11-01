@@ -1,5 +1,7 @@
 package com.lhy.createpackage.content.kinetic;
 
+import com.lhy.createpackage.content.CreatePackagePatternProviderMenu;
+
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.MenuType;
 
@@ -7,7 +9,7 @@ import appeng.api.config.YesNo;
 import appeng.menu.implementations.PatternProviderMenu;
 import appeng.menu.guisync.GuiSync;
 
-public class KineticPatternProviderMenu extends PatternProviderMenu {
+public class KineticPatternProviderMenu extends CreatePackagePatternProviderMenu {
     private static final String ACTION_TOGGLE_SMART_DOUBLING = "toggleSmartDoubling";
 
     private final KineticPatternProviderBlockEntity host;
@@ -17,9 +19,8 @@ public class KineticPatternProviderMenu extends PatternProviderMenu {
 
     public KineticPatternProviderMenu(MenuType<? extends PatternProviderMenu> menuType, int id,
             Inventory playerInventory, KineticPatternProviderBlockEntity host) {
-        super(menuType, id, playerInventory, host);
+        super(menuType, id, playerInventory, host, host.getUpgrades());
         this.host = host;
-        setupUpgrades(host.getUpgrades());
         registerClientAction(ACTION_TOGGLE_SMART_DOUBLING, this::toggleSmartDoubling);
     }
 
