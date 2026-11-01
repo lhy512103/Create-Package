@@ -1,448 +1,741 @@
 {
   "id": "createpackage:package_distributors",
-  "items": [
-    "createpackage:package_distributor",
-    "createpackage:basic_package_distributor",
-    "createpackage:advanced_package_distributor",
-    "createpackage:incomplete_package_distributor"
-  ],
-  "title": {
-    "en_us": "Package Distributors",
-    "zh_cn": "封包分发器"
-  },
+  "items": ["createpackage:package_distributor", "createpackage:basic_package_distributor", "createpackage:advanced_package_distributor", "createpackage:incomplete_package_distributor"],
+  "title": {"en_us": "Package Distributors", "zh_cn": "封包分发器"},
   "tags": ["createpackage:create_package"],
   "editable": false,
   "scenes": [
     {
-      "id": "overview",
-      "title": {
-        "en_us": "Package Distributors: Overview",
-        "zh_cn": "封包分发器：总览"
-      },
+      "id": "setup",
+      "title": {"en_us": "Choose a Distributor and Connect ME", "zh_cn": "分发器选型与 ME 接入"},
+      "basePlateSize": 7,
+      "viewScale": 0.75,
       "steps": [
-        { "type": "encapsulate_bounds", "bounds": [5, 4, 5] },
-        { "type": "set_block", "block": "createpackage:package_distributor", "blockPos": [1, 1, 1] },
-        { "type": "set_block", "block": "createpackage:basic_package_distributor", "blockPos": [2, 1, 1] },
-        { "type": "set_block", "block": "createpackage:advanced_package_distributor", "blockPos": [3, 1, 1] },
-        { "type": "show_section_and_merge", "direction": "down", "blockPos": [1, 1, 1], "blockPos2": [3, 1, 1] },
-        { "type": "idle", "duration": 10 },
-        {
-          "type": "highlight_section",
-          "color": "blue",
-          "duration": 50,
-          "blockPos": [1, 1, 1],
-          "blockPos2": [3, 1, 1]
-        },
+        {"type": "encapsulate_bounds", "bounds": [7, 5, 7]},
+        {"type": "set_block", "block": "createpackage:package_distributor", "blockPos": [1, 1, 2]},
+        {"type": "set_block", "block": "ae2:pattern_provider", "blockPos": [1, 1, 1]},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [0, 1, 1]},
+        {"type": "set_block", "block": "createpackage:basic_package_distributor", "blockPos": [4, 1, 2]},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [4, 1, 1]},
+        {"type": "set_block", "block": "createpackage:advanced_package_distributor", "blockPos": [6, 1, 2]},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [6, 1, 1]},
+        {"type": "show_section", "direction": "down", "blockPos": [0, 1, 0], "blockPos2": [6, 2, 2]},
+        {"type": "idle", "duration": 15},
+        {"type": "show_controls", "action": "right", "point": [1.5, 2.1, 1.5], "direction": "down", "duration": 45},
+        {"type": "highlight_section", "blockPos": [1, 1, 1], "blockPos2": [1, 1, 2], "color": "white", "duration": 110},
         {
           "type": "text",
-          "duration": 70,
+          "duration": 105,
           "attachKeyFrame": true,
           "placeNearTarget": true,
           "color": "blue",
-          "point": [2.5, 3.0, 1.5],
+          "point": [
+            1.5,
+            2.4,
+            2.5
+          ],
           "text": {
-            "en_us": "Package Distributors receive a whole AE2 processing pattern and feed it to a real Create sequenced assembly line.",
-            "zh_cn": "封包分发器接收一整份 AE2 处理样板，并把它送入真实的 Create 序列组装流水线。"
+            "en_us": "The normal Distributor needs an adjacent AE2 Pattern Provider. Open that provider GUI and put the processing patterns there. Link the assembly route to the distributor itself.",
+            "zh_cn": "普通分发器需要相邻的 AE2 样板供应器。打开供应器界面放入处理样板，装配路线则链接到分发器本体。"
           }
         },
-        { "type": "idle", "duration": 80 },
+        {"type": "idle", "duration": 110},
+        {"type": "show_controls", "action": "right", "point": [4.5, 2.5, 2.5], "direction": "down", "duration": 45},
         {
           "type": "text",
-          "duration": 90,
+          "duration": 105,
           "attachKeyFrame": true,
           "placeNearTarget": true,
-          "point": [2.5, 3.0, 1.5],
+          "color": "blue",
+          "point": [
+            4.5,
+            2.5,
+            2.5
+          ],
           "text": {
-            "en_us": "Pick by setup: the normal one needs an AE2 Pattern Provider beside it, the Basic one has its own pattern slots, and the Advanced one reads the route from each pattern.",
-            "zh_cn": "按用途选择：普通款需要旁边接 AE2 样板供应器；基础款自带样板槽；高级款从每张样板读取路线。"
+            "en_us": "The Basic Distributor contains its own provider with 9 pattern slots. Open its GUI empty-handed. It stores one ordered route and runs one job at a time.",
+            "zh_cn": "基础分发器内置供应逻辑与 9 个样板槽，空手右键打开界面。它保存一条有序路线，同时运行一个作业。"
           }
         },
-        { "type": "idle", "duration": 95 }
+        {"type": "idle", "duration": 110},
+        {"type": "show_controls", "action": "right", "point": [6.5, 2.5, 2.5], "direction": "down", "duration": 45},
+        {
+          "type": "text",
+          "duration": 105,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [
+            6.5,
+            2.5,
+            2.5
+          ],
+          "text": {
+            "en_us": "The Advanced Distributor has 36 pattern slots. Each Mechanical Package Pattern stores its own route, so one distributor can serve several independent assembly lines.",
+            "zh_cn": "高级分发器有 36 个样板槽。每张机械封包样板携带自己的路线，因此一台分发器可以管理多条独立装配线。"
+          }
+        },
+        {"type": "idle", "duration": 110},
+        {
+          "type": "text",
+          "duration": 115,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "white",
+          "point": [
+            4.5,
+            1.5,
+            1.5
+          ],
+          "text": {
+            "en_us": "Controllers here mark ME connections only. A working build needs AE power, available channels, storage containing the materials and a crafting CPU. This is not a complete ME network simulation.",
+            "zh_cn": "这里的控制器只表示 ME 连接。实际搭建还需 AE 电力、可用频道、存有材料的存储和合成 CPU；本场景未模拟完整 ME 网络。"
+          }
+        },
+        {"type": "idle", "duration": 120},
+        {
+          "type": "text",
+          "duration": 115,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "white",
+          "point": [
+            4.5,
+            2.5,
+            2.5
+          ],
+          "text": {
+            "en_us": "Distributors supply ingredients and recover outputs for a real Create line. They do not make physical parcels, move items between stations or provide rotation. Kinetic Pattern Providers serve individual machines instead.",
+            "zh_cn": "分发器为真实流水线投料并回收产物，不生成实体物流包裹，也不负责工位间搬运或提供转速。动力样板供应器则面向单台加工机器。"
+          }
+        },
+        {"type": "idle", "duration": 120}
       ]
     },
     {
-      "id": "package_distributor",
-      "title": {
-        "en_us": "Package Distributor: Setup",
-        "zh_cn": "封包分发器：接入方式"
-      },
+      "id": "assembly_cycle",
+      "title": {"en_us": "A Complete Three-pass Assembly Cycle", "zh_cn": "完整加工：三遍装配与半成品回流"},
+      "basePlateSize": 7,
+      "viewScale": 0.75,
       "steps": [
-        { "type": "encapsulate_bounds", "bounds": [5, 4, 5] },
-        { "type": "set_block", "block": "ae2:pattern_provider", "blockPos": [1, 1, 0] },
-        { "type": "set_block", "block": "createpackage:package_distributor", "blockPos": [1, 1, 1] },
-        { "type": "show_section_and_merge", "direction": "down", "blockPos": [1, 1, 0], "blockPos2": [1, 1, 1] },
-        { "type": "idle", "duration": 10 },
+        {"type": "encapsulate_bounds", "bounds": [7, 5, 7]},
+        {"type": "set_block", "block": "createpackage:basic_package_distributor", "blockPos": [1, 1, 0]},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [0, 1, 0]},
+        {"type": "create_belt", "blockPos": [0, 1, 3], "blockPos2": [5, 1, 3], "speed": -32},
+        {"type": "set_block", "block": "create:andesite_casing", "blockPos": [6, 1, 3]},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [0, 1, 4], "blockProperties": {"facing": "north"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [0, 3, 3], "blockProperties": {"facing": "east"}},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [1, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [1, 3, 3], "item": "ae2:silicon_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [2, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [2, 3, 3], "item": "ae2:logic_processor_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [3, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [3, 3, 3], "item": "ae2:engineering_processor_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [4, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [4, 3, 3], "item": "ae2:calculation_processor_press", "count": 1},
+        {"type": "set_kinetic_speed", "blockPos": [0, 3, 3], "blockPos2": [4, 3, 3], "speed": 32},
+        {"type": "set_kinetic_speed", "blockPos": [0, 1, 4], "speed": -32},
+        {"type": "show_section", "direction": "down", "blockPos": [0, 1, 0], "blockPos2": [6, 3, 4]},
+        {"type": "idle", "duration": 15},
+        {"type": "show_line", "point": [0.5, 1.9, 3.5], "point2": [5.5, 1.9, 3.5], "color": "input", "duration": 115},
         {
-          "type": "highlight_section",
+          "type": "text",
+          "duration": 115,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [
+            3.5,
+            2.1,
+            3.5
+          ],
+          "text": {
+            "en_us": "Build the full transport: six belt segments move east under four downward deployers, two blocks above the belt. Both the belt and deployers have power. The end stop prevents dropped outputs.",
+            "zh_cn": "先搭好完整输送线：六段皮带向东移动，四个朝下机械手位于皮带上方两格。皮带和机械手分别接动力，末端挡块防止物品抛落。"
+          }
+        },
+        {"type": "idle", "duration": 120},
+        {"type": "show_controls", "action": "right", "point": [1.5, 2.5, 0.5], "direction": "down", "duration": 45, "item": "createpackage:machine_linker"},
+        {
+          "type": "text",
+          "duration": 120,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [
+            2.5,
+            3.7,
+            3.5
+          ],
+          "text": {
+            "en_us": "Select the Basic Distributor, then link the first belt segment, the Silicon, Logic, Engineering and Calculation deployers, and the final belt segment, in that order. The first and last carriers define input and output.",
+            "zh_cn": "先选择基础分发器，再依次链接：首段皮带 → 硅、逻辑、工程、运算四个机械手 → 末段皮带。首尾载物方块确定入口和出口。"
+          }
+        },
+        {"type": "idle", "duration": 125},
+        {"type": "show_controls", "action": "right", "point": [1.5, 2.5, 0.5], "direction": "down", "duration": 45},
+        {
+          "type": "text",
+          "duration": 115,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [
+            1.5,
+            2.5,
+            0.5
+          ],
+          "text": {
+            "en_us": "Open the GUI empty-handed and insert a processing pattern: 1 gold sheet -> 1 normal Package Distributor. The actual recipe takes three passes through four steps: 12 operations.",
+            "zh_cn": "空手打开界面，放入处理样板：金板 1 → 普通封包分发器 1。该真实配方每遍四道工序，共运行三遍、12 次加工。"
+          }
+        },
+        {"type": "idle", "duration": 120},
+        {"type": "highlight_section", "blockPos": [1, 3, 3], "blockPos2": [4, 3, 3], "color": "white", "duration": 115},
+        {
+          "type": "text",
+          "duration": 110,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
           "color": "white",
-          "duration": 50,
-          "blockPos": [1, 1, 0],
-          "blockPos2": [1, 1, 0]
+          "point": [
+            2.5,
+            3.7,
+            3.5
+          ],
+          "text": {
+            "en_us": "Each deployer holds one matching AE2 Press. All four tools are kept. Preload them as shown, or let the distributor take missing tools from ME. Do not encode three copies of every tool.",
+            "zh_cn": "每个机械手持有一种对应的 AE2 压印模板，四种工具均保留。可如图预装，也可由分发器从 ME 取用缺少的工具，无需把每种模板编码成三份。"
+          }
         },
-        {
-          "type": "highlight_section",
-          "color": "blue",
-          "duration": 50,
-          "blockPos": [1, 1, 1],
-          "blockPos2": [1, 1, 1]
-        },
+        {"type": "idle", "duration": 115},
+        {"type": "show_line", "point": [1.5, 1.8, 0.5], "point2": [0.5, 1.8, 3.5], "color": "input", "duration": 55},
+        {"type": "create_belt_item", "blockPos": [0, 1, 3], "item": "create:golden_sheet", "count": 1, "link": "assembly_base"},
+        {"type": "idle", "duration": 30},
         {
           "type": "text",
-          "duration": 80,
+          "duration": 100,
           "attachKeyFrame": true,
           "placeNearTarget": true,
           "color": "blue",
-          "point": [1.5, 2.6, 0.5],
+          "point": [
+            2.5,
+            3.8,
+            3.5
+          ],
           "text": {
-            "en_us": "Connect the distributor to the ME network. Place an AE2 Pattern Provider beside it, and put the processing patterns in the provider.",
-            "zh_cn": "将分发器接入 ME 网络，在旁边放置 AE2 样板供应器，并把处理样板放进供应器。"
+            "en_us": "Pass 1/3: the same workpiece visits all four powered deployers.",
+            "zh_cn": "第 1/3 遍：同一件原料依次经过四个有动力的机械手。"
           }
         },
-        { "type": "idle", "duration": 85 },
-        {
-          "type": "show_controls",
-          "duration": 50,
-          "point": [1.5, 3.0, 1.5],
-          "direction": "down",
-          "action": "right",
-          "item": "createpackage:machine_linker"
-        },
-        { "type": "idle", "duration": 10 },
+        {"type": "move_belt_item", "link": "assembly_base", "position": 1.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [1, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 1, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [1, 3, 3]},
+        {"type": "move_deployer", "blockPos": [1, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 2.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [2, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 2, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [2, 3, 3]},
+        {"type": "move_deployer", "blockPos": [2, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 3.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [3, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 3, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [3, 3, 3]},
+        {"type": "move_deployer", "blockPos": [3, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 4.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [4, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 4, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [4, 3, 3]},
+        {"type": "move_deployer", "blockPos": [4, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 5.5, "duration": 12},
+        {"type": "show_line", "point": [5.5, 1.8, 3.5], "point2": [0.5, 1.8, 3.5], "color": "output", "duration": 55},
         {
           "type": "text",
-          "duration": 90,
-          "attachKeyFrame": true,
-          "placeNearTarget": true,
-          "point": [1.5, 3.0, 1.5],
-          "text": {
-            "en_us": "Use the Machine Linker: right-click the distributor to select it, then right-click the route blocks in item-flow order.",
-            "zh_cn": "使用机器链接器：先右键分发器将其选中，再按物品流向依次右键路线中的方块。"
-          }
-        },
-        { "type": "idle", "duration": 95 },
-        {
-          "type": "show_controls",
-          "duration": 40,
-          "point": [1.5, 3.0, 1.5],
-          "direction": "down",
-          "action": "right",
-          "whileSneaking": true,
-          "item": "createpackage:machine_linker"
-        },
-        { "type": "idle", "duration": 10 },
-        {
-          "type": "text",
-          "duration": 80,
-          "attachKeyFrame": true,
-          "placeNearTarget": true,
-          "point": [1.5, 3.0, 1.5],
-          "text": {
-            "en_us": "Sneak-right-click a linked block to unlink it. Sneak-right-click the distributor to clear all links.",
-            "zh_cn": "潜行右键已链接的方块可取消链接；潜行右键分发器可清空全部链接。"
-          }
-        },
-        { "type": "idle", "duration": 85 }
-      ]
-    },
-    {
-      "id": "route",
-      "title": {
-        "en_us": "Package Distributors: Create Route",
-        "zh_cn": "封包分发器：装配路线"
-      },
-      "steps": [
-        { "type": "encapsulate_bounds", "bounds": [5, 4, 5] },
-        { "type": "set_block", "block": "create:depot", "blockPos": [0, 1, 3] },
-        { "type": "set_block", "block": "create:depot", "blockPos": [1, 1, 3] },
-        { "type": "set_block", "block": "create:depot", "blockPos": [2, 1, 3] },
-        { "type": "set_block", "block": "create:depot", "blockPos": [3, 1, 3] },
-        {
-          "type": "set_block",
-          "block": "create:deployer",
-          "blockProperties": { "facing": "down" },
-          "blockPos": [1, 3, 3]
-        },
-        { "type": "set_block", "block": "create:spout", "blockPos": [2, 3, 3] },
-        { "type": "show_section_and_merge", "direction": "down", "blockPos": [0, 1, 3], "blockPos2": [3, 3, 3] },
-        { "type": "idle", "duration": 10 },
-        {
-          "type": "highlight_section",
-          "color": "input",
           "duration": 55,
-          "blockPos": [0, 1, 3],
-          "blockPos2": [0, 1, 3]
-        },
-        {
-          "type": "text",
-          "duration": 85,
           "attachKeyFrame": true,
           "placeNearTarget": true,
-          "color": "blue",
-          "point": [0.5, 2.2, 3.5],
-          "text": {
-            "en_us": "A route runs: input depot or belt, then deployers and spouts in process order, then the output depot or belt.",
-            "zh_cn": "路线顺序：起点料盘或传送带，依次经过机械手和注液器，最后到终点料盘或传送带。"
-          }
-        },
-        { "type": "idle", "duration": 90 },
-        {
-          "type": "highlight_section",
-          "color": "white",
-          "duration": 55,
-          "blockPos": [1, 1, 3],
-          "blockPos2": [2, 3, 3]
-        },
-        {
-          "type": "text",
-          "duration": 90,
-          "attachKeyFrame": true,
-          "placeNearTarget": true,
-          "point": [1.5, 3.6, 3.5],
-          "text": {
-            "en_us": "Deployers and spouts sit 2 blocks above the depot they work on. Deployers face down. Pressing and cutting stay on the real Create line.",
-            "zh_cn": "机械手和注液器位于其加工料盘上方 2 格处，机械手朝下。压制、切割等工序仍由真实的 Create 机器完成。"
-          }
-        },
-        { "type": "idle", "duration": 95 },
-        {
-          "type": "highlight_section",
           "color": "output",
+          "point": [
+            5.5,
+            1.9,
+            3.5
+          ],
+          "text": {
+            "en_us": "Pass 1 finished: extract the unfinished item and return the SAME stack, with its progress, to the input.",
+            "zh_cn": "第 1 遍结束：从出口抽出本配方的半成品，将同一件带进度的物品送回入口。"
+          }
+        },
+        {"type": "idle", "duration": 30},
+        {"type": "set_belt_item_position", "link": "assembly_base", "position": 0.5},
+        {"type": "idle", "duration": 30},
+        {
+          "type": "text",
+          "duration": 100,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [
+            2.5,
+            3.8,
+            3.5
+          ],
+          "text": {
+            "en_us": "Pass 2/3: the same workpiece visits all four powered deployers.",
+            "zh_cn": "第 2/3 遍：同一件原料依次经过四个有动力的机械手。"
+          }
+        },
+        {"type": "move_belt_item", "link": "assembly_base", "position": 1.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [1, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 5, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [1, 3, 3]},
+        {"type": "move_deployer", "blockPos": [1, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 2.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [2, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 6, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [2, 3, 3]},
+        {"type": "move_deployer", "blockPos": [2, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 3.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [3, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 7, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [3, 3, 3]},
+        {"type": "move_deployer", "blockPos": [3, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 4.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [4, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 8, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [4, 3, 3]},
+        {"type": "move_deployer", "blockPos": [4, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 5.5, "duration": 12},
+        {"type": "show_line", "point": [5.5, 1.8, 3.5], "point2": [0.5, 1.8, 3.5], "color": "output", "duration": 55},
+        {
+          "type": "text",
           "duration": 55,
-          "blockPos": [3, 1, 3],
-          "blockPos2": [3, 1, 3]
-        },
-        {
-          "type": "text",
-          "duration": 80,
           "attachKeyFrame": true,
           "placeNearTarget": true,
-          "point": [3.5, 2.2, 3.5],
+          "color": "output",
+          "point": [
+            5.5,
+            1.9,
+            3.5
+          ],
           "text": {
-            "en_us": "The output depot or belt is where finished products are recovered and returned to the ME network.",
-            "zh_cn": "终点料盘或传送带负责回收成品，并把成品送回 ME 网络。"
+            "en_us": "Pass 2 finished: extract the unfinished item and return the SAME stack, with its progress, to the input.",
+            "zh_cn": "第 2 遍结束：从出口抽出本配方的半成品，将同一件带进度的物品送回入口。"
           }
         },
-        { "type": "idle", "duration": 85 }
-      ]
-    },
-    {
-      "id": "basic",
-      "title": {
-        "en_us": "Basic Package Distributor",
-        "zh_cn": "基础封包分发器"
-      },
-      "steps": [
-        { "type": "encapsulate_bounds", "bounds": [5, 4, 5] },
-        { "type": "set_block", "block": "create:depot", "blockPos": [0, 1, 3] },
-        { "type": "set_block", "block": "create:depot", "blockPos": [1, 1, 3] },
-        { "type": "set_block", "block": "create:depot", "blockPos": [2, 1, 3] },
-        {
-          "type": "set_block",
-          "block": "create:deployer",
-          "blockProperties": { "facing": "down" },
-          "blockPos": [1, 3, 3]
-        },
-        { "type": "set_block", "block": "createpackage:basic_package_distributor", "blockPos": [1, 1, 1] },
-        { "type": "show_section_and_merge", "direction": "down", "blockPos": [0, 1, 3], "blockPos2": [2, 3, 3] },
-        { "type": "idle", "duration": 10 },
-        {
-          "type": "show_section_and_merge",
-          "direction": "down",
-          "blockPos": [1, 1, 1],
-          "blockPos2": [1, 1, 1]
-        },
-        { "type": "idle", "duration": 8 },
-        {
-          "type": "highlight_section",
-          "color": "blue",
-          "duration": 55,
-          "blockPos": [1, 1, 1],
-          "blockPos2": [1, 1, 1]
-        },
+        {"type": "idle", "duration": 30},
+        {"type": "set_belt_item_position", "link": "assembly_base", "position": 0.5},
+        {"type": "idle", "duration": 30},
         {
           "type": "text",
-          "duration": 85,
+          "duration": 100,
           "attachKeyFrame": true,
           "placeNearTarget": true,
           "color": "blue",
-          "point": [1.5, 2.6, 1.5],
+          "point": [
+            2.5,
+            3.8,
+            3.5
+          ],
           "text": {
-            "en_us": "The Basic Distributor has its own AE2 pattern slots. No Pattern Provider is needed, and one block holds one saved route.",
-            "zh_cn": "基础分发器自带 AE2 样板槽，无需额外的样板供应器；一个方块保存一条路线。"
+            "en_us": "Pass 3/3: the same workpiece visits all four powered deployers.",
+            "zh_cn": "第 3/3 遍：同一件原料依次经过四个有动力的机械手。"
           }
         },
-        { "type": "idle", "duration": 90 },
-        {
-          "type": "show_controls",
-          "duration": 45,
-          "point": [1.5, 3.0, 1.5],
-          "direction": "down",
-          "action": "right",
-          "item": "createpackage:machine_linker"
-        },
-        {
-          "type": "text",
-          "duration": 85,
-          "attachKeyFrame": true,
-          "placeNearTarget": true,
-          "point": [1.5, 3.0, 1.5],
-          "text": {
-            "en_us": "Link the route with the Machine Linker in the same way as the normal distributor.",
-            "zh_cn": "路线的链接方式与普通分发器相同，同样使用机器链接器。"
-          }
-        },
-        { "type": "idle", "duration": 90 }
-      ]
-    },
-    {
-      "id": "advanced",
-      "title": {
-        "en_us": "Advanced Package Distributor",
-        "zh_cn": "高级封包分发器"
-      },
-      "steps": [
-        { "type": "encapsulate_bounds", "bounds": [5, 4, 5] },
-        { "type": "set_block", "block": "createpackage:advanced_package_distributor", "blockPos": [1, 1, 1] },
-        { "type": "show_section_and_merge", "direction": "down", "blockPos": [1, 1, 1], "blockPos2": [1, 1, 1] },
-        { "type": "idle", "duration": 10 },
-        {
-          "type": "highlight_section",
-          "color": "blue",
-          "duration": 50,
-          "blockPos": [1, 1, 1],
-          "blockPos2": [1, 1, 1]
-        },
-        {
-          "type": "text",
-          "duration": 85,
-          "attachKeyFrame": true,
-          "placeNearTarget": true,
-          "color": "blue",
-          "point": [1.5, 2.6, 1.5],
-          "text": {
-            "en_us": "The Advanced Distributor stores no route itself. Each Mechanical Package Pattern carries the route it should run.",
-            "zh_cn": "高级分发器本身不保存路线，路线保存在每张机械封包样板上。"
-          }
-        },
-        { "type": "idle", "duration": 90 },
-        {
-          "type": "show_controls",
-          "duration": 45,
-          "point": [0.5, 3.0, 1.5],
-          "direction": "down",
-          "action": "right",
-          "item": "createpackage:mechanical_pattern_converter"
-        },
-        {
-          "type": "text",
-          "duration": 90,
-          "attachKeyFrame": true,
-          "placeNearTarget": true,
-          "point": [0.5, 3.0, 1.5],
-          "text": {
-            "en_us": "Mark the route with the Mechanical Pattern Converter, then convert an AE2 pattern into a Mechanical Package Pattern.",
-            "zh_cn": "用机械样板转换器标记路线，再把 AE2 样板转换为机械封包样板。"
-          }
-        },
-        { "type": "idle", "duration": 95 },
-        {
-          "type": "show_controls",
-          "duration": 45,
-          "point": [2.5, 3.0, 1.5],
-          "direction": "down",
-          "action": "right",
-          "item": "createpackage:parallel_card"
-        },
+        {"type": "move_belt_item", "link": "assembly_base", "position": 1.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [1, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 9, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [1, 3, 3]},
+        {"type": "move_deployer", "blockPos": [1, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 2.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [2, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 10, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [2, 3, 3]},
+        {"type": "move_deployer", "blockPos": [2, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 3.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [3, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 11, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [3, 3, 3]},
+        {"type": "move_deployer", "blockPos": [3, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 4.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [4, 3, 3], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "assembly_base", "item": "createpackage:package_distributor", "count": 1},
+        {"type": "indicate_success", "blockPos": [4, 3, 3]},
+        {"type": "move_deployer", "blockPos": [4, 3, 3], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "assembly_base", "position": 5.5, "duration": 12},
+        {"type": "show_line", "point": [5.5, 1.8, 3.5], "point2": [1.5, 1.8, 0.5], "color": "output", "duration": 105},
+        {"type": "show_line", "point": [1.5, 1.8, 0.5], "point2": [0.5, 1.5, 0.5], "color": "output", "duration": 105},
         {
           "type": "text",
           "duration": 95,
           "attachKeyFrame": true,
           "placeNearTarget": true,
-          "point": [2.5, 3.0, 1.5],
+          "color": "output",
+          "point": [
+            5.5,
+            1.9,
+            3.5
+          ],
           "text": {
-            "en_us": "Parallel Cards run more lines at once. By default each card gives 16 jobs, so 4 cards give up to 64. Lines must not share depots or machines.",
-            "zh_cn": "并行卡可同时运行更多路线。默认每张卡提供 16 个作业，四张最多 64 个。不同路线之间不能共享料盘或机器。"
+            "en_us": "After operation 12, the finished Distributor reaches the output and returns directly to ME storage. All four tools remain in the deployers.",
+            "zh_cn": "第 12 次加工完成后，普通封包分发器到达出口，随后直接回到 ME 存储。四种压印工具仍留在各自机械手内。"
           }
         },
-        { "type": "idle", "duration": 100 }
+        {"type": "idle", "duration": 35},
+        {"type": "remove_belt_item", "link": "assembly_base"},
+        {"type": "indicate_success", "blockPos": [1, 1, 0]},
+        {"type": "idle", "duration": 65}
+      ]
+    },
+    {
+      "id": "advanced_parallel",
+      "title": {"en_us": "Advanced: Independent Routes in Parallel", "zh_cn": "高级分发器：两条独立路线并行"},
+      "basePlateSize": 9,
+      "viewScale": 0.65,
+      "steps": [
+        {"type": "encapsulate_bounds", "bounds": [9, 5, 9]},
+        {"type": "set_block", "block": "createpackage:advanced_package_distributor", "blockPos": [3, 1, 0]},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [2, 1, 0]},
+        {"type": "create_belt", "blockPos": [0, 1, 3], "blockPos2": [5, 1, 3], "speed": -32},
+        {"type": "set_block", "block": "create:andesite_casing", "blockPos": [6, 1, 3]},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [0, 1, 4], "blockProperties": {"facing": "north"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [0, 3, 3], "blockProperties": {"facing": "east"}},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [1, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [1, 3, 3], "item": "ae2:silicon_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [2, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [2, 3, 3], "item": "ae2:logic_processor_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [3, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [3, 3, 3], "item": "ae2:engineering_processor_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [4, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [4, 3, 3], "item": "ae2:calculation_processor_press", "count": 1},
+        {"type": "set_kinetic_speed", "blockPos": [0, 3, 3], "blockPos2": [4, 3, 3], "speed": 32},
+        {"type": "set_kinetic_speed", "blockPos": [0, 1, 4], "speed": -32},
+        {"type": "create_belt", "blockPos": [0, 1, 7], "blockPos2": [5, 1, 7], "speed": -32},
+        {"type": "set_block", "block": "create:andesite_casing", "blockPos": [6, 1, 7]},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [0, 1, 8], "blockProperties": {"facing": "north"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [0, 3, 7], "blockProperties": {"facing": "east"}},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [1, 3, 7], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [1, 3, 7], "item": "ae2:silicon_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [2, 3, 7], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [2, 3, 7], "item": "ae2:logic_processor_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [3, 3, 7], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [3, 3, 7], "item": "ae2:engineering_processor_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [4, 3, 7], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [4, 3, 7], "item": "ae2:calculation_processor_press", "count": 1},
+        {"type": "set_kinetic_speed", "blockPos": [0, 3, 7], "blockPos2": [4, 3, 7], "speed": 32},
+        {"type": "set_kinetic_speed", "blockPos": [0, 1, 8], "speed": -32},
+        {"type": "show_section", "direction": "down", "blockPos": [0, 1, 0], "blockPos2": [6, 3, 8]},
+        {"type": "idle", "duration": 15},
+        {"type": "highlight_section", "blockPos": [0, 1, 3], "blockPos2": [5, 3, 3], "color": "blue", "duration": 120},
+        {"type": "highlight_section", "blockPos": [0, 1, 7], "blockPos2": [5, 3, 7], "color": "green", "duration": 120},
+        {
+          "type": "text",
+          "duration": 115,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [
+            3.5,
+            2.5,
+            5.5
+          ],
+          "text": {
+            "en_us": "Build two complete independent copies. Each has its own input, four deployers and output. They may share ME and a power source, but must not share processing inventories.",
+            "zh_cn": "搭建两条完整、独立的同配方装配线，每条都有自己的入口、四个机械手和出口。可以共用 ME 网络或动力源，但不能共用加工库存。"
+          }
+        },
+        {"type": "idle", "duration": 120},
+        {"type": "show_controls", "action": "right", "point": [0.5, 1.9, 3.5], "direction": "down", "duration": 45, "item": "createpackage:mechanical_pattern_converter"},
+        {"type": "show_line", "point": [0.5, 1.9, 3.5], "point2": [5.5, 1.9, 3.5], "color": "blue", "duration": 115},
+        {"type": "show_line", "point": [0.5, 1.9, 7.5], "point2": [5.5, 1.9, 7.5], "color": "green", "duration": 115},
+        {
+          "type": "text",
+          "duration": 115,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [
+            3.5,
+            2.5,
+            5.5
+          ],
+          "text": {
+            "en_us": "Convert two copies of the same processing pattern. Each Mechanical Package Pattern stores one complete ordered route: one for the front line and one for the back line.",
+            "zh_cn": "把同一处理样板的两份副本分别转换：第一张机械封包样板保存前线坐标，第二张保存后线坐标。每张都要包含完整、有序的路线。"
+          }
+        },
+        {"type": "idle", "duration": 120},
+        {"type": "show_controls", "action": "right", "point": [3.5, 2.5, 0.5], "direction": "down", "duration": 45},
+        {
+          "type": "text",
+          "duration": 105,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [
+            3.5,
+            2.5,
+            0.5
+          ],
+          "text": {
+            "en_us": "Open the Advanced Distributor GUI empty-handed and insert both Mechanical Package Patterns. There are 36 pattern slots. Plain AE2 patterns cannot be used here.",
+            "zh_cn": "空手打开高级分发器界面，把两张机械封包样板放入样板槽，共有 36 槽。这里不能直接使用普通 AE2 样板。"
+          }
+        },
+        {"type": "idle", "duration": 110},
+        {"type": "show_controls", "action": "right", "point": [3.5, 2.5, 0.5], "direction": "down", "duration": 45, "item": "createpackage:parallel_card", "whileSneaking": true},
+        {
+          "type": "text",
+          "duration": 120,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [
+            3.5,
+            2.5,
+            0.5
+          ],
+          "text": {
+            "en_us": "Install a Parallel Card by sneak-right-clicking, or use the upgrade slot. No cards: one job. Default limits are 16 jobs with one card and 64 with four, subject to independent routes and available AE work.",
+            "zh_cn": "潜行右键安装并行卡，或使用升级槽。无卡一个作业，默认一卡 16、四卡 64；实际并行还取决于独立路线数量及 AE 任务。"
+          }
+        },
+        {"type": "idle", "duration": 125},
+        {"type": "show_line", "point": [3.5, 1.8, 0.5], "point2": [0.5, 1.8, 3.5], "color": "blue", "duration": 100},
+        {"type": "show_line", "point": [3.5, 1.8, 0.5], "point2": [0.5, 1.8, 7.5], "color": "green", "duration": 100},
+        {"type": "create_belt_item", "blockPos": [0, 1, 3], "item": "createpackage:incomplete_package_distributor", "count": 1, "link": "parallel_front", "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 1, "assemblyTotalSteps": 12},
+        {"type": "set_belt_item_position", "link": "parallel_front", "position": 2.5},
+        {"type": "create_belt_item", "blockPos": [0, 1, 7], "item": "createpackage:incomplete_package_distributor", "count": 1, "link": "parallel_back", "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 6, "assemblyTotalSteps": 12},
+        {"type": "set_belt_item_position", "link": "parallel_back", "position": 3.5},
+        {
+          "type": "text",
+          "duration": 100,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "blue",
+          "point": [
+            3.5,
+            2.5,
+            5.5
+          ],
+          "text": {
+            "en_us": "Equivalent encoded patterns are dispatched to idle equivalent routes in rotation. These two jobs can be at different steps while both machines work.",
+            "zh_cn": "对于原始编码相同的等价样板，高级分发器选择空闲路线，并在候选路线间轮转。两个作业可以处于不同进度，同时加工。"
+          }
+        },
+        {"type": "move_deployer", "blockPos": [2, 3, 3], "distance": 1, "duration": 8},
+        {"type": "move_deployer", "blockPos": [3, 3, 7], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "parallel_front", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 2, "assemblyTotalSteps": 12},
+        {"type": "change_belt_item", "link": "parallel_back", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 7, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [2, 3, 3]},
+        {"type": "move_deployer", "blockPos": [2, 3, 3], "distance": -1, "duration": 8},
+        {"type": "indicate_success", "blockPos": [3, 3, 7]},
+        {"type": "move_deployer", "blockPos": [3, 3, 7], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "move_belt_item", "link": "parallel_front", "position": 3.5, "duration": 12},
+        {"type": "move_belt_item", "link": "parallel_back", "position": 4.5, "duration": 12},
+        {"type": "move_deployer", "blockPos": [3, 3, 3], "distance": 1, "duration": 8},
+        {"type": "move_deployer", "blockPos": [4, 3, 7], "distance": 1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "change_belt_item", "link": "parallel_front", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 3, "assemblyTotalSteps": 12},
+        {"type": "change_belt_item", "link": "parallel_back", "item": "createpackage:incomplete_package_distributor", "count": 1, "assemblyRecipe": "createpackage:sequenced_assembly/package_distributor", "assemblyStep": 8, "assemblyTotalSteps": 12},
+        {"type": "indicate_success", "blockPos": [3, 3, 3]},
+        {"type": "move_deployer", "blockPos": [3, 3, 3], "distance": -1, "duration": 8},
+        {"type": "indicate_success", "blockPos": [4, 3, 7]},
+        {"type": "move_deployer", "blockPos": [4, 3, 7], "distance": -1, "duration": 8},
+        {"type": "idle", "duration": 8},
+        {"type": "idle", "duration": 55},
+        {
+          "type": "text",
+          "duration": 115,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "red",
+          "point": [
+            3.5,
+            2.5,
+            5.5
+          ],
+          "text": {
+            "en_us": "Routes sharing any marked block cannot run together on this distributor. Cards increase capacity; they do not make a shared input, output or deployer safe for simultaneous jobs.",
+            "zh_cn": "只要路线共享任意已标记方块，这台分发器就不会让它们同时运行。并行卡增加容量，不会让共用入口、出口或机械手的路线变得可并行。"
+          }
+        },
+        {"type": "idle", "duration": 120},
+        {
+          "type": "text",
+          "duration": 105,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "white",
+          "point": [
+            3.5,
+            2.5,
+            0.5
+          ],
+          "text": {
+            "en_us": "No external provider is needed. Keep the physical lines independent throughout: the overlap check cannot identify shared resources omitted from the marks.",
+            "zh_cn": "高级分发器无需外置供应器。真实物品线也要全程独立：未标入路线的共享资源不会被重叠检查识别。"
+          }
+        },
+        {"type": "idle", "duration": 110}
       ]
     },
     {
       "id": "pitfalls",
-      "title": {
-        "en_us": "Package Distributors: Common Mistakes",
-        "zh_cn": "封包分发器：常见注意事项"
-      },
+      "title": {"en_us": "Pattern Inputs, Power and Retry Rules", "zh_cn": "样板用量、动力与概率补轮"},
+      "basePlateSize": 7,
+      "viewScale": 0.75,
       "steps": [
-        { "type": "encapsulate_bounds", "bounds": [5, 4, 5] },
-        { "type": "set_block", "block": "createpackage:package_distributor", "blockPos": [1, 1, 1] },
-        { "type": "show_section_and_merge", "direction": "down", "blockPos": [1, 1, 1], "blockPos2": [1, 1, 1] },
-        { "type": "idle", "duration": 10 },
+        {"type": "encapsulate_bounds", "bounds": [7, 5, 7]},
+        {"type": "set_block", "block": "createpackage:basic_package_distributor", "blockPos": [1, 1, 0]},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [0, 1, 0]},
+        {"type": "create_belt", "blockPos": [0, 1, 3], "blockPos2": [5, 1, 3], "speed": -32},
+        {"type": "set_block", "block": "create:andesite_casing", "blockPos": [6, 1, 3]},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [0, 1, 4], "blockProperties": {"facing": "north"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [0, 3, 3], "blockProperties": {"facing": "east"}},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [1, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [1, 3, 3], "item": "ae2:silicon_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [2, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [2, 3, 3], "item": "ae2:logic_processor_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [3, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [3, 3, 3], "item": "ae2:engineering_processor_press", "count": 1},
+        {"type": "set_block", "block": "create:deployer", "blockPos": [4, 3, 3], "blockProperties": {"facing": "down", "axis_along_first": "true"}},
+        {"type": "set_deployer_item", "blockPos": [4, 3, 3], "item": "ae2:calculation_processor_press", "count": 1},
+        {"type": "set_kinetic_speed", "blockPos": [0, 3, 3], "blockPos2": [4, 3, 3], "speed": 32},
+        {"type": "set_kinetic_speed", "blockPos": [0, 1, 4], "speed": -32},
+        {"type": "show_section", "direction": "down", "blockPos": [0, 1, 0], "blockPos2": [6, 3, 4]},
+        {"type": "idle", "duration": 15},
         {
           "type": "text",
-          "duration": 85,
+          "duration": 115,
           "attachKeyFrame": true,
           "placeNearTarget": true,
           "color": "red",
-          "point": [1.5, 2.6, 1.5],
+          "point": [
+            1.5,
+            2.5,
+            0.5
+          ],
           "text": {
-            "en_us": "The primary output must match exactly one Create sequenced assembly recipe. Otherwise the job is rejected before any input is used.",
-            "zh_cn": "主产物必须唯一匹配一个 Create 序列组装配方，否则作业会在消耗任何输入之前被拒绝。"
+            "en_us": "Recipe selection starts with the primary output, then uses the base ingredient and step inputs to disambiguate. Missing candidates, tied best matches or unused inputs reject the pattern before normal execution.",
+            "zh_cn": "先按主产物查找序列组装配方，再结合基础原料和工序材料消歧。没有候选、最佳候选仍并列，或有未使用输入时，样板会在正常执行前被拒绝。"
           }
         },
-        { "type": "idle", "duration": 90 },
+        {"type": "idle", "duration": 120},
+        {"type": "highlight_section", "blockPos": [0, 1, 3], "color": "input", "duration": 120},
         {
           "type": "text",
-          "duration": 85,
+          "duration": 115,
           "attachKeyFrame": true,
           "placeNearTarget": true,
           "color": "red",
-          "point": [1.5, 2.6, 1.5],
+          "point": [
+            0.5,
+            1.9,
+            3.5
+          ],
           "text": {
-            "en_us": "The base item is supplied once. Deployer items and spout fluids must be encoded for every loop, not the base item.",
-            "zh_cn": "基础原料只供应一次；机械手物品和注液流体需要按全部循环次数写入样板，而不是把原料也乘以循环数。"
+            "en_us": "Encode one base item per full assembly. Multiply consumed deployer items and filling amounts by the loop count. Kept tools only need one copy, preloaded or supplied from ME.",
+            "zh_cn": "每次完整装配只编码一份基础原料。消耗型机械手材料和每步注液量乘循环次数；保留型工具只需预装一件或由 ME 提供，不要乘循环数。"
           }
         },
-        { "type": "idle", "duration": 90 },
+        {"type": "idle", "duration": 120},
+        {"type": "show_line", "point": [1.5, 1.8, 0.5], "point2": [2.5, 3.5, 3.5], "color": "input", "duration": 120},
         {
           "type": "text",
-          "duration": 85,
+          "duration": 115,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "white",
+          "point": [
+            2.5,
+            3.7,
+            3.5
+          ],
+          "text": {
+            "en_us": "Deployer ingredients go directly into their deployers; fluids go into their linked spouts. Remaining supplies wait when a target is full. Ingredients do not enter a particular face of the distributor model.",
+            "zh_cn": "机械手材料直接送入对应机械手，流体直接填入已链接注液器。目标容量不足时，剩余材料等待投放，不是从分发器模型上的某个面灌入。"
+          }
+        },
+        {"type": "idle", "duration": 120},
+        {
+          "type": "text",
+          "duration": 120,
+          "attachKeyFrame": true,
+          "placeNearTarget": true,
+          "color": "white",
+          "point": [
+            0.5,
+            3.5,
+            3.5
+          ],
+          "text": {
+            "en_us": "AE power and channels run the distributor. Actual rotational power runs belts, deployers, presses and saws; spouts need no rotation. Route marks replace neither transport nor missing machines.",
+            "zh_cn": "分发器需要 AE 电力和频道，自身无需转速。皮带、机械手、压机和锯仍须真实 Create 动力，注液器无需转速；标记不能代替输送结构或缺失机器。"
+          }
+        },
+        {"type": "idle", "duration": 125},
+        {"type": "highlight_section", "blockPos": [5, 1, 3], "color": "output", "duration": 130},
+        {
+          "type": "text",
+          "duration": 125,
           "attachKeyFrame": true,
           "placeNearTarget": true,
           "color": "red",
-          "point": [1.5, 2.6, 1.5],
+          "point": [
+            5.5,
+            1.9,
+            3.5
+          ],
           "text": {
-            "en_us": "Do not list optional byproducts as pattern outputs. AE2 waits for every listed output.",
-            "zh_cn": "不要把可选副产物写进样板产物，AE2 会等待样板中列出的每一个产物。"
+            "en_us": "This gold-sheet example is deterministic. For other probabilistic recipes, byproducts return to ME and another full material round is supplied if the requested main product is still missing. Never list optional byproducts as required outputs.",
+            "zh_cn": "本例金板装配配方为确定性产出。其他概率配方出现副产物时，会回收副产物，并在主产物不足时补投完整一轮材料；不要把可选副产物列为必需输出。"
           }
         },
-        { "type": "idle", "duration": 90 },
+        {"type": "idle", "duration": 130},
         {
           "type": "text",
-          "duration": 85,
+          "duration": 115,
           "attachKeyFrame": true,
           "placeNearTarget": true,
           "color": "red",
-          "point": [1.5, 2.6, 1.5],
+          "point": [
+            1.5,
+            2.5,
+            0.5
+          ],
           "text": {
-            "en_us": "The Advanced Distributor rejects plain AE2 patterns. Convert them to Mechanical Package Patterns first.",
-            "zh_cn": "高级分发器不接受普通 AE2 样板，请先用机械样板转换器转换为机械封包样板。"
+            "en_us": "Reserve refill materials and ME storage space. Crafting missing refill materials automatically is off by default. Goggles or Jade report missing supplies, blocked targets, inactive ME or rejected patterns.",
+            "zh_cn": "请预留补轮材料与 ME 回收空间。缺料时自动合成补料默认关闭；护目镜或 Jade 可查看缺料、目标堵塞、ME 未激活和样板拒绝原因。"
           }
         },
-        { "type": "idle", "duration": 90 },
-        {
-          "type": "text",
-          "duration": 95,
-          "attachKeyFrame": true,
-          "placeNearTarget": true,
-          "color": "red",
-          "point": [1.5, 2.6, 1.5],
-          "text": {
-            "en_us": "The distributor model is two blocks tall. Goggles or Jade show the exact rejection reason when a job is refused.",
-            "zh_cn": "分发器模型高两格。作业被拒绝时，护目镜或 Jade 会显示具体原因。"
-          }
-        },
-        { "type": "idle", "duration": 100 }
+        {"type": "idle", "duration": 120}
       ]
     }
   ]

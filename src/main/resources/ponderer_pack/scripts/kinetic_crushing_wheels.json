@@ -1,0 +1,261 @@
+{
+  "id": "createpackage:kinetic_crushing_wheels",
+  "items": ["createpackage:kinetic_pattern_provider", "createpackage:extended_kinetic_pattern_provider", "create:crushing_wheel"],
+  "title": {"en_us": "Special Target: Crushing Wheels", "zh_cn": "特殊目标：粉碎轮"},
+  "tags": ["createpackage:create_package"],
+  "editable": false,
+  "scenes": [
+    {
+      "id": "controller_target",
+      "title": {"en_us": "Crushing Wheels: Target the Gap", "zh_cn": "粉碎轮：绑定轮间处理格"},
+      "basePlateSize": 7,
+      "viewScale": 0.7,
+      "steps": [
+        {"type": "encapsulate_bounds", "bounds": [7, 5, 7]},
+        {"type": "set_block", "block": "create:crushing_wheel", "blockPos": [2, 3, 3], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:shaft", "blockPos": [2, 3, 4], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [2, 3, 5], "blockProperties": {"facing": "north"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 3, 3], "speed": -64, "blockPos2": [2, 3, 5]},
+        {"type": "set_block", "block": "create:crushing_wheel", "blockPos": [4, 3, 3], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:shaft", "blockPos": [4, 3, 4], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [4, 3, 5], "blockProperties": {"facing": "north"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 3, 3], "speed": 64, "blockPos2": [4, 3, 5]},
+        {"type": "set_block", "block": "create:crushing_wheel_controller", "blockPos": [3, 3, 3], "blockProperties": {"facing": "down", "valid": "true"}},
+        {"type": "set_block", "block": "create:depot", "blockPos": [3, 2, 3]},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [1, 3, 3], "blockProperties": {"push_direction": "east"}},
+        {"type": "show_section", "blockPos": [0, 2, 2], "blockPos2": [5, 3, 5], "direction": "down"},
+        {"type": "idle", "duration": 20},
+        {"type": "highlight_section", "blockPos": [2, 3, 3], "color": "red", "duration": 110},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Facing a wheel block is rejected. This adapter targets create:crushing_wheel_controller, the invisible processing block between two wheels; clicking a wheel does not redirect to it.",
+            "zh_cn": "对准轮子本体会被拒绝。这个适配的目标是两轮间隐形处理方块 create:crushing_wheel_controller；点击轮子不会自动转成该目标。"
+          },
+          "point": [
+            2.5,
+            3.8,
+            3.5
+          ],
+          "duration": 130,
+          "color": "red",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140},
+        {"type": "highlight_section", "blockPos": [3, 3, 3], "color": "green", "duration": 110},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Place matching-axis wheels with one block between them and drive them in opposite directions. In this vertical example they pull downward, producing a valid controller in the middle gap.",
+            "zh_cn": "两轮转轴一致，中间留一格，并反向旋转。本例向下卷入物品，中间会自动形成有效控制器；不是另合成一个控制器来放。"
+          },
+          "point": [
+            3.5,
+            3.8,
+            3.5
+          ],
+          "duration": 125,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 135},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [1, 3, 3], "blockProperties": {"push_direction": "all"}},
+        {"type": "set_block", "block": "minecraft:air", "blockPos": [1, 3, 3]},
+        {"type": "set_block", "block": "create:andesite_casing", "blockPos": [3, 3, 1]},
+        {"type": "show_controls", "action": "right", "point": [3.5, 3.5, 2.0], "direction": "down", "duration": 45, "item": "createpackage:kinetic_pattern_provider"},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [3, 3, 2], "blockProperties": {"push_direction": "all"}},
+        {"type": "show_section", "blockPos": [3, 3, 1], "blockPos2": [3, 3, 2], "direction": "down"},
+        {"type": "idle", "duration": 20},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Place the provider beside the middle gap. A temporary support block on the near side makes placement easy; attach the provider to its far face, then remove the support.",
+            "zh_cn": "供应器要紧挨中间处理格。可先在近侧放临时支撑，点支撑朝向轮间的一面放供应器，再拆支撑；不要把供应器塞进处理格。"
+          },
+          "point": [
+            3.5,
+            3.8,
+            2.5
+          ],
+          "duration": 125,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 135},
+        {"type": "set_block", "block": "minecraft:air", "blockPos": [3, 3, 1]},
+        {"type": "show_controls", "action": "right", "point": [3.5, 3.5, 2.0], "direction": "down", "duration": 45, "item": "create:wrench"},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "From ALL, right-click the provider NORTH face with a wrench. It now targets SOUTH into the middle controller. Connect powered ME on another face.",
+            "zh_cn": "从 ALL 状态，用扳手普通右键供应器北面，目标就指向南侧中间控制器。ME 从其他面接入，并提供电力、频道、材料与合成任务。"
+          },
+          "point": [
+            3.5,
+            3.8,
+            2.5
+          ],
+          "duration": 120,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 130},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [3, 3, 2], "blockProperties": {"push_direction": "south"}},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [3, 3, 1]},
+        {"type": "show_section", "blockPos": [3, 3, 1], "blockPos2": [3, 3, 1], "direction": "down"},
+        {"type": "idle", "duration": 20},
+        {"type": "show_line", "point": [3.5, 3.5, 2.5], "point2": [3.5, 3.5, 3.5], "color": "input", "duration": 90},
+        {"type": "highlight_section", "blockPos": [3, 2, 3], "color": "output", "duration": 110},
+        {"type": "show_line", "point": [3.5, 3.5, 3.5], "point2": [3.5, 2.8, 3.5], "color": "output", "duration": 90},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "The input goes into the controller, not into either wheel. For a downward controller, place a recoverable Depot or Belt directly below the GAP; the provider collects there. A loose floor or arbitrary chest is not equivalent.",
+            "zh_cn": "原料进入控制器，不进入两侧轮子。向下控制器的回收料盘或传送带要放在处理格正下方，不是轮子下面；普通地面或随意放一个箱子不能代替。"
+          },
+          "point": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "duration": 135,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 145},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "The colored gap outline is a teaching marker. The real controller is invisible and has no normal black selection outline; F3 Targeted Block can confirm its ID and coordinates.",
+            "zh_cn": "彩色方框只是教学标记。实际控制器不可见，也没有普通黑色选框；可用 F3 的目标方块信息确认注册 ID 与坐标。"
+          },
+          "point": [
+            3.5,
+            3.5,
+            3.5
+          ],
+          "duration": 120,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 130}
+      ]
+    },
+    {
+      "id": "parallel_controllers",
+      "title": {"en_us": "Crushing Wheels: Link Additional Pairs", "zh_cn": "粉碎轮：给额外轮组添加链接"},
+      "basePlateSize": 13,
+      "viewScale": 0.43,
+      "steps": [
+        {"type": "encapsulate_bounds", "bounds": [13, 5, 13]},
+        {"type": "set_block", "block": "create:crushing_wheel", "blockPos": [2, 3, 3], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:shaft", "blockPos": [2, 3, 4], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [2, 3, 5], "blockProperties": {"facing": "north"}},
+        {"type": "set_kinetic_speed", "blockPos": [2, 3, 3], "speed": -64, "blockPos2": [2, 3, 5]},
+        {"type": "set_block", "block": "create:crushing_wheel", "blockPos": [4, 3, 3], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:shaft", "blockPos": [4, 3, 4], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [4, 3, 5], "blockProperties": {"facing": "north"}},
+        {"type": "set_kinetic_speed", "blockPos": [4, 3, 3], "speed": 64, "blockPos2": [4, 3, 5]},
+        {"type": "set_block", "block": "create:crushing_wheel_controller", "blockPos": [3, 3, 3], "blockProperties": {"facing": "down", "valid": "true"}},
+        {"type": "set_block", "block": "create:depot", "blockPos": [3, 2, 3]},
+        {"type": "set_block", "block": "create:crushing_wheel", "blockPos": [8, 3, 3], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:shaft", "blockPos": [8, 3, 4], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [8, 3, 5], "blockProperties": {"facing": "north"}},
+        {"type": "set_kinetic_speed", "blockPos": [8, 3, 3], "speed": -64, "blockPos2": [8, 3, 5]},
+        {"type": "set_block", "block": "create:crushing_wheel", "blockPos": [10, 3, 3], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:shaft", "blockPos": [10, 3, 4], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [10, 3, 5], "blockProperties": {"facing": "north"}},
+        {"type": "set_kinetic_speed", "blockPos": [10, 3, 3], "speed": 64, "blockPos2": [10, 3, 5]},
+        {"type": "set_block", "block": "create:crushing_wheel_controller", "blockPos": [9, 3, 3], "blockProperties": {"facing": "down", "valid": "true"}},
+        {"type": "set_block", "block": "create:depot", "blockPos": [9, 2, 3]},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [3, 3, 2], "blockProperties": {"push_direction": "south"}},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [3, 3, 1]},
+        {"type": "set_block", "block": "create:andesite_casing", "blockPos": [9, 3, 4]},
+        {"type": "show_section", "blockPos": [1, 2, 1], "blockPos2": [11, 3, 5], "direction": "down"},
+        {"type": "idle", "duration": 20},
+        {"type": "show_controls", "action": "right", "point": [3.5, 3.8, 2.5], "direction": "down", "duration": 45, "item": "createpackage:machine_linker"},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Select the provider with the linker. For another crushing pair, link its middle controller, not either wheel and not the output Depot. Each pair needs its own correct output and drive.",
+            "zh_cn": "先用链接器右键供应器。新增另一套粉碎轮时，要链接它的中间控制器，不是两侧轮子，也不是回收料盘；每套都要有独立出口和正确动力。"
+          },
+          "point": [
+            3.5,
+            3.8,
+            2.5
+          ],
+          "duration": 130,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140},
+        {"type": "highlight_section", "blockPos": [9, 3, 3], "color": "green", "duration": 110},
+        {"type": "highlight_section", "blockPos": [9, 3, 4], "color": "white", "duration": 110},
+        {"type": "show_line", "point": [9.5, 3.5, 1.5], "point2": [9.5, 3.5, 4.5], "color": "white", "duration": 130},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "To aim at the invisible target, place a temporary visible block BEHIND the second gap. Stand in front with your eye level through the gap, and aim at that reference block; the controller is hit first.",
+            "zh_cn": "瞄不到隐形目标时，在第二套处理格后面放临时参照块。站在正前方，让视线穿过处理格中心，瞄准参照块；射线会先命中控制器。"
+          },
+          "point": [
+            9.5,
+            3.5,
+            3.5
+          ],
+          "duration": 135,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 145},
+        {"type": "show_controls", "action": "right", "point": [9.5, 3.5, 3.0], "direction": "down", "duration": 45, "item": "createpackage:machine_linker"},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Use F3 to confirm create:crushing_wheel_controller, then right-click with the linker. No black outline is expected. Remove the reference afterward; sneak-right-click the same target to unlink it.",
+            "zh_cn": "用 F3 确认目标为 create:crushing_wheel_controller，再持链接器右键。没有黑色选框是正常的。成功后拆参照块；潜行右键同一控制器可解绑。"
+          },
+          "point": [
+            9.5,
+            3.5,
+            3.5
+          ],
+          "duration": 135,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 145},
+        {"type": "set_block", "block": "minecraft:air", "blockPos": [9, 3, 4]},
+        {"type": "indicate_success", "blockPos": [9, 3, 3]},
+        {"type": "show_controls", "action": "right", "point": [3.5, 3.8, 2.5], "direction": "down", "duration": 45, "item": "createpackage:parallel_card", "whileSneaking": true},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Parallel Cards enable extra linked controllers. The front controller is already a target. Repeat for independent pairs; linking the two wheel blocks does not create two processing machines.",
+            "zh_cn": "装并行卡后才启用额外控制器。正面控制器本来就计入目标；其余独立轮组照此添加，不能把两个轮子链接成两台加工机器。"
+          },
+          "point": [
+            3.5,
+            3.8,
+            2.5
+          ],
+          "duration": 125,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 135}
+      ]
+    }
+  ]
+}

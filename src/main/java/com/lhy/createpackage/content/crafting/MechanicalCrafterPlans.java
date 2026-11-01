@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -53,6 +54,42 @@ public final class MechanicalCrafterPlans {
     private static final ThreadLocal<IPatternDetails> PATTERN = new ThreadLocal<>();
     private static final ThreadLocal<Set<BlockPos>> CLAIMED = new ThreadLocal<>();
     private static final ThreadLocal<Set<BlockPos>> CLAIMED_CONTAINERS = new ThreadLocal<>();
+    // Values hold only immutable layout data, never a level, block entity, inventory or simulated action.
+    private static final Map<Level, Map<LayoutKey, LayoutHint>> SUCCESSFUL_LAYOUTS = new WeakHashMap<>();
+    private static final int MAX_LAYOUT_HINTS_PER_LEVEL = 256;
+    private static final Map<Level, Map<RecipeKey, List<List<PatternCell>>>> RECIPE_LAYOUTS = new WeakHashMap<>();
+    private static final Map<Level, PlanningFailureCache<LayoutKey, FailureState>> FAILURES = new WeakHashMap<>();
+    private static final int FAILURE_RETRY_TICKS = 5;
+    private static final ThreadLocal<SearchStats> LAST_DEBUG_SEARCH = new ThreadLocal<>();
+
+    record SearchStats(int placements, int groupLookups, boolean reusedLayout, int sinkScans, int recipeScans,
+            boolean failureCached) {
+    }
+
+    @Nullable
+    static SearchStats lastDebugSearch() {
+        return LAST_DEBUG_SEARCH.get();
+    }
+
+    public static void onAddReloadListeners(net.neoforged.neoforge.event.AddReloadListenerEvent event) {
+        event.addListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) resources -> clearPlanningCaches());
+    }
+
+    public static void onNeighborNotify(net.neoforged.neoforge.event.level.BlockEvent.NeighborNotifyEvent event) {
+        if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+            invalidateFailures(level);
+        }
+    }
+
+    static synchronized void invalidateFailures(Level level) {
+        FAILURES.remove(level);
+    }
+
+    static synchronized void clearPlanningCaches() {
+        RECIPE_LAYOUTS.clear();
+        SUCCESSFUL_LAYOUTS.clear();
+        FAILURES.clear();
+    }
 
     private MechanicalCrafterPlans() {
     }
@@ -138,14 +175,59 @@ public final class MechanicalCrafterPlans {
 
     public static MachinePlanFactory.Plan plan(Level level, BlockPos origin, BlockPos providerPos, AEKey primaryOutput,
             long outputAmount, List<GenericStack> patternOutputs) {
+        LAST_DEBUG_SEARCH.remove();
         IPatternDetails pattern = PATTERN.get();
         if (!(pattern instanceof AEProcessingPattern processing)) {
             return MachinePlanFactory.Plan.failure("crafter_pattern_shape");
         }
-        if (crafter(level, origin) == null) {
+        var originCrafter = crafter(level, origin);
+        if (originCrafter == null) {
             return MachinePlanFactory.Plan.failure("missing_machine");
         }
-        List<List<PatternCell>> layouts = recipeLayouts(level, processing, primaryOutput, outputAmount);
+        Set<BlockPos> claimed = CLAIMED.get() == null ? Set.of() : CLAIMED.get();
+        Set<BlockPos> claimedContainers = CLAIMED_CONTAINERS.get() == null ? Set.of() : CLAIMED_CONTAINERS.get();
+        LayoutKey cacheKey = new LayoutKey(origin.immutable(), providerPos.immutable(), processing.getDefinition(),
+                primaryOutput, outputAmount);
+        FailureState state = new FailureState(originCrafter.getBlockState(), originCrafter.getSpeed(), claimed,
+                claimedContainers, AllConfigs.server().recipes.allowRegularCraftingInCrafter.get());
+        String failed = recentFailure(level, cacheKey, state);
+        if (failed != null) {
+            if (Config.debugLoggingEnabled()) {
+                LAST_DEBUG_SEARCH.set(new SearchStats(0, 0, false, 0, 0, true));
+            }
+            return MachinePlanFactory.Plan.failure(failed);
+        }
+        PlanningContext context = new PlanningContext(level);
+        MachinePlanFactory.Plan result = planFresh(level, origin, providerPos, primaryOutput, outputAmount,
+                patternOutputs, processing, claimed, claimedContainers, cacheKey, context);
+        if (!result.isSuccess()) {
+            rememberFailure(level, cacheKey, state, result.statusKey());
+        }
+        if (Config.debugLoggingEnabled()) {
+            LAST_DEBUG_SEARCH.set(new SearchStats(context.placements, context.groups.lookups(), context.reusedLayout,
+                    context.sinkScans, context.recipeScans, false));
+            debugLog("search placements={} groupLookups={} reused={} sinkScans={} recipeScans={}",
+                    context.placements, context.groups.lookups(), context.reusedLayout, context.sinkScans, context.recipeScans);
+        }
+        return result;
+    }
+
+    private static MachinePlanFactory.Plan planFresh(Level level, BlockPos origin, BlockPos providerPos, AEKey primaryOutput,
+            long outputAmount, List<GenericStack> patternOutputs, AEProcessingPattern processing, Set<BlockPos> claimed,
+            Set<BlockPos> claimedContainers, LayoutKey cacheKey, PlanningContext context) {
+        if (claimed.contains(origin)) {
+            return MachinePlanFactory.Plan.failure("crafter_occupied");
+        }
+        Cluster cluster = Cluster.around(level, origin, claimed);
+        // Outlet discovery depends on the structure, not the recipe placement. Fail before scanning recipes.
+        context.sinks = discoverSinks(context, cluster, providerPos, claimedContainers);
+        if (context.sinks.isEmpty()) {
+            return MachinePlanFactory.Plan.failure("crafter_output_not_provider");
+        }
+        if (context.sinks.stream().noneMatch(sink -> context.crafter(sink.crafter()).getSpeed() != 0)) {
+            return MachinePlanFactory.Plan.failure("crafter_not_powered");
+        }
+        List<List<PatternCell>> layouts = recipeLayouts(context, processing, primaryOutput, outputAmount);
         if (layouts.isEmpty()) {
             List<PatternCell> sparse = patternCells(processing.getSparseInputs());
             if (sparse == null) {
@@ -156,23 +238,35 @@ public final class MechanicalCrafterPlans {
             }
             layouts = List.of(sparse);
         }
-
-        Set<BlockPos> claimed = CLAIMED.get() == null ? Set.of() : CLAIMED.get();
-        Set<BlockPos> claimedContainers = CLAIMED_CONTAINERS.get() == null ? Set.of() : CLAIMED_CONTAINERS.get();
-        Cluster cluster = Cluster.around(level, origin, claimed);
         debugLog("plan origin={} provider={} layouts={} cluster={} claimed={}", origin, providerPos, layouts.size(),
                 cluster.positions().size(), claimed.size());
         Arrangement best = null;
+        List<PatternCell> bestLayout = null;
         String failure = null;
-        for (List<PatternCell> layout : layouts) {
-            Result result = arrangeLayout(level, cluster, layout, providerPos, claimed, claimedContainers);
-            if (result.arrangement() == null) {
-                debugLog("layout rejected cells={} failure={}", layout.size(), result.failure());
-                failure = failure == null ? result.failure() : failure;
-                continue;
+        LayoutHint hint = layoutHint(level, cacheKey);
+        if (hint != null && layouts.contains(hint.layout())
+                && hint.positions().stream().allMatch(cluster.coords()::containsKey)) {
+            Result result = tryPlacement(context, cluster, hint.layout(), hint.positions(), providerPos, claimed);
+            Arrangement candidate = result.arrangement();
+            if (candidate != null && !candidate.busy() && candidate.changes() == 0
+                    && candidate.sink().equals(hint.sink()) && candidate.outputPos().equals(hint.outputPos())) {
+                best = candidate;
+                bestLayout = hint.layout();
             }
-            if (best == null || result.arrangement().changes() < best.changes()) {
-                best = result.arrangement();
+        }
+        context.reusedLayout = best != null;
+        if (!context.reusedLayout) {
+            for (List<PatternCell> layout : layouts) {
+                Result result = arrangeLayout(context, cluster, layout, providerPos, claimed);
+                if (result.arrangement() == null) {
+                    debugLog("layout rejected cells={} failure={}", layout.size(), result.failure());
+                    failure = failure == null ? result.failure() : failure;
+                    continue;
+                }
+                if (best == null || result.arrangement().changes() < best.changes()) {
+                    best = result.arrangement();
+                    bestLayout = layout;
+                }
             }
         }
         if (best == null) {
@@ -205,6 +299,9 @@ public final class MechanicalCrafterPlans {
             // would, once every recipe item is in place.
             actions.add(new PoweredStartAction(level, best.cells().get(0).pos()));
         }
+        // Simulation cannot populate this cache. Only a fully executed supply plan remembers its placement.
+        actions.add(new RememberLayoutAction(level, cacheKey, new LayoutHint(List.copyOf(bestLayout),
+                best.cells().stream().map(Placed::pos).toList(), best.sink(), best.outputPos())));
         return new MachinePlanFactory.Plan(best.sink(), best.outputPos(), outputs, "mechanical_crafter",
                 new ActionList(actions), declared, List.of(), true, "working", null);
     }
@@ -213,8 +310,8 @@ public final class MechanicalCrafterPlans {
      * Tries every anchor cell of the layout against the physical cluster and keeps the placement that needs the
      * fewest arrow and link changes.
      */
-    private static Result arrangeLayout(Level level, Cluster cluster, List<PatternCell> layout, BlockPos providerPos,
-            Set<BlockPos> claimed, Set<BlockPos> claimedContainers) {
+    private static Result arrangeLayout(PlanningContext context, Cluster cluster, List<PatternCell> layout, BlockPos providerPos,
+            Set<BlockPos> claimed) {
         int maxY = 0;
         for (PatternCell cell : layout) {
             maxY = Math.max(maxY, cell.y);
@@ -223,11 +320,15 @@ public final class MechanicalCrafterPlans {
         // Any crafter in the cluster may host any recipe cell, so the recipe is not tied to the front crafter. Every
         // placement is scored, because a recipe far from the provider drags a long chain of empty crafters with it.
         Arrangement best = null;
+        Set<Long> visitedOffsets = new HashSet<>();
         for (BlockPos anchorPos : cluster.positions()) {
             for (PatternCell anchor : layout) {
                 // Shift the layout so this anchor cell lands on anchorPos.
                 int offsetX = cluster.x(anchorPos) - anchor.x;
                 int offsetY = cluster.y(anchorPos) - (maxY - anchor.y);
+                if (!visitedOffsets.add(pack(offsetX, offsetY))) {
+                    continue;
+                }
                 List<BlockPos> positions = new ArrayList<>(layout.size());
                 for (PatternCell cell : layout) {
                     BlockPos pos = cluster.at(cell.x + offsetX, maxY - cell.y + offsetY);
@@ -240,7 +341,7 @@ public final class MechanicalCrafterPlans {
                 if (positions == null) {
                     continue;
                 }
-                Result result = tryPlacement(level, cluster, layout, positions, providerPos, claimed, claimedContainers);
+                Result result = tryPlacement(context, cluster, layout, positions, providerPos, claimed);
                 if (result.arrangement() == null) {
                     debugLog("candidate anchor={} anchorCell=({},{}) positions={} failure={}", anchorPos, anchor.x,
                             anchor.y, positions, result.failure());
@@ -258,27 +359,29 @@ public final class MechanicalCrafterPlans {
         return Result.failed(failure == null ? "crafter_shape_missing" : failure);
     }
 
-    private static Result tryPlacement(Level level, Cluster cluster, List<PatternCell> layout, List<BlockPos> positions,
-            BlockPos providerPos, Set<BlockPos> claimed, Set<BlockPos> claimedContainers) {
+    private static Result tryPlacement(PlanningContext context, Cluster cluster, List<PatternCell> layout, List<BlockPos> positions,
+            BlockPos providerPos, Set<BlockPos> claimed) {
+        Level level = context.level;
+        context.placements++;
         List<Placed> cells = new ArrayList<>(layout.size());
         Set<BlockPos> recipe = new HashSet<>(positions);
         boolean busy = false;
         for (int i = 0; i < positions.size(); i++) {
-            MechanicalCrafterBlockEntity crafter = crafter(level, positions.get(i));
-            if (crafter == null) {
+            MechanicalCrafterBlockEntity crafter = context.crafter(positions.get(i));
+            if (crafter == null || claimed.contains(positions.get(i))) {
                 return Result.failed("crafter_shape_missing");
             }
             // A crafter still holding items, or one mid-craft with its items already in the grid, is busy. The insert
             // step reports held items as a simulate failure so the job can queue; only a chain that already matches
             // may be used as-is.
-            busy |= !crafter.getInventory().getStackInSlot(0).isEmpty() || isCrafting(level, crafter);
+            busy |= !crafter.getInventory().getStackInSlot(0).isEmpty() || context.isCrafting(crafter);
             cells.add(new Placed(positions.get(i), ((AEItemKey) layout.get(i).stack().what()).toStack(1)));
         }
 
         // The chain's output face has to point at an inventory the player placed beside it, so the finished product
         // has somewhere to land. The sink does not have to hold a recipe item, because a powered start lets empty
         // crafters ride along in the chain.
-        Sink found = chooseSink(level, cluster, recipe, providerPos, claimedContainers);
+        Sink found = chooseSink(context.sinks, recipe, providerPos);
         if (found == null) {
             debugLog("no output container next to the cluster, positions={}", positions);
             return Result.failed("crafter_output_not_provider");
@@ -363,7 +466,7 @@ public final class MechanicalCrafterPlans {
             // Linking a chain that is mid-craft would change shared inventories under it, so leave it alone.
             return Result.ok(new Arrangement(sink, containerPos, cells, List.of(), List.of(), true, emptyLinks, emptyCount));
         }
-        List<Connection> connections = groupConnections(level, new ArrayList<>(chain), chain);
+        List<Connection> connections = groupConnections(context, new ArrayList<>(chain), chain);
         return Result.ok(new Arrangement(sink, containerPos, cells, pointingChanges, connections, false, emptyLinks, emptyCount));
     }
 
@@ -380,7 +483,8 @@ public final class MechanicalCrafterPlans {
     }
 
     /** Pairs of matched crafters to link into one Create group, skipping pairs that are already linked. */
-    private static List<Connection> groupConnections(Level level, List<BlockPos> positions, Set<BlockPos> matched) {
+    private static List<Connection> groupConnections(PlanningContext context, List<BlockPos> positions, Set<BlockPos> matched) {
+        Level level = context.level;
         List<Connection> connections = new ArrayList<>();
         Set<BlockPos> done = new HashSet<>();
         for (BlockPos pos : positions) {
@@ -394,7 +498,7 @@ public final class MechanicalCrafterPlans {
                 if (!matched.contains(next) || done.contains(next)) {
                     continue;
                 }
-                if (ConnectedInputHandler.shouldConnect(level, pos, direction, direction) && !sameGroup(level, pos, next)) {
+                if (context.canConnect(pos, next, direction) && !context.sameGroup(pos, next)) {
                     connections.add(new Connection(pos, next));
                 }
             }
@@ -410,39 +514,45 @@ public final class MechanicalCrafterPlans {
     private record Sink(BlockPos crafter, BlockPos container) {
     }
 
-    @Nullable
-    private static Sink chooseSink(Level level, Cluster cluster, Set<BlockPos> recipe, BlockPos providerPos,
+    private static List<Sink> discoverSinks(PlanningContext context, Cluster cluster, BlockPos providerPos,
             Set<BlockPos> blocked) {
-        // The provider's own return slots come first: the product needs no scanning and AE empties them. Any number
-        // of groups may deliver there, so it is never treated as claimed.
-        Sink direct = null;
-        Sink container = null;
-        Sink directFallback = null;
-        Sink containerFallback = null;
+        context.sinkScans++;
+        List<Sink> sinks = new ArrayList<>();
         for (BlockPos pos : cluster.positions()) {
-            BlockState state = crafter(level, pos).getBlockState();
+            BlockState state = context.crafter(pos).getBlockState();
             for (Direction direction : Direction.values()) {
                 BlockPos target = pos.relative(direction);
                 boolean isProvider = target.equals(providerPos);
                 if (cluster.coords().containsKey(target) || (!isProvider && blocked.contains(target))
-                        || crafter(level, target) != null
-                        || pointingToward(state, direction) == null
-                        || InventoryAccess.itemHandler(level, target, direction.getOpposite()) == null) {
+                        || context.crafter(target) != null
+                        || InventoryAccess.itemHandler(context.level, target, direction.getOpposite()) == null
+                        || pointingToward(state, direction) == null) {
                     continue;
                 }
-                Sink sink = new Sink(pos, target);
-                boolean holdsRecipe = recipe.contains(pos);
-                if (isProvider) {
-                    if (holdsRecipe && direct == null) {
-                        direct = sink;
-                    } else if (directFallback == null) {
-                        directFallback = sink;
-                    }
-                } else if (holdsRecipe && container == null) {
-                    container = sink;
-                } else if (containerFallback == null) {
-                    containerFallback = sink;
+                sinks.add(new Sink(pos, target));
+            }
+        }
+        return List.copyOf(sinks);
+    }
+
+    @Nullable
+    private static Sink chooseSink(List<Sink> sinks, Set<BlockPos> recipe, BlockPos providerPos) {
+        Sink direct = null;
+        Sink container = null;
+        Sink directFallback = null;
+        Sink containerFallback = null;
+        for (Sink sink : sinks) {
+            boolean holdsRecipe = recipe.contains(sink.crafter());
+            if (sink.container().equals(providerPos)) {
+                if (holdsRecipe && direct == null) {
+                    direct = sink;
+                } else if (directFallback == null) {
+                    directFallback = sink;
                 }
+            } else if (holdsRecipe && container == null) {
+                container = sink;
+            } else if (containerFallback == null) {
+                containerFallback = sink;
             }
         }
         if (direct != null) {
@@ -575,8 +685,24 @@ public final class MechanicalCrafterPlans {
      * Every recipe layout that matches the pattern's materials and the requested output. Recipes that do not fit
      * the physical crafters are rejected later, so several candidates can coexist here.
      */
-    private static List<List<PatternCell>> recipeLayouts(Level level, AEProcessingPattern pattern, AEKey primaryOutput,
-            long outputAmount) {
+    private static List<List<PatternCell>> recipeLayouts(PlanningContext context, AEProcessingPattern pattern,
+            AEKey primaryOutput, long outputAmount) {
+        Level level = context.level;
+        boolean regular = AllConfigs.server().recipes.allowRegularCraftingInCrafter.get();
+        RecipeKey key = new RecipeKey(pattern.getDefinition(), primaryOutput, outputAmount, regular);
+        List<List<PatternCell>> cached = cachedRecipes(level, key);
+        if (cached != null) {
+            return cached;
+        }
+        context.recipeScans++;
+        List<List<PatternCell>> layouts = findRecipeLayouts(level, pattern, primaryOutput, outputAmount, regular)
+                .stream().map(List::copyOf).toList();
+        cacheRecipes(level, key, layouts);
+        return layouts;
+    }
+
+    private static List<List<PatternCell>> findRecipeLayouts(Level level, AEProcessingPattern pattern, AEKey primaryOutput,
+            long outputAmount, boolean regular) {
         if (!(primaryOutput instanceof AEItemKey primaryItem) || outputAmount <= 0) {
             return List.of();
         }
@@ -600,9 +726,11 @@ public final class MechanicalCrafterPlans {
                 addLayout(layouts, level, recipe, primaryItem, outputAmount, pool);
             }
         }
-        if (AllConfigs.server().recipes.allowRegularCraftingInCrafter.get()) {
+        if (regular) {
             for (RecipeHolder<CraftingRecipe> holder : level.getRecipeManager().getAllRecipesFor(RecipeType.CRAFTING)) {
-                if (holder.value() instanceof ShapedRecipe recipe && !AllRecipeTypes.shouldIgnoreInAutomation(holder)) {
+                if (holder.value() instanceof ShapedRecipe recipe
+                        && matchesRecipeOutput(level, recipe, primaryItem, outputAmount)
+                        && !AllRecipeTypes.shouldIgnoreInAutomation(holder)) {
                     addLayout(layouts, level, recipe, primaryItem, outputAmount, pool);
                 }
             }
@@ -610,10 +738,14 @@ public final class MechanicalCrafterPlans {
         return layouts;
     }
 
+    private static boolean matchesRecipeOutput(Level level, ShapedRecipe recipe, AEItemKey output, long amount) {
+        ItemStack result = recipe.getResultItem(level.registryAccess());
+        return !result.isEmpty() && result.getCount() == amount && output.equals(AEItemKey.of(result));
+    }
+
     private static void addLayout(List<List<PatternCell>> layouts, Level level, ShapedRecipe recipe,
             AEItemKey primaryItem, long outputAmount, Map<AEItemKey, Integer> pool) {
-        ItemStack result = recipe.getResultItem(level.registryAccess());
-        if (result.isEmpty() || result.getCount() != outputAmount || !primaryItem.equals(AEItemKey.of(result))) {
+        if (!matchesRecipeOutput(level, recipe, primaryItem, outputAmount)) {
             return;
         }
         List<PatternCell> cells = assignRecipe(recipe.getWidth(), recipe.getHeight(), recipe.getIngredients(), pool);
@@ -836,6 +968,129 @@ public final class MechanicalCrafterPlans {
 
         static Result failed(String failure) {
             return new Result(null, failure);
+        }
+    }
+
+    /** Scoped to one read-only search; never reused after ArrangeAction mutates the world. */
+    private static final class PlanningContext {
+        private final Level level;
+        private final Map<BlockPos, MechanicalCrafterBlockEntity> crafters = new HashMap<>();
+        private final Map<BlockPos, Boolean> crafting = new HashMap<>();
+        private final Map<Connection, Boolean> connectable = new HashMap<>();
+        private final GroupIdentityCache<MechanicalCrafterBlockEntity.Inventory> groups = new GroupIdentityCache<>();
+        private int placements;
+        private int sinkScans;
+        private int recipeScans;
+        private boolean reusedLayout;
+        private List<Sink> sinks = List.of();
+
+        private PlanningContext(Level level) {
+            this.level = level;
+        }
+
+        @Nullable
+        private MechanicalCrafterBlockEntity crafter(BlockPos pos) {
+            if (!crafters.containsKey(pos)) {
+                crafters.put(pos, MechanicalCrafterPlans.crafter(level, pos));
+            }
+            return crafters.get(pos);
+        }
+
+        private boolean isCrafting(MechanicalCrafterBlockEntity crafter) {
+            return crafting.computeIfAbsent(crafter.getBlockPos(), pos -> MechanicalCrafterPlans.isCrafting(level, crafter));
+        }
+
+        private boolean canConnect(BlockPos left, BlockPos right, Direction direction) {
+            return connectable.computeIfAbsent(new Connection(left, right),
+                    pair -> ConnectedInputHandler.shouldConnect(level, left, direction, direction));
+        }
+
+        private boolean sameGroup(BlockPos left, BlockPos right) {
+            var leftCrafter = crafter(left);
+            var rightCrafter = crafter(right);
+            if (leftCrafter == null || rightCrafter == null) {
+                return false;
+            }
+            var leftGroup = groups.representative(leftCrafter.getInventory(),
+                    () -> leftCrafter.getInput().getInventories(level, left));
+            var rightGroup = groups.representative(rightCrafter.getInventory(),
+                    () -> rightCrafter.getInput().getInventories(level, right));
+            return leftGroup != null && leftGroup == rightGroup;
+        }
+    }
+
+    private record LayoutKey(BlockPos origin, BlockPos provider, AEItemKey definition, AEKey output, long amount) {
+    }
+
+    private record RecipeKey(AEItemKey definition, AEKey output, long amount, boolean regularCrafting) {
+    }
+
+    private record FailureState(BlockState originState, float speed, Set<BlockPos> claimed,
+            Set<BlockPos> claimedContainers, boolean regularCrafting) {
+    }
+
+    @Nullable
+    private static synchronized String recentFailure(Level level, LayoutKey key, FailureState state) {
+        var failures = FAILURES.get(level);
+        return failures == null ? null : failures.get(key, state, level.getGameTime());
+    }
+
+    private static synchronized void rememberFailure(Level level, LayoutKey key, FailureState state, String reason) {
+        FAILURES.computeIfAbsent(level, unused -> new PlanningFailureCache<>(MAX_LAYOUT_HINTS_PER_LEVEL, FAILURE_RETRY_TICKS))
+                .remember(key, state, level.getGameTime(), reason);
+    }
+
+    @Nullable
+    private static synchronized List<List<PatternCell>> cachedRecipes(Level level, RecipeKey key) {
+        var layouts = RECIPE_LAYOUTS.get(level);
+        return layouts == null ? null : layouts.get(key);
+    }
+
+    private static synchronized void cacheRecipes(Level level, RecipeKey key, List<List<PatternCell>> layouts) {
+        var cached = RECIPE_LAYOUTS.computeIfAbsent(level, unused -> new LinkedHashMap<>(16, 0.75f, true));
+        cached.put(key, layouts);
+        if (cached.size() > MAX_LAYOUT_HINTS_PER_LEVEL) {
+            cached.remove(cached.keySet().iterator().next());
+        }
+    }
+
+    private record LayoutHint(List<PatternCell> layout, List<BlockPos> positions, BlockPos sink, BlockPos outputPos) {
+    }
+
+    @Nullable
+    private static synchronized LayoutHint layoutHint(Level level, LayoutKey key) {
+        var hints = SUCCESSFUL_LAYOUTS.get(level);
+        return hints == null ? null : hints.get(key);
+    }
+
+    private static synchronized void rememberLayout(Level level, LayoutKey key, LayoutHint hint) {
+        var hints = SUCCESSFUL_LAYOUTS.computeIfAbsent(level, unused -> new LinkedHashMap<>(16, 0.75f, true));
+        hints.put(key, hint);
+        if (hints.size() > MAX_LAYOUT_HINTS_PER_LEVEL) {
+            hints.remove(hints.keySet().iterator().next());
+        }
+    }
+
+    private static synchronized void forgetLayout(Level level, LayoutKey key, LayoutHint hint) {
+        var hints = SUCCESSFUL_LAYOUTS.get(level);
+        if (hints != null) {
+            hints.remove(key, hint);
+        }
+    }
+
+    private record RememberLayoutAction(Level level, LayoutKey key, LayoutHint hint) implements SupplyAction {
+        @Override
+        public boolean perform(boolean simulate) {
+            if (!simulate) {
+                rememberLayout(level, key, hint);
+            }
+            return true;
+        }
+
+        @Override
+        public CompensationResult compensate() {
+            forgetLayout(level, key, hint);
+            return CompensationResult.complete();
         }
     }
 

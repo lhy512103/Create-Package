@@ -61,6 +61,8 @@ public class CreatePackage {
         NeoForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onPlayerTick);
         NeoForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onContainerClose);
         NeoForge.EVENT_BUS.addListener(PackageDistributorBlockEntity::onPlayerLoggedIn);
+        NeoForge.EVENT_BUS.addListener(com.lhy.createpackage.content.crafting.MechanicalCrafterPlans::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(com.lhy.createpackage.content.crafting.MechanicalCrafterPlans::onNeighborNotify);
 
         // Register server-side behavior config.
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);

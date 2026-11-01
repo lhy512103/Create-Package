@@ -1,73 +1,42 @@
 # Changelog
 
-## v0.0.4
+## v1.1.0
 
 ### English
 
-- Changed: Upgrade cards now share exactly four slots. Supported machines accept at most four Parallel Cards and one NBT Tear Card, subject to the four-slot total; the tooltip lists available upgrades. Legacy dedicated cards move into free shared slots or drop beside the block if full.
-
-- Added: AE2 Utility 1.8 NBT Tear Card slots for built-in providers, including ExtendedAE Plus compatibility. Distributor output accounting, AE CPU returns and refill selection honor the card's rules; ordinary distributors inherit the external provider's rule for each job.
-- Changed: Local runtime uses the AE2 Utility 1.8.0 build and JECharacters CurseForge file 8771217.
-- Changed: Advanced Package Distributor Parallel Cards now default to 16 jobs per card (32 with two), matching Kinetic Pattern Providers.
-- Changed: Advanced Package Distributor now has 36 pattern slots in a 9-by-4 grid, using the Extended Kinetic Pattern Provider background.
-- Added: Kinetic Pattern Provider support for Enchantment Industry grindstone sanding.
-- Added: Runtime mods aligned with MEST, including its extra AE and processing mods.
-- Fixed: Deployer patterns no longer fail when a non-consumed tool is already in the machine.
-- Fixed: Extended Kinetic Pattern Provider disconnecting from AE cables after reload or wrenching.
-- Fixed: Parallel cards not matching between the upgrade GUI and sneak-insert.
-- Fixed: MEST spliced-terminal network-tool slots missing on both Kinetic Pattern Provider screens.
-- Fixed: Package distributor and kinetic refill waits now use real game ticks, so empty-output and retry intervals match the config.
-- Fixed: Basic and Advanced Package Distributor upgrade slots now share the same inventory as sneak-insert, and show MEST network-tool slots.
-- Added: Goggles show refill-retry countdown on package distributors and both kinetic pattern providers.
-- Added: Missing refill inputs with network patterns are auto-ordered after each failed refill retry.
-- Optimized: Removed unused imports, fields, and methods flagged by the IDE.
-- Fixed: Ponder scenes now match their captions, with correct machine facing and camera-friendly placement.
-- Added: Ponder scenes rewritten in the Ponderer JSON DSL and loaded at runtime.
-- Added: Local patched Ponderer 1.10.4.1 as a runtime dependency, compatible with JEI 19.51.
-- Changed: Package Distributor Ponder scenes split into focused segments (overview, setup, Create route, Basic, Advanced, common mistakes) with corrected machine positions.
-- Fixed: Segments of the same Ponder scene shared one localization id, so their captions could overwrite each other.
-- Fixed: Kinetic Pattern Provider keeps scanning for ejected outputs while a small craft is still running.
-- Fixed: Small depot and basin crafts are no longer dropped when AE stops requesting the output before the machine finishes.
-- Fixed: Non-consumed pattern inputs, such as an inscriber press, are no longer pulled out of the machine during a small craft.
-- Fixed: Materials already sitting in the machine are not treated as outputs, and a small craft still collects the real product.
-- Added: Kinetic Pattern Provider can feed a Mechanical Crafter arrow chain and collect from its output face.
-- Fixed: Stacked processing-pattern inputs follow the mechanical crafting recipe, and empty recipe corners stay out of the arrow chain.
-- Fixed: Upgrade panels stay visible when ExtendedAE Plus blocks a second setupUpgrades call.
-- Added: Config switch for auto-ordering missing refill inputs, off by default.
+- Changed: Upgrade card tooltips now consistently show an "Available Upgrades" list.
+- Added: AE2 Utility 1.8 NBT Tear Card support, with built-in pattern-provider upgrade slots compatible with ExtendedAE Plus.
+- Changed: Advanced Package Distributor Parallel Cards now default to 16 concurrent jobs per card, or 32 with two cards.
+- Changed: Advanced Package Distributor pattern storage expanded to 36 slots (9 columns × 4 rows).
+- Added: Kinetic Pattern Provider support for Create Enchantment Industry Mechanical Grindstone sanding.
+- Fixed: Deployers no longer report missing ingredients when a non-consumed held item is already loaded.
+- Fixed: Extended Kinetic Pattern Providers disconnecting from AE cables after rejoining a world or rotating them with a wrench.
+- Fixed: MEST terminal network-tool slots missing from both Kinetic Pattern Provider screens.
+- Fixed: Empty-output waits on Package Distributors and Kinetic Pattern Providers now use actual game ticks.
+- Fixed: Basic and Advanced Package Distributor upgrade slots now use the same inventory as sneak-right-click insertion.
+- Added: Goggles show the refill-retry countdown on Package Distributors and both Kinetic Pattern Provider variants.
+- Optimized: Rewrote all machine Ponder scenes and corrected machine positions.
+- Fixed: Upgrade slots and their background remain visible with ExtendedAE Plus installed.
+- Added: A configuration option to automatically order missing refill ingredients, disabled by default.
+- Added: Kinetic Pattern Providers automatically recognize Mechanical Crafter layouts and support binding multiple machine locations.
 
 ### 中文
 
-- 调整：升级卡共用总计 4 个槽位，支持机型的并行卡上限 4 张、NBT 撕裂卡上限 1 张，由玩家自行搭配；提示统一显示“可用升级”列表。旧专用槽卡片移入空余通用槽，满槽时掉落在方块旁。
-
-- 新增：兼容 AE2 Utility 1.8 的 NBT 撕裂卡，内置样板供应器的卡槽可与 ExtendedAE Plus 共存；分发器产物计数、AE CPU 回传和补料选择遵循卡片规则，普通分发器按作业继承外接供应器的规则。
-- 调整：开发运行时加载本地 AE2 Utility 1.8.0，JECharacters 更新到 CurseForge 文件 8771217。
-- 调整：高级封包分发器每张并行卡默认提供 16 并行，两张为 32，与动力样板供应器一致。
-- 调整：高级封包分发器的样板槽位扩展为 36 格（9 列 × 4 行），使用扩展动力样板供应器的界面背景。
-- 新增：动力样板供应器支持附魔工业动力砂轮打磨。
-- 新增：运行时依赖与 MEST 对齐，并补上其额外模组。
+- 调整：升级卡提示统一显示“可用升级”列表。
+- 新增：兼容 AE2 Utility 1.8 的 NBT 撕裂卡，内置样板供应器的卡槽可与 ExtendedAE Plus 共存。
+- 调整：高级封包分发器每张并行卡默认提供 16 并行，两张为 32。
+- 调整：高级封包分发器的样板槽位扩展为 36 格（9 列 × 4 行）。
+- 新增：动力样板供应器支持附魔工业模组动力砂轮打磨。
 - 修复：机械手已预放不消耗施加物时不再误报缺料。
 - 修复：扩展动力样板供应器重进或扳手转向后与 AE 线缆断连。
-- 修复：并行卡界面显示与实际生效不一致。
 - 修复：两个动力样板供应器界面不显示 MEST 终端网络工具槽。
-- 修复：封包分发器和动力样板供应器的空产出等待/补刷重试改为按游戏真实 tick 计时，配置对所有类型生效。
-- 修复：基础/高级封包分发器升级槽与蹲下右键放入使用同一库存，并显示 MEST 网络工具槽。
+- 修复：封包分发器和动力样板供应器的空产出等待改为按游戏真实 tick 计时。
+- 修复：基础/高级封包分发器升级槽与蹲下右键放入使用同一库存。
 - 新增：封包分发器和两种动力样板供应器护目镜显示补刷重试倒计时。
-- 新增：补刷缺料且网络已有样板时自动下单，每次重试失败后再尝试。
-- 优化：清理未使用的导入、字段和方法。
-- 修复：Ponder 场景与字幕对齐，并纠正机器朝向和镜头遮挡。
-- 新增：思索场景改为 Ponderer JSON DSL 并在运行时加载。
-- 新增：运行时依赖改为本地修补版 Ponderer 1.10.4.1，兼容 JEI 19.51。
-- 优化：封包分发器思索场景重写为独立分段（总览、接入方式、装配路线、基础款、高级款、常见注意事项），并修正机器位置。
-- 修复：同一思索的各分段共用本地化键，字幕可能互相覆盖，现在每段使用独立键。
-- 修复：动力样板供应器少量发配时持续扫描弹出产物，避免产物飞出回收范围。
-- 修复：少量发配到置物台或工作盆时，不再因为 AE 已停止请求就提前结束任务，产物会继续回收。
-- 修复：样板里的不消耗物品（例如压印模板）在少量发配时不再被当成产物抽走。
-- 修复：机器里预先放好的材料不会被当成产物抽走，少量发配仍会回收真正的产物。
-- 新增：动力样板供应器可按箭头链给动力合成器投料，并从出货面回收产物。
-- 新增：动力合成器箭头和配方对不上时，会按样板重排箭头并自动拼成一组。
-- 修复：处理样板把材料堆在一起时按动力合成配方拆开摆放，配方空角不再算进箭头链。
+- 优化：各机器思索场景全部重写，并修正机器位置。
 - 修复：有 ExtendedAE Plus 时升级槽和底板不再被藏掉。
 - 新增：补刷缺料自动下单配置开关，默认关闭。
+- 新增：动力样板供应器支持自动识别动力合成器以及多点位绑定。
 
 ## 2026-07-25
 

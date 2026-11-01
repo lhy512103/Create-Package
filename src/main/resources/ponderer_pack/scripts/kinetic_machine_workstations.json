@@ -1,0 +1,266 @@
+{
+  "id": "createpackage:kinetic_machine_workstations",
+  "items": ["createpackage:kinetic_pattern_provider", "createpackage:extended_kinetic_pattern_provider"],
+  "title": {"en_us": "Special Machine Working Positions", "zh_cn": "特殊机器的加工与回收位置"},
+  "tags": ["createpackage:create_package"],
+  "editable": false,
+  "scenes": [
+    {
+      "id": "saw_output",
+      "title": {"en_us": "Mechanical Saw: Orientation and Exit Side", "zh_cn": "动力锯：朝向与出料侧"},
+      "basePlateSize": 7,
+      "viewScale": 0.7,
+      "steps": [
+        {"type": "encapsulate_bounds", "bounds": [7, 5, 7]},
+        {"type": "set_block", "block": "create:mechanical_saw", "blockPos": [3, 2, 3], "blockProperties": {"facing": "up", "axis_along_first": "false"}},
+        {"type": "set_block", "block": "create:shaft", "blockPos": [3, 2, 4], "blockProperties": {"axis": "z"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [3, 2, 5], "blockProperties": {"facing": "north"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 2, 3], "speed": 64, "blockPos2": [3, 2, 5]},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [2, 2, 3], "blockProperties": {"push_direction": "east"}},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [1, 2, 3]},
+        {"type": "set_block", "block": "create:depot", "blockPos": [4, 2, 3]},
+        {"type": "show_section", "blockPos": [1, 2, 3], "blockPos2": [4, 2, 5], "direction": "down"},
+        {"type": "idle", "duration": 20},
+        {"type": "highlight_section", "blockPos": [3, 2, 3], "color": "blue", "duration": 110},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Target the Saw block itself, with its blade facing UP, and give its shaft real rotation. A sideways or stopped Saw is rejected even if its item inventory can be reached.",
+            "zh_cn": "目标是动力锯本体，锯刃必须朝上，转轴必须有真实转速。朝侧面或停转的锯，即使能访问库存，也会被拒绝。"
+          },
+          "point": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "duration": 125,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 135},
+        {"type": "show_line", "point": [2.5, 2.5, 3.5], "point2": [3.5, 2.5, 3.5], "color": "input", "duration": 90},
+        {"type": "highlight_section", "blockPos": [4, 2, 3], "color": "output", "duration": 110},
+        {"type": "show_line", "point": [3.5, 2.5, 3.5], "point2": [4.5, 2.5, 3.5], "color": "output", "duration": 90},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "The input enters the Saw. In this direction it ejects EAST into the adjacent Depot at the SAME height. The provider sets the Saw filter from the pattern main output and recovers from this exit.",
+            "zh_cn": "原料进入锯内部。本图转向把产物向东送至同高度紧邻料盘。供应器按样板主产物设置锯过滤器，并从这个出口回收，不是从下方料盘收。"
+          },
+          "point": [
+            4.5,
+            2.8,
+            3.5
+          ],
+          "duration": 135,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 145},
+        {"type": "set_kinetic_speed", "blockPos": [3, 2, 3], "speed": -64, "blockPos2": [3, 2, 5]},
+        {"type": "highlight_section", "blockPos": [2, 2, 3], "color": "red", "duration": 110},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Reversing rotation reverses the exit. The old output Depot is no longer the output; put a recoverable carrier at the new exit. Motor panel signs depend on orientation, so check the actual movement direction.",
+            "zh_cn": "反转动力会反转出口，原来的料盘不再是出料侧，必须在新出口留可回收载体。马达面板正负还与朝向有关，应以实际出料方向确认。"
+          },
+          "point": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "duration": 135,
+          "color": "red",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 145},
+        {"type": "set_block", "block": "minecraft:air", "blockPos": [2, 2, 3]},
+        {"type": "set_block", "block": "minecraft:air", "blockPos": [1, 2, 3]},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [3, 2, 2], "blockProperties": {"push_direction": "south"}},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [3, 2, 1]},
+        {"type": "set_block", "block": "create:depot", "blockPos": [2, 2, 3]},
+        {"type": "show_section", "blockPos": [2, 2, 1], "blockPos2": [3, 2, 3], "direction": "down"},
+        {"type": "idle", "duration": 20},
+        {"type": "highlight_section", "blockPos": [2, 2, 3], "color": "output", "duration": 110},
+        {"type": "show_line", "point": [3.5, 2.5, 3.5], "point2": [2.5, 2.5, 3.5], "color": "output", "duration": 90},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "The reversed example now has a west Depot and the provider moved to a free side. A valid output must accept the Saw ejection and expose an item handler; an arbitrary chest or bare ground is not enough.",
+            "zh_cn": "反转示例已在西侧放料盘，供应器也移到不挡出口的一面。出口必须能接收锯弹出的物品并提供物品库存；普通箱子或地面不能随意替代。"
+          },
+          "point": [
+            2.5,
+            2.8,
+            3.5
+          ],
+          "duration": 130,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140}
+      ]
+    },
+    {
+      "id": "basin_work_positions",
+      "title": {"en_us": "Mixer and Press: Target the Machine, Supply the Basin", "zh_cn": "搅拌与压制：对准机器，向工作盆供料"},
+      "basePlateSize": 9,
+      "viewScale": 0.6,
+      "steps": [
+        {"type": "encapsulate_bounds", "bounds": [9, 7, 9]},
+        {"type": "set_block", "block": "create:mechanical_mixer", "blockPos": [3, 4, 3]},
+        {"type": "set_block", "block": "create:basin", "blockPos": [3, 2, 3]},
+        {"type": "set_block", "block": "create:blaze_burner", "blockPos": [3, 1, 3], "blockProperties": {"blaze": "kindled"}},
+        {"type": "set_block", "block": "create:cogwheel", "blockPos": [4, 4, 3], "blockProperties": {"axis": "y"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [4, 5, 3], "blockProperties": {"facing": "down"}},
+        {"type": "set_kinetic_speed", "blockPos": [3, 4, 3], "speed": -64},
+        {"type": "set_kinetic_speed", "blockPos": [4, 4, 3], "speed": 64},
+        {"type": "set_kinetic_speed", "blockPos": [4, 5, 3], "speed": 64},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [2, 4, 3], "blockProperties": {"push_direction": "east"}},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [1, 4, 3]},
+        {"type": "set_block", "block": "create:mechanical_press", "blockPos": [6, 4, 3], "blockProperties": {"facing": "north"}},
+        {"type": "set_block", "block": "create:creative_motor", "blockPos": [6, 4, 4], "blockProperties": {"facing": "north"}},
+        {"type": "set_kinetic_speed", "blockPos": [6, 4, 3], "speed": 64, "blockPos2": [6, 4, 4]},
+        {"type": "set_block", "block": "create:basin", "blockPos": [6, 2, 3]},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [5, 4, 3], "blockProperties": {"push_direction": "east"}},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [5, 4, 2]},
+        {"type": "show_section", "blockPos": [1, 1, 2], "blockPos2": [6, 5, 4], "direction": "down"},
+        {"type": "idle", "duration": 20},
+        {"type": "highlight_section", "blockPos": [3, 4, 3], "color": "blue", "duration": 110},
+        {"type": "highlight_section", "blockPos": [3, 2, 3], "color": "input", "duration": 110},
+        {"type": "show_line", "point": [2.5, 4.5, 3.5], "point2": [3.5, 2.8, 3.5], "color": "input", "duration": 90},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Face the MIXER, not the Basin. The Basin must be two blocks below the mixer. Pattern items and fluids go there and products are collected there; a Depot cannot replace the mixer Basin.",
+            "zh_cn": "供应器对准搅拌机，不是工作盆。工作盆必须在机器下方两格；样板物品与流体进工作盆，产物也从那里回收，不能用料盘代替。"
+          },
+          "point": [
+            3.5,
+            2.8,
+            3.5
+          ],
+          "duration": 130,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140},
+        {"type": "highlight_section", "blockPos": [4, 4, 3], "color": "green", "duration": 110, "blockPos2": [4, 5, 3]},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Drive the mixer through its cogwheel and satisfy the recipe speed and heat requirements. The burner shown supplies heat beneath the Basin; a powered ME connection does not provide rotation or heat.",
+            "zh_cn": "搅拌机通过齿轮啮合供动力，并要满足配方转速、加热要求。图中燃烧器在盆下供热；ME 有电不代表机器有转速，也不会代替热源。"
+          },
+          "point": [
+            3.5,
+            4.8,
+            3.5
+          ],
+          "duration": 130,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140},
+        {"type": "highlight_section", "blockPos": [6, 4, 3], "color": "blue", "duration": 110},
+        {"type": "highlight_section", "blockPos": [6, 2, 3], "color": "input", "duration": 110},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "The Press also works two blocks below itself. With a Basin, it receives basin recipe inputs. For ordinary single-item pressing, place a Depot or Belt at that work position instead.",
+            "zh_cn": "压力机工位同样在下方两格。下面是工作盆时按盆配方供料；普通单物品压制则在该工位放料盘或传送带。"
+          },
+          "point": [
+            6.5,
+            2.8,
+            3.5
+          ],
+          "duration": 120,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 130},
+        {"type": "set_block", "block": "create:depot", "blockPos": [6, 2, 3]},
+        {"type": "highlight_section", "blockPos": [6, 2, 3], "color": "output", "duration": 110},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Bind the actual processing machines when adding parallel targets. Each needs its own valid work position; do not link their Basins or Depots as if those were extra mixers or presses.",
+            "zh_cn": "加并行目标时仍链接机器本体，各自配有效工位。不要把它们的工作盆或料盘，当成额外搅拌机或压力机来链接。"
+          },
+          "point": [
+            6.5,
+            4.8,
+            3.5
+          ],
+          "duration": 120,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 130}
+      ]
+    },
+    {
+      "id": "spout_work_position",
+      "title": {"en_us": "Spout: Separate Item and Fluid Destinations", "zh_cn": "注液器：物品与流体分别送达"},
+      "basePlateSize": 7,
+      "viewScale": 0.7,
+      "steps": [
+        {"type": "encapsulate_bounds", "bounds": [7, 5, 7]},
+        {"type": "set_block", "block": "create:spout", "blockPos": [3, 3, 3]},
+        {"type": "set_block", "block": "create:depot", "blockPos": [3, 1, 3]},
+        {"type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [2, 3, 3], "blockProperties": {"push_direction": "east"}},
+        {"type": "set_block", "block": "ae2:controller", "blockPos": [1, 3, 3]},
+        {"type": "show_section", "blockPos": [1, 1, 3], "blockPos2": [3, 3, 3], "direction": "down"},
+        {"type": "idle", "duration": 20},
+        {"type": "highlight_section", "blockPos": [3, 3, 3], "color": "blue", "duration": 110},
+        {"type": "highlight_section", "blockPos": [3, 1, 3], "color": "input", "duration": 110},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "Target the SPOUT itself. Place a Depot or Belt two blocks below it. The pattern item goes onto that working position, while the pattern fluid is inserted directly into the Spout tank.",
+            "zh_cn": "目标面指向注液器本体，下方两格放料盘或传送带。样板中的加工物送到工位，流体直接填入注液器罐，不是灌进料盘。"
+          },
+          "point": [
+            3.5,
+            3.8,
+            3.5
+          ],
+          "duration": 130,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140},
+        {"type": "show_line", "point": [2.5, 3.5, 3.5], "point2": [3.5, 3.5, 3.5], "color": "blue", "duration": 90},
+        {"type": "show_line", "point": [2.5, 3.5, 3.5], "point2": [3.5, 1.8, 3.5], "color": "input", "duration": 90},
+        {
+          "type": "text",
+          "text": {
+            "en_us": "A Spout needs the required fluid but no rotational shaft. After filling, the provider recovers the product from the same Depot or Belt. Extra linked Spouts each need their own free working position.",
+            "zh_cn": "注液器需要配方所需流体，自身不需要转轴动力。注液完成后，从同一料盘或传送带收成品；额外注液器也要各有独立、空闲的工位。"
+          },
+          "point": [
+            3.5,
+            1.8,
+            3.5
+          ],
+          "duration": 130,
+          "color": "blue",
+          "placeNearTarget": false,
+          "attachKeyFrame": true
+        },
+        {"type": "idle", "duration": 140}
+      ]
+    }
+  ]
+}

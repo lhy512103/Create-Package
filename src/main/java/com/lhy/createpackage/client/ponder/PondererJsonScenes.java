@@ -2,6 +2,7 @@ package com.lhy.createpackage.client.ponder;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -11,17 +12,27 @@ import org.slf4j.Logger;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mojang.logging.LogUtils;
+import com.simibubi.create.AllDataComponents;
+import com.simibubi.create.content.kinetics.belt.BeltBlockEntity;
+import com.simibubi.create.content.kinetics.belt.BeltPart;
+import com.simibubi.create.content.kinetics.deployer.DeployerBlockEntity;
+import com.simibubi.create.content.kinetics.millstone.MillstoneBlockEntity;
+import com.simibubi.create.content.processing.sequenced.SequencedAssemblyRecipe.SequencedAssembly;
 import com.simibubi.create.foundation.ponder.CreateSceneBuilder;
+import com.simibubi.create.foundation.ponder.element.BeltItemElement;
 
 import net.createmod.catnip.math.Pointing;
 import net.createmod.ponder.api.PonderPalette;
+import net.createmod.ponder.api.element.ElementLink;
 import net.createmod.ponder.api.element.InputElementBuilder;
 import net.createmod.ponder.api.element.TextElementBuilder;
 import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
 import net.createmod.ponder.api.scene.SceneBuilder;
 import net.createmod.ponder.api.scene.SceneBuildingUtil;
 import net.createmod.ponder.api.scene.Selection;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -31,12 +42,13 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Loads Ponderer JSON DSL scenes from {@code assets/createpackage/ponderer/} and plays them
- * with Create Ponder. The JSON is the same format Ponderer uses, so scenes can be edited
- * in-game with Ponderer and dropped back into this folder.
+ * Loads scenes from {@code assets/createpackage/ponderer/}. Static steps follow the
+ * Ponderer JSON DSL; the machine and transport steps are Create Package extensions.
+ * These are scripted demonstrations, not a running AE2 network simulation.
  */
 public final class PondererJsonScenes {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -46,7 +58,11 @@ public final class PondererJsonScenes {
             "package_distributors.json",
             "kinetic_pattern_provider.json",
             "mechanical_route_tools.json",
-            "parallel_card.json"
+            "parallel_card.json",
+            "kinetic_crushing_wheels.json",
+            "kinetic_mechanical_crafters.json",
+            "kinetic_machine_workstations.json",
+            "kinetic_batch_linking.json"
     };
 
     private PondererJsonScenes() {
@@ -113,21 +129,38 @@ public final class PondererJsonScenes {
             path = path + "_" + segment.id;
         }
         scene.title(path, title);
-        scene.configureBasePlate(0, 0, 5);
-        scene.scaleSceneView(0.9f);
+        int size = segment.basePlateSize == null ? 5 : Math.max(5, segment.basePlateSize);
+        int height = 5;
+        for (DslStep step : segment.steps) {
+            if (step != null && step.bounds != null && step.bounds.size() >= 3) {
+                size = Math.max(size, Math.max(step.bounds.get(0), step.bounds.get(2)));
+                height = Math.max(height, step.bounds.get(1));
+            }
+        }
+        // The stock schematic supplies a world, not our layout. Changing only the
+        // base plate leaves instructions outside its original bounds silently ignored.
+        BoundingBox bounds = new BoundingBox(0, 0, 0, size - 1, height - 1, size - 1);
+        scene.addInstruction(s -> s.getWorld().setBounds(bounds));
+        scene.configureBasePlate(0, 0, size);
+        scene.scaleSceneView(segment.viewScale == null ? 0.9f : segment.viewScale);
+        scene.world().setBlocks(util.select().fromTo(0, 1, 0, size - 1, height - 1, size - 1),
+                Blocks.AIR.defaultBlockState(), false);
+        scene.world().setBlocks(util.select().fromTo(0, 0, 0, size - 1, 0, size - 1),
+                Blocks.GRAY_CONCRETE.defaultBlockState(), false);
         scene.showBasePlate();
-        scene.world().setBlocks(util.select().fromTo(0, 1, 0, 4, 4, 4), Blocks.AIR.defaultBlockState(), false);
 
+        Map<String, ElementLink<BeltItemElement>> beltItems = new HashMap<>();
         for (DslStep step : segment.steps) {
             if (step == null || step.type == null) {
                 continue;
             }
-            apply(scene, util, step);
+            apply(scene, util, step, beltItems);
         }
         scene.markAsFinished();
     }
 
-    private static void apply(CreateSceneBuilder scene, SceneBuildingUtil util, DslStep step) {
+    private static void apply(CreateSceneBuilder scene, SceneBuildingUtil util, DslStep step,
+            Map<String, ElementLink<BeltItemElement>> beltItems) {
         if (Boolean.TRUE.equals(step.attachKeyFrame)) {
             scene.addKeyframe();
         }
@@ -140,10 +173,84 @@ public final class PondererJsonScenes {
             case "replace_blocks" -> applyReplace(scene, util, step);
             case "show_section_and_merge", "show_section" -> applyShowSection(scene, util, step);
             case "hide_section" -> applyHideSection(scene, util, step);
-            case "encapsulate_bounds" -> {
-                if (step.bounds != null && step.bounds.size() >= 3) {
-                    scene.configureBasePlate(0, 0, Math.max(5, step.bounds.get(0)));
+            case "create_belt" -> applyCreateBelt(scene, util, step);
+            case "set_kinetic_speed" -> {
+                Selection selected = selection(util, step);
+                if (selected != null && step.speed != null) {
+                    scene.world().setKineticSpeed(selected, step.speed);
                 }
+            }
+            case "set_deployer_item" -> {
+                Selection selected = selection(util, step);
+                if (selected != null) {
+                    scene.world().modifyBlockEntityNBT(selected, DeployerBlockEntity.class,
+                            nbt -> nbt.put("HeldItem", itemStack(step).saveOptional(scene.world().getHolderLookupProvider())));
+                }
+            }
+            case "set_millstone_item" -> {
+                BlockPos pos = blockPos(step.blockPos);
+                if (pos != null) {
+                    scene.world().modifyBlockEntity(pos, MillstoneBlockEntity.class, millstone -> {
+                        if (Boolean.TRUE.equals(step.output)) {
+                            millstone.outputInv.setStackInSlot(0, itemStack(step));
+                        } else {
+                            ItemStack input = itemStack(step);
+                            millstone.inputInv.setStackInSlot(0, input);
+                            millstone.timer = input.isEmpty() ? 0 : 50;
+                        }
+                    });
+                }
+            }
+            case "create_depot_item" -> {
+                BlockPos pos = blockPos(step.blockPos);
+                if (pos != null) {
+                    scene.world().createItemOnBeltLike(pos, direction(step.direction, Direction.UP), itemStack(step));
+                }
+            }
+            case "remove_depot_item" -> {
+                BlockPos pos = blockPos(step.blockPos);
+                if (pos != null) {
+                    scene.world().removeItemsFromBelt(pos);
+                }
+            }
+            case "move_deployer" -> {
+                BlockPos pos = blockPos(step.blockPos);
+                if (pos != null && step.distance != null) {
+                    scene.world().moveDeployer(pos, step.distance, Math.max(1, duration(step, 15)));
+                }
+            }
+            case "create_belt_item" -> {
+                BlockPos pos = blockPos(step.blockPos);
+                if (pos != null && step.link != null) {
+                    ElementLink<BeltItemElement> link = scene.world().createItemOnBelt(pos,
+                            direction(step.direction, Direction.UP), itemStack(step));
+                    beltItems.put(step.link, link);
+                    scene.world().stallBeltItem(link, true);
+                }
+            }
+            case "move_belt_item", "set_belt_item_position" -> applyBeltItemPosition(scene, step, beltItems);
+            case "change_belt_item", "remove_belt_item" -> {
+                ElementLink<BeltItemElement> link = beltItems.get(step.link);
+                if (link != null) {
+                    scene.world().changeBeltItemTo(link,
+                            step.type.equalsIgnoreCase("remove_belt_item") ? ItemStack.EMPTY : itemStack(step));
+                }
+            }
+            case "show_line" -> {
+                if (step.point != null && step.point.size() >= 3 && step.point2 != null && step.point2.size() >= 3) {
+                    PonderPalette color = palette(step.color);
+                    scene.overlay().showLine(color == null ? PonderPalette.BLUE : color,
+                            vector(step.point), vector(step.point2), duration(step, 40));
+                }
+            }
+            case "indicate_success" -> {
+                BlockPos pos = blockPos(step.blockPos);
+                if (pos != null) {
+                    scene.effects().indicateSuccess(pos);
+                }
+            }
+            case "encapsulate_bounds" -> {
+                // Bounds are resolved before scheduling, so the base plate is correct from frame one.
             }
             case "rotate_camera_y" -> scene.rotateCameraY(step.degrees == null ? 90f : step.degrees);
             case "zoom_scene" -> {
@@ -158,10 +265,94 @@ public final class PondererJsonScenes {
         }
     }
 
+    private static void applyCreateBelt(CreateSceneBuilder scene, SceneBuildingUtil util, DslStep step) {
+        BlockPos start = blockPos(step.blockPos);
+        BlockPos end = blockPos(step.blockPos2);
+        if (start == null || end == null || start.getY() != end.getY()
+                || (start.getX() != end.getX() && start.getZ() != end.getZ()) || start.equals(end)) {
+            throw new IllegalArgumentException("create_belt requires two distinct, aligned horizontal endpoints");
+        }
+        Direction facing = start.getX() == end.getX()
+                ? (end.getZ() > start.getZ() ? Direction.SOUTH : Direction.NORTH)
+                : (end.getX() > start.getX() ? Direction.EAST : Direction.WEST);
+        int length = Math.abs(end.getX() - start.getX()) + Math.abs(end.getZ() - start.getZ()) + 1;
+        for (int i = 0; i < length; i++) {
+            BlockPos pos = start.relative(facing, i);
+            BeltPart part = i == 0 ? BeltPart.START : i == length - 1 ? BeltPart.END : BeltPart.MIDDLE;
+            scene.world().setBlock(pos, blockState("create:belt", Map.of(
+                    "facing", facing.getName(), "part", part.getSerializedName())), false);
+        }
+        for (int i = 0; i < length; i++) {
+            int index = i;
+            scene.world().modifyBlockEntity(start.relative(facing, i), BeltBlockEntity.class, belt -> {
+                belt.setController(start);
+                belt.beltLength = length;
+                belt.index = index;
+            });
+        }
+        scene.world().setKineticSpeed(util.select().fromTo(start, end), step.speed == null ? -32 : step.speed);
+    }
+
+    private static void applyBeltItemPosition(CreateSceneBuilder scene, DslStep step,
+            Map<String, ElementLink<BeltItemElement>> beltItems) {
+        ElementLink<BeltItemElement> link = beltItems.get(step.link);
+        if (link == null || step.position == null) {
+            throw new IllegalArgumentException("Belt movement requires an existing item link and a position");
+        }
+        int ticks = step.type.equalsIgnoreCase("set_belt_item_position") ? 1 : Math.max(1, duration(step, 20));
+        for (int tick = 0; tick < ticks; tick++) {
+            int remaining = ticks - tick;
+            scene.addInstruction(s -> {
+                BeltItemElement element = s.resolve(link);
+                if (element != null) {
+                    element.ifPresent(item -> {
+                        item.prevBeltPosition = item.beltPosition;
+                        item.beltPosition += (step.position - item.beltPosition) / remaining;
+                        item.sideOffset = item.prevSideOffset = 0;
+                        item.locked = true;
+                    });
+                }
+            });
+            if (step.type.equalsIgnoreCase("move_belt_item")) {
+                scene.idle(1);
+            }
+        }
+    }
+
+    private static ItemStack itemStack(DslStep step) {
+        ResourceLocation id = step.item == null ? null : ResourceLocation.tryParse(step.item);
+        if (id == null || (step.count != null && step.count <= 0)) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(id), step.count == null ? 1 : step.count);
+        if (step.assemblyRecipe != null && step.assemblyStep != null && step.assemblyTotalSteps != null) {
+            stack.set(AllDataComponents.SEQUENCED_ASSEMBLY, new SequencedAssembly(
+                    ResourceLocation.parse(step.assemblyRecipe), step.assemblyStep,
+                    step.assemblyStep / (float) Math.max(1, step.assemblyTotalSteps)));
+        }
+        return stack;
+    }
+
+    private static Vec3 vector(List<Double> point) {
+        return new Vec3(point.get(0), point.get(1), point.get(2));
+    }
+
     private static void applyText(CreateSceneBuilder scene, DslStep step) {
-        TextElementBuilder builder = scene.overlay()
-                .showText(duration(step, 60))
-                .text(resolveText(step.text));
+        TextElementBuilder builder = scene.overlay().showText(duration(step, 60));
+        if (step.keybind == null || step.keybind.isBlank()) {
+            builder.text(resolveText(step.text));
+        } else {
+            // Supply a format parameter so normal-mode I18n text and editor
+            // defaults both show the player's actual binding, including remaps.
+            String keyName = I18n.get("gui.createpackage.ponder.key_unavailable");
+            for (KeyMapping mapping : Minecraft.getInstance().options.keyMappings) {
+                if (step.keybind.equals(mapping.getName())) {
+                    keyName = mapping.isUnbound() ? keyName : mapping.getTranslatedKeyMessage().getString();
+                    break;
+                }
+            }
+            builder.text(resolveText(step.text), keyName);
+        }
         if (step.point != null && step.point.size() >= 3) {
             builder.pointAt(new Vec3(step.point.get(0), step.point.get(1), step.point.get(2)));
         }
@@ -355,6 +546,8 @@ public final class PondererJsonScenes {
     static final class DslSegment {
         String id;
         LocalizedText title;
+        Integer basePlateSize;
+        Float viewScale;
         List<DslStep> steps;
     }
 
@@ -362,7 +555,18 @@ public final class PondererJsonScenes {
         String type;
         Integer duration;
         LocalizedText text;
+        String keybind;
         List<Double> point;
+        List<Double> point2;
+        String link;
+        Float speed;
+        Float distance;
+        Float position;
+        Integer count;
+        Boolean output;
+        String assemblyRecipe;
+        Integer assemblyStep;
+        Integer assemblyTotalSteps;
         String direction;
         String action;
         String item;
