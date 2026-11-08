@@ -5,10 +5,12 @@
 ### 中文
 
 1. 修复：机器链接器优先响应右键，避免被动力合成器等机器收走。
+2. 新增：高级封包分发器提供 36 格样板槽，每张并行卡默认提供 16 路并行。
 
 ### English
 
 1. Fixed: The Machine Linker handles right-clicks before machines can take it as input.
+2. Added: The Advanced Package Distributor provides 36 pattern slots and defaults to 16 parallel jobs per Parallel Card.
 
 ## English
 

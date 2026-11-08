@@ -61,6 +61,8 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlockEntity
         implements PatternProviderLogicHost, IUpgradeableObject {
+    public static final int PATTERN_SLOTS = 36;
+
     private static final String NBT_UPGRADES = "upgrades";
     private static final String NBT_LAST_FAILURE_ROUTE = "lastFailureRoute";
     private static final String NBT_LAST_FAILURE_SLOT = "lastFailureSlot";
@@ -391,7 +393,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
 
     private final class InternalPatternProviderLogic extends PatternProviderLogic {
         private InternalPatternProviderLogic() {
-            super(getMainNode(), AdvancedPackageDistributorBlockEntity.this);
+            super(getMainNode(), AdvancedPackageDistributorBlockEntity.this, PATTERN_SLOTS);
         }
 
         @Override

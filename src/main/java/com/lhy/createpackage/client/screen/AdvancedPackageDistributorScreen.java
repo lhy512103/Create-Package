@@ -11,6 +11,6 @@ public final class AdvancedPackageDistributorScreen
         extends CreatePackagePatternProviderScreen<AdvancedPackageDistributorMenu> {
     public AdvancedPackageDistributorScreen(AdvancedPackageDistributorMenu menu, Inventory playerInventory,
             Component title) {
-        super(menu, playerInventory, title, StyleManager.loadStyleDoc("/screens/pattern_provider.json"));
+        super(menu, playerInventory, title, StyleManager.loadStyleDoc("/screens/createpackage_advanced_package_distributor.json"));
     }
 }
