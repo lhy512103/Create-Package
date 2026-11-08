@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import com.lhy.createpackage.content.recipe.AssemblyPlan;
 import com.lhy.createpackage.content.recipe.AssemblyRecipeMatcher;
 import com.lhy.createpackage.content.distributor.LinkedMachines;
+import com.lhy.createpackage.compat.Ae2UtilityCompat;
 
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.AEFluidKey;
@@ -81,7 +82,7 @@ public final class AssemblyPlanner {
     }
 
     public static Plan create(Level level, NetworkIO network, IPatternDetails patternDetails, KeyCounter[] inputs,
-            List<BlockPos> route) {
+            List<BlockPos> route, ItemStack tearCard) {
         var patternInputs = PatternStacks.flattenInputs(inputs);
         var primary = patternDetails.getPrimaryOutput();
         if (primary == null || !(primary.what() instanceof AEItemKey primaryOutputKey)) {
@@ -91,6 +92,11 @@ public final class AssemblyPlanner {
         ItemStack primaryOutput = primaryOutputKey.toStack((int) Math.min(primary.amount(), Integer.MAX_VALUE));
         var candidates = AssemblyRecipeMatcher.findCandidates(level, primaryOutput,
                 PatternStacks.itemInputs(patternInputs), PatternStacks.fluidInputs(patternInputs));
+        if (candidates.isEmpty() && !tearCard.isEmpty()) {
+            candidates = AssemblyRecipeMatcher.findCandidates(level, primaryOutput,
+                    PatternStacks.itemInputs(patternInputs), PatternStacks.fluidInputs(patternInputs),
+                    (expected, actual) -> Ae2UtilityCompat.matches(tearCard, AEItemKey.of(expected), AEItemKey.of(actual)));
+        }
         if (candidates.isEmpty()) {
             return Plan.failure("no_matching_recipe");
         }

@@ -22,4 +22,15 @@ class ExpectedOutputMatcherTest {
 
         assertFalse(ExpectedOutputMatcher.matches("ingot", outputs, value -> value, "unmelted_ore"));
     }
+
+    @Test
+    void scopedMatcherAppliesToPrimaryAndByproductsOnly() {
+        var outputs = List.of("ingot:plain", "slag:plain");
+        java.util.function.BiPredicate<String, String> byItem =
+                (expected, actual) -> expected.split(":")[0].equals(actual.split(":")[0]);
+        assertTrue(ExpectedOutputMatcher.matches("ingot:plain", outputs, value -> value, "ingot:named", byItem));
+        assertTrue(ExpectedOutputMatcher.matches("ingot:plain", outputs, value -> value, "slag:named", byItem));
+        assertFalse(ExpectedOutputMatcher.matches("ingot:plain", outputs, value -> value, "ore:named", byItem));
+        assertFalse(ExpectedOutputMatcher.matches("ingot:plain", outputs, value -> value, "ingot:named"));
+    }
 }

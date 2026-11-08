@@ -231,6 +231,19 @@ public final class InventoryAccess {
         return handler.drain(request, simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE);
     }
 
+    public static boolean hasAnyItem(@Nullable Level level, BlockPos pos) {
+        IItemHandler handler = itemHandler(level, pos);
+        if (handler == null) {
+            return false;
+        }
+        for (int slot = 0; slot < handler.getSlots(); slot++) {
+            if (!handler.getStackInSlot(slot).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static boolean hasAnyFluid(@Nullable Level level, BlockPos pos) {
         IFluidHandler handler = fluidHandler(level, pos);
         if (handler == null) {

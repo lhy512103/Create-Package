@@ -50,6 +50,10 @@ When several Mechanical Package Patterns encode the same underlying recipe with 
 
 ## Behavior notes
 
+With AE2 Utility 1.8 or newer, Basic and Advanced Package Distributors accept one NBT Tear Card in their four shared upgrade slots. It occupies a slot that could otherwise hold a supported upgrade. For an ordinary distributor, install the card in the external pattern provider that supplies its jobs.
+
+Output recognition, crafting returns and refill selection honor the card whitelist and AE2 Utility blacklist while preserving actual item data. Each distributor job saves the rule active when it was accepted; rule changes apply to subsequent jobs.
+
 * Supplies are simulated before commit; partial failures roll back as far as targets allow.
 * Probabilistic recipes can refill from AE storage when byproducts or empty-output timeouts show the primary has not arrived.
 * Cancelling the AE craft releases the distributor job and clears missing-refill notices.

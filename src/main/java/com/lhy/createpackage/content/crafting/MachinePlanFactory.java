@@ -133,12 +133,16 @@ public final class MachinePlanFactory {
             adapter(CreateMachineIds::isMechanicalBeltGrinder, (ctx, role) -> Plan.failure("unsupported_machine")),
             adapter(CreateMachineIds::isIndustrialCrucible, MachinePlanFactory::planIndustrialCrucible),
             // Create Bitterballen
-            adapter(CreateMachineIds::isMechanicalFryer, MachinePlanFactory::planMechanicalFryer));
+            adapter(CreateMachineIds::isMechanicalFryer, MachinePlanFactory::planMechanicalFryer),
+            // Create Enchantment Industry: the drain owns inventory; the wheel above is required to process.
+            adapter(CreateMachineIds::isMechanicalGrindstone,
+                    (ctx, role) -> Plan.failure("missing_grindstone_drain")),
+            adapter(CreateMachineIds::isGrindstoneDrain, MachinePlanFactory::planGrindstoneDrain));
 
     private MachinePlanFactory() {
     }
 
-    public static Plan create(Level level, BlockPos machinePos, AEKey primaryOutput, long outputAmount,
+    public static Plan create(Level level, BlockPos machinePos, BlockPos providerPos, AEKey primaryOutput, long outputAmount,
             List<GenericStack> patternOutputs, List<GenericStack> inputs) {
         if (level == null || !level.isLoaded(machinePos)) {
             return Plan.failure("missing_machine");
@@ -147,6 +151,9 @@ public final class MachinePlanFactory {
         ResourceLocation machineId = CreateMachineIds.idOf(level, machinePos);
         if (machineId == null) {
             return Plan.failure("unsupported_machine");
+        }
+        if (CreateMachineIds.isMechanicalCrafter(machineId)) {
+            return MechanicalCrafterPlans.plan(level, machinePos, providerPos, primaryOutput, outputAmount, patternOutputs);
         }
         List<GenericStack> workingInputs = new ArrayList<>(inputs);
         Context context = new Context(level, machinePos, machineId, primaryOutput, outputAmount,
@@ -182,13 +189,18 @@ public final class MachinePlanFactory {
         if (processed.isEmpty()) {
             return Plan.failure("missing_item_input");
         }
-        if (held.isEmpty()) {
-            return Plan.failure("missing_deployer_item");
-        }
         BlockPos itemTarget = deployerItemTarget(ctx.level(), ctx.machinePos());
         List<SupplyAction> actions = new ArrayList<>();
         actions.add(SupplyActions.insertItem(ctx.level(), itemTarget, processed));
-        actions.add(SupplyActions.insertItem(ctx.level(), ctx.machinePos(), held));
+        if (held.isEmpty()) {
+            // Non-consumed tools (inscriber presses, sandpaper, etc.) are often pre-placed in the
+            // deployer and omitted from the AE2 processing pattern so the network never requests them.
+            if (!InventoryAccess.hasAnyItem(ctx.level(), ctx.machinePos())) {
+                return Plan.failure("missing_deployer_item");
+            }
+        } else {
+            actions.add(SupplyActions.insertItem(ctx.level(), ctx.machinePos(), held));
+        }
         return success(ctx, itemTarget, role, actions, false, remaining);
     }
 
@@ -290,6 +302,24 @@ public final class MachinePlanFactory {
                 MachineEndpoint.smartItemOutput(ctx.machinePos()),
                 MachineEndpoint.smartFluidOutput(ctx.machinePos()));
         return success(ctx, ctx.machinePos(), outputs, role, actions, true, remaining);
+    }
+
+    private static Plan planGrindstoneDrain(Context ctx, String role) {
+        if (!CreateMachineIds.isMechanicalGrindstone(CreateMachineIds.idOf(ctx.level(), ctx.machinePos().above()))) {
+            return Plan.failure("missing_grindstone");
+        }
+        Direction outputDirection = grindstoneOutputDirection(ctx.level(), ctx.machinePos());
+        if (outputDirection == null) {
+            return Plan.failure("grindstone_not_powered");
+        }
+        List<GenericStack> remaining = ctx.inputs();
+        List<SupplyAction> actions = new ArrayList<>();
+        if (!addBasinInputs(actions, remaining, ctx.level(), ctx.machinePos())) {
+            return Plan.failure("missing_machine_input");
+        }
+        BlockPos outputPos = ctx.machinePos().relative(outputDirection);
+        return success(ctx, outputPos, beltOrDroppedItemOutput(ctx.level(), outputPos, outputDirection), role, actions,
+                true, remaining);
     }
 
     private static Plan planMillstone(Context ctx, String role) {
@@ -800,6 +830,47 @@ public final class MachinePlanFactory {
         return state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)
                 ? state.getValue(BlockStateProperties.HORIZONTAL_FACING)
                 : null;
+    }
+
+    /**
+     * Enchantment Industry grindstone drain ejects to clockwise/counter-clockwise of its shaft facing,
+     * matching {@code GrindstoneDrainBlockEntity#getOutputSide} and requiring opposite rotation from
+     * the mechanical grindstone directly above.
+     */
+    @Nullable
+    private static Direction grindstoneOutputDirection(Level level, BlockPos drainPos) {
+        if (level == null || !level.isLoaded(drainPos)) {
+            return null;
+        }
+        BlockState drainState = level.getBlockState(drainPos);
+        if (!drainState.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+            return null;
+        }
+        Direction facing = drainState.getValue(BlockStateProperties.HORIZONTAL_FACING);
+        BlockEntity drainEntity = level.getBlockEntity(drainPos);
+        if (!(drainEntity instanceof KineticBlockEntity drain) || drain.getSpeed() == 0) {
+            return null;
+        }
+        BlockPos grindPos = drainPos.above();
+        if (!level.isLoaded(grindPos) || !CreateMachineIds.isMechanicalGrindstone(CreateMachineIds.idOf(level, grindPos))) {
+            return null;
+        }
+        BlockState grindState = level.getBlockState(grindPos);
+        if (!grindState.hasProperty(BlockStateProperties.AXIS)
+                || grindState.getValue(BlockStateProperties.AXIS) != facing.getAxis()) {
+            return null;
+        }
+        BlockEntity grindEntity = level.getBlockEntity(grindPos);
+        if (!(grindEntity instanceof KineticBlockEntity grind) || grind.getSpeed() == 0) {
+            return null;
+        }
+        float drainSpeed = drain.getSpeed();
+        float grindSpeed = grind.getSpeed();
+        if (drainSpeed > 0f ? grindSpeed >= 0f : grindSpeed <= 0f) {
+            return null;
+        }
+        float signed = facing == Direction.WEST || facing == Direction.NORTH ? drainSpeed * -1 : drainSpeed;
+        return signed > 0 ? facing.getClockWise() : facing.getCounterClockWise();
     }
 
     @Nullable

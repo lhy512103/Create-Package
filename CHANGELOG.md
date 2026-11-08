@@ -6,11 +6,25 @@
 
 1. 修复：机器链接器优先响应右键，避免被动力合成器等机器收走。
 2. 新增：高级封包分发器提供 36 格样板槽，每张并行卡默认提供 16 路并行。
+3. 新增：动力样板供应器支持动力合成器自动布局、箭头整理、独立组投料和出口回收。
+4. 新增：支持附魔工业砂轮投料，并正确识别砂轮与下方流体槽。
+5. 优化：内置供应器统一使用 4 个共享升级槽，兼容并行卡与 AE2 Utility 的 NBT 撕裂卡。
+6. 修复：少量作业持续回收真实产物，不再误收预存材料或不消耗的工具。
+7. 修复：补刷重试按实际游戏时间计时并显示倒计时，缺料自动下单默认关闭。
+8. 修复：供应器转向或重新进入存档后刷新网络连接，并正确显示升级槽和网络工具槽。
+9. 优化：减少动力合成器重复规划开销，并在机器变化后重新校验布局。
 
 ### English
 
 1. Fixed: The Machine Linker handles right-clicks before machines can take it as input.
 2. Added: The Advanced Package Distributor provides 36 pattern slots and defaults to 16 parallel jobs per Parallel Card.
+3. Added: Kinetic Pattern Providers arrange Mechanical Crafter layouts and arrows, supply independent groups, and recover products from their exits.
+4. Added: Mechanical Grindstones from Enchantment Industry support input delivery and recognition of the drain below them.
+5. Improved: Built-in providers share four upgrade slots for Parallel Cards and compatible AE2 Utility NBT Tear Cards.
+6. Fixed: Small jobs keep collecting real products without extracting pre-existing ingredients or reusable tools.
+7. Fixed: Refill retries use elapsed game time with a countdown, while automatic crafting of missing inputs remains off by default.
+8. Fixed: Providers refresh ME connections after rotation or world reload and correctly display upgrade and network tool slots.
+9. Improved: Mechanical Crafter planning avoids repeated searches and revalidates layouts when machines change.
 
 ## English
 

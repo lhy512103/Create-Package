@@ -6,6 +6,7 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.compat.Ae2UtilityCompat;
 import com.lhy.createpackage.compat.ExtendedAePlusCompat;
 import com.lhy.createpackage.registry.ModBlockEntities;
 import com.lhy.createpackage.registry.ModItems;
@@ -14,6 +15,7 @@ import com.lhy.createpackage.registry.ModMenuTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -27,6 +29,10 @@ import appeng.api.config.LockCraftingMode;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.implementations.blockentities.PatternContainerGroup;
 import appeng.api.inventories.InternalInventory;
+import appeng.api.inventories.ISegmentedInventory;
+import appeng.api.upgrades.IUpgradeInventory;
+import appeng.api.upgrades.IUpgradeableObject;
+import appeng.api.upgrades.UpgradeInventories;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
 import appeng.api.networking.IGridNodeListener;
@@ -35,7 +41,6 @@ import appeng.api.networking.ticking.IGridTickable;
 import appeng.api.networking.ticking.TickRateModulation;
 import appeng.api.networking.ticking.TickingRequest;
 import appeng.api.stacks.AEItemKey;
-import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.helpers.patternprovider.PatternProviderLogic;
 import appeng.helpers.patternprovider.PatternProviderLogicHost;
@@ -52,9 +57,12 @@ import appeng.util.SettingsFrom;
  * from {@link PackageDistributorBlockEntity}; no adjacent pattern provider is required.
  */
 public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockEntity
-        implements PatternProviderLogicHost {
+        implements PatternProviderLogicHost, IUpgradeableObject {
+    private static final String NBT_HOST_UPGRADES = "createpackage_upgrades";
 
     private final InternalPatternProviderLogic logic = new InternalPatternProviderLogic();
+    private final IUpgradeInventory upgrades = UpgradeInventories.forMachine(
+            ModItems.BASIC_PACKAGE_DISTRIBUTOR.get(), 4, this::saveAndSync);
     private final CombinedTicker combinedTicker = new CombinedTicker();
 
     public BasicPackageDistributorBlockEntity(BlockPos pos, BlockState blockState) {
@@ -77,12 +85,24 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
         super.onReady();
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
         logic.updatePatterns();
+        Ae2UtilityCompat.migrateLegacyCard(this, getUpgrades());
+        // Keep cards from older addon-owned inventories accessible without discarding leftovers.
+        IUpgradeInventory legacy = ExtendedAePlusCompat.patternLogicUpgrades(logic);
+        if (legacy != null && legacy != upgrades) {
+            for (int slot = 0; slot < legacy.size(); slot++) {
+                ItemStack stack = legacy.getStackInSlot(slot);
+                if (!stack.isEmpty()) {
+                    legacy.setItemDirect(slot, upgrades.addItems(stack));
+                }
+            }
+        }
     }
 
     @Override
     public void saveAdditional(CompoundTag data) {
         super.saveAdditional(data);
         logic.writeToNBT(data);
+        upgrades.writeToNBT(data, NBT_HOST_UPGRADES);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
     }
 
@@ -91,6 +111,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
         super.loadTag(data);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
         logic.readFromNBT(data);
+        upgrades.readFromNBT(data, NBT_HOST_UPGRADES);
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
     }
 
@@ -98,12 +119,18 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     public void addAdditionalDrops(Level level, BlockPos pos, List<ItemStack> drops) {
         super.addAdditionalDrops(level, pos, drops);
         logic.addDrops(drops);
+        for (ItemStack upgrade : upgrades) {
+            if (!upgrade.isEmpty()) {
+                drops.add(upgrade);
+            }
+        }
     }
 
     @Override
     public void clearContent() {
         super.clearContent();
         logic.clearContent();
+        upgrades.clear();
     }
 
     @Override
@@ -118,6 +145,19 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     @Override
     public PatternProviderLogic getLogic() {
         return logic;
+    }
+
+    @Override
+    public IUpgradeInventory getUpgrades() {
+        return upgrades;
+    }
+
+    @Override
+    public @Nullable InternalInventory getSubInventory(ResourceLocation id) {
+        if (id.equals(ISegmentedInventory.UPGRADES)) {
+            return getUpgrades();
+        }
+        return super.getSubInventory(id);
     }
 
     @Override
@@ -192,6 +232,12 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
     }
 
     private final class InternalPatternProviderLogic extends PatternProviderLogic {
+        // Implements Utility's mixin-provided interface method at runtime. No addon is required to load this class.
+        @SuppressWarnings("unused") // Called through NbtTearLogicAccess after Mixin transforms the superclass.
+        public ItemStack ae2utility$getEffectiveTearCardStack() {
+            return Ae2UtilityCompat.findInstalledCard(BasicPackageDistributorBlockEntity.this.getUpgrades());
+        }
+
         private InternalPatternProviderLogic() {
             super(getMainNode(), BasicPackageDistributorBlockEntity.this);
         }
@@ -234,7 +280,7 @@ public class BasicPackageDistributorBlockEntity extends PackageDistributorBlockE
         @Override
         public TickRateModulation tickingRequest(IGridNode node, int ticksSinceLastCall) {
             if (hasDistributorJob()) {
-                return tickDistributorJob() ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
+                return tickDistributorJob(ticksSinceLastCall) ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
             }
             return TickRateModulation.SLEEP;
         }

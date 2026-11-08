@@ -4,6 +4,7 @@ build/
 out/
 bin/
 run/
+run-gametest/
 eclipse/
 
 # IDE

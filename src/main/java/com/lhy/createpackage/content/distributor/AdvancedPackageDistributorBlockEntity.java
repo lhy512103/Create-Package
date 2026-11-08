@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import com.lhy.createpackage.Config;
 import com.lhy.createpackage.CreatePackage;
+import com.lhy.createpackage.compat.Ae2UtilityCompat;
 import com.lhy.createpackage.compat.ExtendedAePlusCompat;
 import com.lhy.createpackage.content.pattern.MechanicalPackagePatternDetails;
 import com.lhy.createpackage.content.pattern.RoutedMechanicalPackagePatternDetails;
@@ -64,9 +65,10 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     public static final int PATTERN_SLOTS = 36;
 
     private static final String NBT_UPGRADES = "upgrades";
+    private static final String NBT_PARALLEL_UPGRADES = "parallel_upgrades";
     private static final String NBT_LAST_FAILURE_ROUTE = "lastFailureRoute";
     private static final String NBT_LAST_FAILURE_SLOT = "lastFailureSlot";
-    private static final int MAX_PARALLEL_CARDS = 2;
+    public static final int MAX_PARALLEL_CARDS = 4;
 
     private final InternalPatternProviderLogic logic = new InternalPatternProviderLogic();
     private final IUpgradeInventory upgrades = UpgradeInventories.forMachine(
@@ -98,6 +100,8 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
         super.onReady();
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
         logic.updatePatterns();
+        Ae2UtilityCompat.migrateLegacyCard(this, getUpgrades());
+        migrateHostUpgradesIntoLogic();
     }
 
     @Override
@@ -105,7 +109,9 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
         super.saveAdditional(data);
         logic.writeToNBT(data);
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
-        upgrades.writeToNBT(data, NBT_UPGRADES);
+        if (getUpgrades() == upgrades) {
+            upgrades.writeToNBT(data, NBT_PARALLEL_UPGRADES);
+        }
         if (!lastFailureRoute.isEmpty()) {
             long[] route = new long[lastFailureRoute.size()];
             for (int i = 0; i < route.length; i++) {
@@ -122,7 +128,11 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
         ExtendedAePlusCompat.removeProviderSmartSettings(data);
         logic.readFromNBT(data);
         ExtendedAePlusCompat.disableProviderSmartSettings(logic.getConfigManager());
-        upgrades.readFromNBT(data, NBT_UPGRADES);
+        if (data.contains(NBT_PARALLEL_UPGRADES)) {
+            upgrades.readFromNBT(data, NBT_PARALLEL_UPGRADES);
+        } else if (ExtendedAePlusCompat.patternLogicUpgrades(logic) == null) {
+            upgrades.readFromNBT(data, NBT_UPGRADES);
+        }
         var route = new java.util.ArrayList<BlockPos>();
         for (long packed : data.getLongArray(NBT_LAST_FAILURE_ROUTE)) {
             route.add(BlockPos.of(packed));
@@ -135,8 +145,12 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     public void addAdditionalDrops(Level level, BlockPos pos, List<ItemStack> drops) {
         super.addAdditionalDrops(level, pos, drops);
         logic.addDrops(drops);
-        for (ItemStack upgrade : upgrades) {
-            drops.add(upgrade);
+        if (getUpgrades() == upgrades) {
+            for (ItemStack upgrade : upgrades) {
+                if (!upgrade.isEmpty()) {
+                    drops.add(upgrade);
+                }
+            }
         }
     }
 
@@ -169,7 +183,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     @Override
     public @Nullable InternalInventory getSubInventory(ResourceLocation id) {
         if (id.equals(ISegmentedInventory.UPGRADES)) {
-            return upgrades;
+            return getUpgrades();
         }
         return super.getSubInventory(id);
     }
@@ -197,7 +211,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
         if (level != null && level.isClientSide()) {
             return visibleParallelCards;
         }
-        return Math.min(MAX_PARALLEL_CARDS, upgrades.getInstalledUpgrades(ModItems.PARALLEL_CARD.get()));
+        return Math.min(MAX_PARALLEL_CARDS, countInstalledParallelCards());
     }
 
     @Override
@@ -351,6 +365,29 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
         }
     }
 
+    private int countInstalledParallelCards() {
+        int count = getUpgrades().getInstalledUpgrades(ModItems.PARALLEL_CARD.get());
+        if (getUpgrades() != upgrades) {
+            count += upgrades.getInstalledUpgrades(ModItems.PARALLEL_CARD.get());
+        }
+        return count;
+    }
+
+    private void migrateHostUpgradesIntoLogic() {
+        IUpgradeInventory fromLogic = ExtendedAePlusCompat.patternLogicUpgrades(logic);
+        if (fromLogic == null || fromLogic == upgrades) {
+            return;
+        }
+        for (int slot = 0; slot < fromLogic.size(); slot++) {
+            ItemStack stack = fromLogic.getStackInSlot(slot);
+            if (stack.isEmpty() || stack.getItem() != ModItems.PARALLEL_CARD.get()) {
+                continue;
+            }
+            ItemStack leftover = upgrades.addItems(stack);
+            fromLogic.setItemDirect(slot, leftover);
+        }
+    }
+
     private void onUpgradesChanged() {
         saveAndSync();
         ICraftingProvider.requestUpdate(getMainNode());
@@ -392,6 +429,12 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
     }
 
     private final class InternalPatternProviderLogic extends PatternProviderLogic {
+        // Implements Utility's mixin-provided interface method at runtime. No addon is required to load this class.
+        @SuppressWarnings("unused") // Called through NbtTearLogicAccess after Mixin transforms the superclass.
+        public ItemStack ae2utility$getEffectiveTearCardStack() {
+            return Ae2UtilityCompat.findInstalledCard(AdvancedPackageDistributorBlockEntity.this.getUpgrades());
+        }
+
         private InternalPatternProviderLogic() {
             super(getMainNode(), AdvancedPackageDistributorBlockEntity.this, PATTERN_SLOTS);
         }
@@ -461,7 +504,7 @@ public class AdvancedPackageDistributorBlockEntity extends PackageDistributorBlo
         @Override
         public TickRateModulation tickingRequest(IGridNode node, int ticksSinceLastCall) {
             if (hasDistributorJob()) {
-                return tickDistributorJob() ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
+                return tickDistributorJob(ticksSinceLastCall) ? TickRateModulation.URGENT : TickRateModulation.SLOWER;
             }
             return TickRateModulation.SLEEP;
         }

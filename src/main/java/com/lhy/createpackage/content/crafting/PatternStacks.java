@@ -48,6 +48,68 @@ public final class PatternStacks {
         return new ArrayList<>(inputs);
     }
 
+    /**
+     * Removes inputs that the pattern also lists as outputs, other than the primary product.
+     * AE2 shows those as non-consumed. Returns the stacks that must go back to the network.
+     */
+    public static List<GenericStack> extractFullyReturned(List<GenericStack> inputs, List<GenericStack> outputs,
+            AEKey primaryOutput) {
+        List<GenericStack> returned = new ArrayList<>();
+        if (outputs == null || outputs.isEmpty()) {
+            return returned;
+        }
+        for (int i = 0; i < inputs.size();) {
+            GenericStack input = inputs.get(i);
+            if (input == null || input.amount() <= 0 || input.what().equals(primaryOutput)) {
+                i++;
+                continue;
+            }
+            long outputAmount = 0;
+            for (GenericStack output : outputs) {
+                if (output != null && input.what().equals(output.what())) {
+                    outputAmount = safeAdd(outputAmount, output.amount());
+                }
+            }
+            if (outputAmount <= 0) {
+                i++;
+                continue;
+            }
+            long giveBack = Math.min(input.amount(), outputAmount);
+            returned.add(new GenericStack(input.what(), giveBack));
+            long keep = input.amount() - giveBack;
+            if (keep <= 0) {
+                inputs.remove(i);
+            } else {
+                inputs.set(i, new GenericStack(input.what(), keep));
+                i++;
+            }
+        }
+        return returned;
+    }
+
+    /** Drops pattern outputs that only exist to return a non-consumed input. */
+    public static List<GenericStack> collectableOutputs(List<GenericStack> outputs, List<GenericStack> returned) {
+        if (returned == null || returned.isEmpty()) {
+            return outputs;
+        }
+        List<GenericStack> collectable = new ArrayList<>();
+        for (GenericStack output : outputs) {
+            if (output == null || output.amount() <= 0) {
+                continue;
+            }
+            long returnedAmount = 0;
+            for (GenericStack stack : returned) {
+                if (output.what().equals(stack.what())) {
+                    returnedAmount = safeAdd(returnedAmount, stack.amount());
+                }
+            }
+            if (returnedAmount < output.amount()) {
+                collectable.add(output);
+            }
+        }
+        return collectable;
+    }
+
     public static List<ItemStack> itemInputs(List<GenericStack> inputs) {
         List<ItemStack> items = new ArrayList<>();
         for (GenericStack input : inputs) {

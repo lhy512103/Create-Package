@@ -2,11 +2,16 @@ package com.lhy.createpackage.content.crafting;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.function.BiPredicate;
+
 import appeng.api.config.Actionable;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
+import appeng.api.stacks.GenericStack;
 import appeng.api.storage.MEStorage;
 
 import net.minecraft.world.item.ItemStack;
@@ -38,6 +43,28 @@ public final class NetworkIO {
             return 0;
         }
         return storage.extract(what, amount, mode, actionSource);
+    }
+
+    public List<GenericStack> resolveInputs(List<GenericStack> requested, BiPredicate<AEKey, AEKey> matches) {
+        if (grid == null) {
+            return requested;
+        }
+        var available = new LinkedHashMap<AEKey, Long>();
+        for (var entry : grid.getStorageService().getCachedInventory()) {
+            if (requested.stream().anyMatch(input -> matches.test(input.what(), entry.getKey()))) {
+                long extractable = extract(entry.getKey(), entry.getLongValue(), Actionable.SIMULATE);
+                if (extractable > 0) {
+                    available.put(entry.getKey(), extractable);
+                }
+            }
+        }
+        var inputs = requested.stream()
+                .map(input -> new MatchingInputResolver.Input<>(input.what(), input.amount())).toList();
+        List<GenericStack> result = new java.util.ArrayList<>();
+        for (var input : MatchingInputResolver.resolve(inputs, available, matches)) {
+            PatternStacks.addStack(result, new GenericStack(input.key(), input.amount()));
+        }
+        return result;
     }
 
     @Nullable

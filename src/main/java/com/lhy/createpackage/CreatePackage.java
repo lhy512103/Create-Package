@@ -39,6 +39,8 @@ public class CreatePackage {
         MinecraftForge.EVENT_BUS.addListener(MechanicalPackagePatternEncodingCompat::onContainerClose);
         MinecraftForge.EVENT_BUS.addListener(PackageDistributorBlockEntity::onPlayerLoggedIn);
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC);
+        MinecraftForge.EVENT_BUS.addListener(com.lhy.createpackage.content.crafting.MechanicalCrafterPlans::onAddReloadListeners);
+        MinecraftForge.EVENT_BUS.addListener(com.lhy.createpackage.content.crafting.MechanicalCrafterPlans::onNeighborNotify);
 
         if (FMLEnvironment.dist == Dist.CLIENT) {
             CreatePackageClient.init(modEventBus);
@@ -48,14 +50,28 @@ public class CreatePackage {
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             ModNetwork.register();
-            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.PACKAGE_DISTRIBUTOR.get(), ModItems.PACKAGE_DISTRIBUTOR.get());
-            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get(), ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
-            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
-            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(), ModItems.KINETIC_PATTERN_PROVIDER.get());
-            AEBaseBlockEntity.registerBlockEntityItem(ModBlockEntities.EXTENDED_KINETIC_PATTERN_PROVIDER.get(), ModItems.EXTENDED_KINETIC_PATTERN_PROVIDER.get());
-            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(), 2);
-            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.KINETIC_PATTERN_PROVIDER.get(), 2);
-            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.EXTENDED_KINETIC_PATTERN_PROVIDER.get(), 2);
+            AEBaseBlockEntity.registerBlockEntityItem(
+                    ModBlockEntities.PACKAGE_DISTRIBUTOR.get(),
+                    ModItems.PACKAGE_DISTRIBUTOR.get());
+            AEBaseBlockEntity.registerBlockEntityItem(
+                    ModBlockEntities.BASIC_PACKAGE_DISTRIBUTOR.get(),
+                    ModItems.BASIC_PACKAGE_DISTRIBUTOR.get());
+            AEBaseBlockEntity.registerBlockEntityItem(
+                    ModBlockEntities.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
+                    ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get());
+            AEBaseBlockEntity.registerBlockEntityItem(
+                    ModBlockEntities.KINETIC_PATTERN_PROVIDER.get(),
+                    ModItems.KINETIC_PATTERN_PROVIDER.get());
+            AEBaseBlockEntity.registerBlockEntityItem(
+                    ModBlockEntities.EXTENDED_KINETIC_PATTERN_PROVIDER.get(),
+                    ModItems.EXTENDED_KINETIC_PATTERN_PROVIDER.get());
+            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.ADVANCED_PACKAGE_DISTRIBUTOR.get(),
+                    com.lhy.createpackage.content.distributor.AdvancedPackageDistributorBlockEntity.MAX_PARALLEL_CARDS);
+            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.KINETIC_PATTERN_PROVIDER.get(),
+                    com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity.MAX_PARALLEL_CARDS);
+            Upgrades.add(ModItems.PARALLEL_CARD.get(), ModItems.EXTENDED_KINETIC_PATTERN_PROVIDER.get(),
+                    com.lhy.createpackage.content.kinetic.KineticPatternProviderBlockEntity.MAX_PARALLEL_CARDS);
+            com.lhy.createpackage.compat.Ae2UtilityCompat.registerUpgrades();
             if (ModList.get().isLoaded("ftbultimine")) {
                 com.lhy.createpackage.integration.ftbultimine.FtbUltimineCompat.register();
             }
