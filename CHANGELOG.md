@@ -14,6 +14,7 @@
 8. 修复：供应器转向或重新进入存档后刷新网络连接，并正确显示升级槽和网络工具槽。
 9. 优化：减少动力合成器重复规划开销，并在机器变化后重新校验布局。
 10. 修复：智能倍增在回收端点发生变化后不再向旧作业追加投料。
+11. 新增：完善 8 个主题的中英文思索教程，涵盖完整装配循环、16/64 台并行、特殊机器及批量绑定。
 
 ### English
 
@@ -27,6 +28,7 @@
 8. Fixed: Providers refresh ME connections after rotation or world reload and correctly display upgrade and network tool slots.
 9. Improved: Mechanical Crafter planning avoids repeated searches and revalidates layouts when machines change.
 10. Fixed: Smart batching no longer appends inputs to an existing job after its recovery endpoints change.
+11. Added: Eight bilingual Ponder topics cover complete assembly cycles, 16/64-machine parallel setups, special machines, and batch linking.
 
 ## English
 

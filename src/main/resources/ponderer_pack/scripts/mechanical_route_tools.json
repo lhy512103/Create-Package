@@ -1,0 +1,315 @@
+{
+  "id": "createpackage:mechanical_route_tools",
+  "items": [
+    "createpackage:machine_linker",
+    "createpackage:mechanical_pattern_converter",
+    "createpackage:mechanical_package_pattern"
+  ],
+  "title": { "en_us": "Mechanical Route Tools", "zh_cn": "机械路线工具" },
+  "tags": ["createpackage:create_package"],
+  "editable": false,
+  "scenes": [
+    {
+      "id": "linker",
+      "title": { "en_us": "Machine Linker: One Ordered Route", "zh_cn": "机器链接器：按序连接一条路线" },
+      "basePlateSize": 7,
+      "viewScale": 0.75,
+      "steps": [
+        { "type": "encapsulate_bounds", "bounds": [7, 5, 7] },
+        { "type": "set_block", "block": "createpackage:basic_package_distributor", "blockPos": [1, 1, 0] },
+        { "type": "create_belt", "blockPos": [0, 1, 3], "blockPos2": [5, 1, 3], "speed": -32 },
+        { "type": "set_block", "block": "create:andesite_casing", "blockPos": [6, 1, 3] },
+        { "type": "set_block", "block": "create:creative_motor", "blockProperties": { "facing": "north" }, "blockPos": [0, 1, 4] },
+        { "type": "set_block", "block": "create:creative_motor", "blockProperties": { "facing": "east" }, "blockPos": [0, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [1, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [2, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [3, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [4, 3, 3] },
+        { "type": "set_deployer_item", "blockPos": [1, 3, 3], "item": "ae2:silicon_press", "count": 1 },
+        { "type": "set_deployer_item", "blockPos": [2, 3, 3], "item": "ae2:logic_processor_press", "count": 1 },
+        { "type": "set_deployer_item", "blockPos": [3, 3, 3], "item": "ae2:engineering_processor_press", "count": 1 },
+        { "type": "set_deployer_item", "blockPos": [4, 3, 3], "item": "ae2:calculation_processor_press", "count": 1 },
+        { "type": "set_kinetic_speed", "blockPos": [0, 3, 3], "blockPos2": [4, 3, 3], "speed": 32 },
+        { "type": "set_kinetic_speed", "blockPos": [0, 1, 4], "speed": -32 },
+        { "type": "show_section", "direction": "down", "blockPos": [0, 1, 0], "blockPos2": [6, 3, 4] },
+        { "type": "idle", "duration": 15 },
+        { "type": "show_line", "point": [0.5, 1.9, 3.5], "point2": [5.5, 1.9, 3.5], "color": "input", "duration": 110 },
+        {
+          "type": "text", "duration": 105, "attachKeyFrame": true, "placeNearTarget": true, "point": [2.5, 2.0, 3.5],
+          "text": {
+            "en_us": "Build the transport first: a powered belt moves east under four downward deployers, each two blocks above it. The end stop keeps items available for collection.",
+            "zh_cn": "先搭好真实输送线：动力皮带向东移动，四个机械手朝下，位于皮带上方两格。末端挡块让物品留在出口等待回收。"
+          }
+        },
+        { "type": "idle", "duration": 110 },
+        {
+          "type": "text", "duration": 115, "attachKeyFrame": true, "placeNearTarget": true, "point": [2.5, 3.8, 3.5],
+          "text": {
+            "en_us": "This real recipe uses one gold sheet and the Silicon, Logic, Engineering and Calculation Presses in that order. All four tools are kept; three passes produce one normal Package Distributor.",
+            "zh_cn": "示例配方用一张金板，依次经过硅、逻辑、工程、运算四种压印模板。四种工具均保留，整条线运行三遍得到一个普通封包分发器。"
+          }
+        },
+        { "type": "idle", "duration": 120 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:machine_linker", "point": [1.5, 2.5, 0.5], "direction": "down", "duration": 45 },
+        { "type": "highlight_section", "blockPos": [1, 1, 0], "color": "blue", "duration": 75 },
+        {
+          "type": "text", "duration": 85, "attachKeyFrame": true, "placeNearTarget": true, "point": [1.5, 2.5, 0.5],
+          "text": {
+            "en_us": "1. Right-click the Basic Distributor with the Machine Linker to select the host. The normal Distributor uses the same linking procedure.",
+            "zh_cn": "① 手持机器链接器右键基础分发器，先选定宿主。普通分发器也使用同样的链接方式。"
+          }
+        },
+        { "type": "idle", "duration": 90 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:machine_linker", "point": [0.5, 1.9, 3.5], "direction": "down", "duration": 40 },
+        { "type": "highlight_section", "blockPos": [0, 1, 3], "color": "input", "duration": 70 },
+        {
+          "type": "text", "duration": 80, "attachKeyFrame": true, "placeNearTarget": true, "point": [0.5, 1.9, 3.5],
+          "text": {
+            "en_us": "2. Right-click the first belt segment to mark the input. The distributor supplies the base item here; its own facing does not choose the input.",
+            "zh_cn": "② 右键首段皮带，标记入口。分发器会把基础原料送到这里，入口不由分发器自身朝向决定。"
+          }
+        },
+        { "type": "idle", "duration": 85 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:machine_linker", "point": [1.5, 3.7, 3.5], "direction": "down", "duration": 25 },
+        { "type": "indicate_success", "blockPos": [1, 3, 3] },
+        { "type": "idle", "duration": 25 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:machine_linker", "point": [2.5, 3.7, 3.5], "direction": "down", "duration": 25 },
+        { "type": "indicate_success", "blockPos": [2, 3, 3] },
+        { "type": "idle", "duration": 25 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:machine_linker", "point": [3.5, 3.7, 3.5], "direction": "down", "duration": 25 },
+        { "type": "indicate_success", "blockPos": [3, 3, 3] },
+        { "type": "idle", "duration": 25 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:machine_linker", "point": [4.5, 3.7, 3.5], "direction": "down", "duration": 25 },
+        { "type": "indicate_success", "blockPos": [4, 3, 3] },
+        { "type": "highlight_section", "blockPos": [1, 3, 3], "blockPos2": [4, 3, 3], "color": "white", "duration": 85 },
+        {
+          "type": "text", "duration": 85, "attachKeyFrame": true, "placeNearTarget": true, "point": [2.5, 3.8, 3.5],
+          "text": {
+            "en_us": "3. Right-click all four deployers in process order, from left to right. Link the machines themselves, not every belt segment beneath them.",
+            "zh_cn": "③ 按加工顺序从左到右，依次右键四个机械手。标记的是机器本体，无需把机器下方每段皮带都加入路线。"
+          }
+        },
+        { "type": "idle", "duration": 90 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:machine_linker", "point": [5.5, 1.9, 3.5], "direction": "down", "duration": 40 },
+        { "type": "highlight_section", "blockPos": [5, 1, 3], "color": "output", "duration": 85 },
+        {
+          "type": "text", "duration": 95, "attachKeyFrame": true, "placeNearTarget": true, "point": [5.5, 1.9, 3.5],
+          "text": {
+            "en_us": "4. Mark the final belt segment last. It is the output: unfinished items return to the input, and finished products return to ME storage.",
+            "zh_cn": "④ 最后右键末段皮带，确定出口。到达这里的半成品会被送回入口，成品则直接回到 ME 存储。"
+          }
+        },
+        { "type": "idle", "duration": 100 },
+        { "type": "show_controls", "action": "right", "point": [1.5, 2.5, 0.5], "direction": "down", "duration": 45 },
+        {
+          "type": "text", "duration": 115, "attachKeyFrame": true, "placeNearTarget": true, "point": [1.5, 2.5, 0.5],
+          "text": {
+            "en_us": "Put the linker away and right-click to open the Basic Distributor GUI. Insert an encoded processing pattern: 1 gold sheet → 1 normal Package Distributor. Connect powered ME storage and a crafting CPU to request it.",
+            "zh_cn": "收起链接器，空手右键打开基础分发器界面，放入已编码处理样板：金板1 → 普通封包分发器1。实际请求合成还需有电的 ME 存储网络与合成 CPU。"
+          }
+        },
+        { "type": "idle", "duration": 120 }
+      ]
+    },
+    {
+      "id": "converter",
+      "title": { "en_us": "Converter: Put the Route on a Pattern", "zh_cn": "机械样板转换器：把路线写入样板" },
+      "basePlateSize": 7,
+      "viewScale": 0.75,
+      "steps": [
+        { "type": "encapsulate_bounds", "bounds": [7, 5, 7] },
+        { "type": "set_block", "block": "createpackage:advanced_package_distributor", "blockPos": [1, 1, 0] },
+        { "type": "create_belt", "blockPos": [0, 1, 3], "blockPos2": [5, 1, 3], "speed": -32 },
+        { "type": "set_block", "block": "create:andesite_casing", "blockPos": [6, 1, 3] },
+        { "type": "set_block", "block": "create:creative_motor", "blockProperties": { "facing": "north" }, "blockPos": [0, 1, 4] },
+        { "type": "set_block", "block": "create:creative_motor", "blockProperties": { "facing": "east" }, "blockPos": [0, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [1, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [2, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [3, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [4, 3, 3] },
+        { "type": "set_deployer_item", "blockPos": [1, 3, 3], "item": "ae2:silicon_press", "count": 1 },
+        { "type": "set_deployer_item", "blockPos": [2, 3, 3], "item": "ae2:logic_processor_press", "count": 1 },
+        { "type": "set_deployer_item", "blockPos": [3, 3, 3], "item": "ae2:engineering_processor_press", "count": 1 },
+        { "type": "set_deployer_item", "blockPos": [4, 3, 3], "item": "ae2:calculation_processor_press", "count": 1 },
+        { "type": "set_kinetic_speed", "blockPos": [0, 3, 3], "blockPos2": [4, 3, 3], "speed": 32 },
+        { "type": "set_kinetic_speed", "blockPos": [0, 1, 4], "speed": -32 },
+        { "type": "show_section", "direction": "down", "blockPos": [0, 1, 0], "blockPos2": [6, 3, 4] },
+        { "type": "idle", "duration": 15 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_pattern_converter", "point": [0.5, 1.9, 3.5], "direction": "down", "duration": 40 },
+        { "type": "highlight_section", "blockPos": [0, 1, 3], "color": "input", "duration": 75 },
+        {
+          "type": "text", "duration": 90, "attachKeyFrame": true, "placeNearTarget": true, "point": [0.5, 1.9, 3.5],
+          "text": {
+            "en_us": "The Advanced Distributor reads routes from Mechanical Package Patterns. With the converter, begin by marking the input; there is no distributor host to select.",
+            "zh_cn": "高级分发器从机械封包样板读取路线。手持转换器，先标记入口即可，不需要先选择分发器宿主。"
+          }
+        },
+        { "type": "idle", "duration": 95 },
+        { "type": "show_line", "point": [1.5, 3.5, 3.5], "point2": [4.5, 3.5, 3.5], "color": "white", "duration": 90 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_pattern_converter", "point": [1.5, 3.7, 3.5], "direction": "down", "duration": 25 },
+        { "type": "idle", "duration": 25 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_pattern_converter", "point": [2.5, 3.7, 3.5], "direction": "down", "duration": 25 },
+        { "type": "idle", "duration": 25 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_pattern_converter", "point": [3.5, 3.7, 3.5], "direction": "down", "duration": 25 },
+        { "type": "idle", "duration": 25 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_pattern_converter", "point": [4.5, 3.7, 3.5], "direction": "down", "duration": 25 },
+        { "type": "idle", "duration": 25 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_pattern_converter", "point": [5.5, 1.9, 3.5], "direction": "down", "duration": 40 },
+        { "type": "highlight_section", "blockPos": [5, 1, 3], "color": "output", "duration": 80 },
+        {
+          "type": "text", "duration": 95, "attachKeyFrame": true, "placeNearTarget": true, "point": [3.5, 2.3, 3.5],
+          "text": {
+            "en_us": "Mark the four deployers in order, then the final belt segment. The converter now holds input → four deployers → output for this physical line.",
+            "zh_cn": "依次标记四个机械手，再标记末段皮带。转换器中保存的顺序就是：入口 → 四个机械手 → 出口，对应眼前这条真实流水线。"
+          }
+        },
+        { "type": "idle", "duration": 100 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_pattern_converter", "point": [3.5, 3.5, 0.5], "direction": "down", "duration": 45 },
+        {
+          "type": "text", "duration": 110, "attachKeyFrame": true, "placeNearTarget": true, "point": [3.5, 3.5, 0.5],
+          "text": {
+            "en_us": "Right-click AIR with the converter to open its GUI. Put the encoded AE2 processing pattern, 1 gold sheet → 1 normal Package Distributor, in an input slot and press Convert.",
+            "zh_cn": "手持转换器，对空气右键打开转换界面。把已编码 AE2 处理样板“金板1 → 普通封包分发器1”放入输入槽，再点击转换。"
+          }
+        },
+        { "type": "idle", "duration": 115 },
+        {
+          "type": "text", "duration": 105, "attachKeyFrame": true, "placeNearTarget": true, "point": [3.5, 3.5, 0.5],
+          "text": {
+            "en_us": "Take the Mechanical Package Pattern from the output slot. It contains the original encoded pattern, this ordered route and its encoder information; it is not a physical parcel of ingredients.",
+            "zh_cn": "从输出槽取出机械封包样板。它保存原始编码样板、有序路线和编码者信息，并不是装着配方原料的实体包裹。"
+          }
+        },
+        { "type": "idle", "duration": 110 },
+        { "type": "show_controls", "action": "right", "point": [1.5, 2.5, 0.5], "direction": "down", "duration": 45 },
+        { "type": "highlight_section", "blockPos": [1, 1, 0], "color": "blue", "duration": 90 },
+        {
+          "type": "text", "duration": 110, "attachKeyFrame": true, "placeNearTarget": true, "point": [1.5, 2.5, 0.5],
+          "text": {
+            "en_us": "Put the held tool away. Empty-hand right-click the Advanced Distributor to open its GUI, then place the Mechanical Package Pattern in a pattern slot. It needs a powered ME network and a crafting CPU.",
+            "zh_cn": "收起手中工具，空手右键高级分发器打开界面，再把机械封包样板放入样板槽。实际合成需要有电的 ME 网络和合成 CPU。"
+          }
+        },
+        { "type": "idle", "duration": 115 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_package_pattern", "point": [2.5, 3.7, 3.5], "direction": "down", "duration": 40 },
+        {
+          "type": "text", "duration": 95, "attachKeyFrame": true, "placeNearTarget": true, "point": [2.5, 3.7, 3.5],
+          "text": {
+            "en_us": "An existing encoded Mechanical Package Pattern is also a route tool. While holding it, you can append, replace or remove its own marks without changing the encoded recipe.",
+            "zh_cn": "已有编码数据的机械封包样板本身也能作路线工具。手持它可以追加、替换或删除自身的路线标记，原编码配方保持不变。"
+          }
+        },
+        { "type": "idle", "duration": 100 }
+      ]
+    },
+    {
+      "id": "edit_and_auto_route",
+      "title": { "en_us": "Append, Edit and Auto-route", "zh_cn": "追加、编辑与自动路线" },
+      "basePlateSize": 7,
+      "viewScale": 0.75,
+      "steps": [
+        { "type": "encapsulate_bounds", "bounds": [7, 5, 7] },
+        { "type": "set_block", "block": "createpackage:basic_package_distributor", "blockPos": [1, 1, 0] },
+        { "type": "create_belt", "blockPos": [0, 1, 3], "blockPos2": [5, 1, 3], "speed": -32 },
+        { "type": "set_block", "block": "create:andesite_casing", "blockPos": [6, 1, 3] },
+        { "type": "set_block", "block": "create:creative_motor", "blockProperties": { "facing": "north" }, "blockPos": [0, 1, 4] },
+        { "type": "set_block", "block": "create:creative_motor", "blockProperties": { "facing": "east" }, "blockPos": [0, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [1, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [2, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [3, 3, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "true" }, "blockPos": [4, 3, 3] },
+        { "type": "set_deployer_item", "blockPos": [1, 3, 3], "item": "ae2:silicon_press", "count": 1 },
+        { "type": "set_deployer_item", "blockPos": [2, 3, 3], "item": "ae2:logic_processor_press", "count": 1 },
+        { "type": "set_deployer_item", "blockPos": [3, 3, 3], "item": "ae2:engineering_processor_press", "count": 1 },
+        { "type": "set_deployer_item", "blockPos": [4, 3, 3], "item": "ae2:calculation_processor_press", "count": 1 },
+        { "type": "set_kinetic_speed", "blockPos": [0, 3, 3], "blockPos2": [4, 3, 3], "speed": 32 },
+        { "type": "set_kinetic_speed", "blockPos": [0, 1, 4], "speed": -32 },
+        { "type": "show_section", "direction": "down", "blockPos": [0, 1, 0], "blockPos2": [6, 3, 4] },
+        { "type": "idle", "duration": 15 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_pattern_converter", "point": [2.5, 3.7, 3.5], "direction": "down", "duration": 40 },
+        {
+          "type": "text", "duration": 90, "attachKeyFrame": true, "placeNearTarget": true, "point": [2.5, 3.7, 3.5],
+          "text": {
+            "en_us": "Append is the default mode: right-click a machine to add its mark at the end; sneak-right-click a marked machine to remove that clicked mark.",
+            "zh_cn": "默认是追加模式：右键机器，把标记加到路线末尾；潜行右键已标记机器，删除这次点击的标记。"
+          }
+        },
+        { "type": "idle", "duration": 95 },
+        { "type": "show_controls", "action": "left", "item": "createpackage:mechanical_pattern_converter", "point": [3.5, 3.5, 0.5], "direction": "down", "duration": 45 },
+        {
+          "type": "text", "duration": 90, "attachKeyFrame": true, "placeNearTarget": true, "point": [3.5, 3.5, 0.5],
+          "text": {
+            "en_us": "Left-click AIR to switch between Append and Edit. These ordered modes work for converters, encoded Mechanical Package Patterns and linkers bound to normal or Basic Distributors.",
+            "zh_cn": "对空气左键，在追加和编辑模式间切换。转换器、已有编码的机械封包样板，以及绑定普通或基础分发器的链接器，都支持有序编辑。"
+          }
+        },
+        { "type": "idle", "duration": 95 },
+        { "type": "show_controls", "action": "scroll", "item": "createpackage:mechanical_pattern_converter", "point": [2.5, 3.7, 3.5], "direction": "down", "duration": 45 },
+        { "type": "highlight_section", "blockPos": [2, 3, 3], "color": "blue", "duration": 90 },
+        {
+          "type": "text", "duration": 100, "attachKeyFrame": true, "placeNearTarget": true, "point": [2.5, 3.7, 3.5],
+          "text": {
+            "en_us": "In Edit mode, scroll to select a route mark first. Right-click a valid route block to replace that selected position while preserving its place in the order.",
+            "zh_cn": "编辑模式下，先滚动鼠标滚轮选中路线标记，再右键有效路线方块替换选中位置；替换后仍保留它原来的路线顺序。"
+          }
+        },
+        { "type": "idle", "duration": 105 },
+        { "type": "show_controls", "action": "right", "whileSneaking": true, "item": "createpackage:mechanical_pattern_converter", "point": [2.5, 3.7, 3.5], "direction": "down", "duration": 45 },
+        {
+          "type": "text", "duration": 95, "attachKeyFrame": true, "placeNearTarget": true, "point": [2.5, 3.7, 3.5],
+          "text": {
+            "en_us": "In Edit mode, sneak-right-click a valid route block to remove the SELECTED mark. This differs from Append mode, which removes the mark you clicked.",
+            "zh_cn": "编辑模式下，潜行右键有效路线方块会删除“当前选中的标记”；追加模式删除的则是“这次点击的标记”。"
+          }
+        },
+        { "type": "idle", "duration": 100 },
+        { "type": "show_controls", "action": "right", "whileSneaking": true, "item": "createpackage:machine_linker", "point": [1.5, 2.5, 0.5], "direction": "down", "duration": 45 },
+        {
+          "type": "text", "duration": 105, "attachKeyFrame": true, "placeNearTarget": true, "point": [1.5, 2.5, 0.5],
+          "text": {
+            "en_us": "To clear a stored distributor route, sneak-right-click its host with the linker in Append mode. To clear the converter's own route, sneak-right-click AIR with the converter.",
+            "zh_cn": "清空分发器路线时，在追加模式用链接器潜行右键宿主。清空转换器自身的路线，则手持转换器对空气潜行右键。"
+          }
+        },
+        { "type": "idle", "duration": 110 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_pattern_converter", "point": [0.5, 1.9, 3.5], "direction": "down", "duration": 35 },
+        { "type": "idle", "duration": 35 },
+        { "type": "show_controls", "action": "right", "item": "createpackage:mechanical_pattern_converter", "point": [5.5, 1.9, 3.5], "direction": "down", "duration": 35 },
+        { "type": "show_line", "point": [0.5, 1.9, 3.5], "point2": [5.5, 1.9, 3.5], "color": "green", "duration": 105 },
+        {
+          "type": "text", "duration": 105, "attachKeyFrame": true, "placeNearTarget": true, "point": [2.5, 2.0, 3.5],
+          "text": {
+            "en_us": "For auto-route, start with a clear route in Append mode: mark the input first and output second, then press G while holding the tool. A linker must already be bound to a normal or Basic Distributor.",
+            "zh_cn": "自动路线可从空路线开始：切回追加模式，先标入口、再标出口，手持工具按 G。使用链接器时，必须先绑定普通或基础分发器。"
+          }
+        },
+        { "type": "idle", "duration": 110 },
+        { "type": "highlight_section", "blockPos": [1, 3, 3], "blockPos2": [4, 3, 3], "color": "green", "duration": 115 },
+        {
+          "type": "text", "duration": 115, "attachKeyFrame": true, "placeNearTarget": true, "point": [2.5, 3.8, 3.5],
+          "text": {
+            "en_us": "G rebuilds the route between its first and last marks. Endpoints must be different depots or belt blocks on the same Y level. It scans a straight corridor and adds deployers aimed at its stations and spouts two blocks above them.",
+            "zh_cn": "G 会在首尾标记之间重建路线。两端必须是不同的同高度料盘或皮带；它沿直线走廊收集对准工位的机械手，以及工位上方两格的注液器。"
+          }
+        },
+        { "type": "idle", "duration": 120 },
+        {
+          "type": "text", "duration": 120, "attachKeyFrame": true, "placeNearTarget": true, "point": [5.5, 1.9, 3.5],
+          "text": {
+            "en_us": "A single L-shaped bend is supported only when enabled in server config, with a depot or belt at the corner. Default maximum length is 512 blocks. G does not build transport, connect power or discover presses and saws.",
+            "zh_cn": "配置允许时还可搜索同高度、单拐角的 L 形路线，拐角处须有料盘或皮带。默认长度上限为512格。G 不会搭建输送、连接动力，也不会自动收集压机和锯。"
+          }
+        },
+        { "type": "idle", "duration": 125 },
+        {
+          "type": "text", "duration": 100, "attachKeyFrame": true, "placeNearTarget": true, "point": [1.5, 2.5, 0.5],
+          "text": {
+            "en_us": "Kinetic Pattern Provider links are a set of parallel machines, not an ordered assembly route. They do not support these Edit-mode controls or G auto-route.",
+            "zh_cn": "动力样板供应器的链接是同类并行机器集合，不是有序装配路线，因此不支持这里的编辑模式和 G 自动路线。"
+          }
+        },
+        { "type": "idle", "duration": 105 }
+      ]
+    }
+  ]
+}

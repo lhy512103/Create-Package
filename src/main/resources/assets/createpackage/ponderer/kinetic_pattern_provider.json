@@ -1,0 +1,227 @@
+{
+  "id": "createpackage:kinetic_pattern_provider",
+  "items": [
+    "createpackage:kinetic_pattern_provider",
+    "createpackage:extended_kinetic_pattern_provider"
+  ],
+  "title": { "en_us": "Kinetic Pattern Providers", "zh_cn": "动力样板供应器" },
+  "tags": ["createpackage:create_package"],
+  "editable": false,
+  "scenes": [
+    {
+      "id": "single_machine",
+      "basePlateSize": 7,
+      "title": { "en_us": "Target, power, supply, and recovery", "zh_cn": "目标、动力、供料与回收" },
+      "steps": [
+        { "type": "set_block", "block": "create:depot", "blockPos": [3, 1, 3] },
+        { "type": "set_block", "block": "create:deployer", "blockProperties": { "facing": "down", "axis_along_first": "false" }, "blockPos": [3, 3, 3] },
+        { "type": "set_block", "block": "create:shaft", "blockProperties": { "axis": "z" }, "blockPos": [3, 3, 4] },
+        { "type": "set_block", "block": "create:creative_motor", "blockProperties": { "facing": "north" }, "blockPos": [3, 3, 5] },
+        { "type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockProperties": { "push_direction": "all" }, "blockPos": [2, 3, 3] },
+        { "type": "show_section", "direction": "down", "blockPos": [2, 1, 3], "blockPos2": [3, 3, 5] },
+        { "type": "set_kinetic_speed", "blockPos": [3, 3, 3], "blockPos2": [3, 3, 5], "speed": 64.0 },
+        {
+          "type": "text", "duration": 95, "attachKeyFrame": true, "placeNearTarget": true,
+          "point": [2.5, 3.7, 3.5],
+          "text": {
+            "en_us": "Place the provider beside the machine itself. The default ALL setting has no machine target.",
+            "zh_cn": "供应器紧贴机器本体放置。默认的 ALL 状态没有机器目标，必须先设置单一方向。"
+          }
+        },
+        { "type": "idle", "duration": 100 },
+        { "type": "show_controls", "action": "right", "item": "create:wrench", "point": [2.0, 3.5, 3.5], "direction": "right", "duration": 70 },
+        {
+          "type": "text", "duration": 95, "placeNearTarget": true,
+          "point": [2.0, 3.5, 3.5],
+          "text": {
+            "en_us": "Starting from ALL, right-click the WEST face with a wrench to target the machine to the EAST.",
+            "zh_cn": "从 ALL 开始，用扳手普通右键西面，目标就设为东侧这台机械手。"
+          }
+        },
+        { "type": "idle", "duration": 35 },
+        { "type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockProperties": { "push_direction": "east" }, "blockPos": [2, 3, 3] },
+        { "type": "show_line", "point": [2.8, 3.5, 3.5], "point2": [3.2, 3.5, 3.5], "color": "green", "duration": 65 },
+        { "type": "indicate_success", "blockPos": [2, 3, 3] },
+        { "type": "idle", "duration": 70 },
+        { "type": "set_block", "block": "ae2:controller", "blockPos": [1, 3, 3] },
+        { "type": "show_section", "direction": "west", "blockPos": [1, 3, 3] },
+        { "type": "highlight_section", "color": "blue", "blockPos": [1, 3, 3], "blockPos2": [2, 3, 3], "duration": 95 },
+        {
+          "type": "text", "duration": 115, "attachKeyFrame": true, "placeNearTarget": true,
+          "point": [1.5, 3.7, 3.5],
+          "text": {
+            "en_us": "Connect ME on a non-target face. This marks the connection only: the real network needs power, a channel, storage, a crafting CPU, and a submitted job.",
+            "zh_cn": "ME 网络接非目标面；目标面不能接网。这里仅标示接线位置，实际还需电源、频道、存储、合成 CPU 和已提交的任务。"
+          }
+        },
+        { "type": "idle", "duration": 120 },
+        { "type": "highlight_section", "color": "green", "blockPos": [3, 3, 4], "blockPos2": [3, 3, 5], "duration": 85 },
+        {
+          "type": "text", "duration": 90, "placeNearTarget": true,
+          "point": [3.5, 3.7, 4.5],
+          "text": {
+            "en_us": "The motor and shaft power the Deployer separately. The provider supplies ingredients; it does not provide rotation.",
+            "zh_cn": "马达经相连的传动杆给机械手供动力；供应器负责供料，不提供转速或应力。"
+          }
+        },
+        { "type": "idle", "duration": 95 },
+        { "type": "show_controls", "action": "right", "item": "create:sand_paper", "point": [3.5, 2.3, 3.5], "direction": "down", "duration": 45 },
+        { "type": "set_deployer_item", "blockPos": [3, 3, 3], "item": "create:sand_paper", "count": 1 },
+        {
+          "type": "text", "duration": 110, "attachKeyFrame": true, "placeNearTarget": true,
+          "point": [3.5, 2.3, 3.5],
+          "text": {
+            "en_us": "Preload Sand Paper. Put a processing pattern for Rose Quartz -> Polished Rose Quartz in the provider; the tool can stay in the hand.",
+            "zh_cn": "先给机械手装砂纸，再给供应器放入“玫瑰石英 → 磨制玫瑰石英”的加工样板；工具可留在机械手中，不写进输入。"
+          }
+        },
+        { "type": "idle", "duration": 115 },
+        { "type": "show_line", "point": [2.5, 3.5, 3.5], "point2": [3.5, 1.8, 3.5], "color": "input", "duration": 75 },
+        { "type": "create_depot_item", "blockPos": [3, 1, 3], "item": "create:rose_quartz", "count": 1 },
+        {
+          "type": "text", "duration": 100, "placeNearTarget": true,
+          "point": [3.5, 1.8, 3.5],
+          "text": {
+            "en_us": "When AE dispatches the pattern, its first item input goes to the working position, two blocks along the Deployer's facing.",
+            "zh_cn": "AE 下发加工任务时，首项物品输入送至机械手朝向两格的工作位；这里是下方料盘。"
+          }
+        },
+        { "type": "idle", "duration": 105 },
+        { "type": "move_deployer", "blockPos": [3, 3, 3], "distance": 1.0, "duration": 30 },
+        { "type": "idle", "duration": 30 },
+        { "type": "remove_depot_item", "blockPos": [3, 1, 3] },
+        { "type": "create_depot_item", "blockPos": [3, 1, 3], "item": "create:polished_rose_quartz", "count": 1 },
+        { "type": "move_deployer", "blockPos": [3, 3, 3], "distance": -1.0, "duration": 30 },
+        { "type": "indicate_success", "blockPos": [3, 1, 3] },
+        { "type": "idle", "duration": 40 },
+        { "type": "show_line", "point": [3.5, 1.8, 3.5], "point2": [2.5, 3.5, 3.5], "color": "output", "duration": 75 },
+        { "type": "show_line", "point": [2.5, 3.5, 3.5], "point2": [1.5, 3.5, 3.5], "color": "output", "duration": 75 },
+        {
+          "type": "text", "duration": 105, "attachKeyFrame": true, "placeNearTarget": true,
+          "point": [3.5, 1.8, 3.5],
+          "text": {
+            "en_us": "The finished item is collected from that same working position and returned to ME storage. Keep space available in the network.",
+            "zh_cn": "加工完成后，供应器从同一工作位收取成品并送回 ME；网络必须有空间接收产物。"
+          }
+        },
+        { "type": "idle", "duration": 25 },
+        { "type": "remove_depot_item", "blockPos": [3, 1, 3] },
+        { "type": "indicate_success", "blockPos": [2, 3, 3] },
+        { "type": "idle", "duration": 90 }
+      ]
+    },
+    {
+      "id": "millstone_output",
+      "basePlateSize": 7,
+      "title": { "en_us": "A Millstone keeps its own output", "zh_cn": "石磨从自身库存回收" },
+      "steps": [
+        { "type": "set_block", "block": "create:creative_motor", "blockProperties": { "facing": "up" }, "blockPos": [3, 1, 3] },
+        { "type": "set_block", "block": "create:shaft", "blockProperties": { "axis": "y" }, "blockPos": [3, 2, 3] },
+        { "type": "set_block", "block": "create:millstone", "blockPos": [3, 3, 3] },
+        { "type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockProperties": { "push_direction": "east" }, "blockPos": [2, 3, 3] },
+        { "type": "set_block", "block": "ae2:controller", "blockPos": [1, 3, 3] },
+        { "type": "show_section", "direction": "down", "blockPos": [1, 1, 3], "blockPos2": [3, 3, 3] },
+        { "type": "set_kinetic_speed", "blockPos": [3, 1, 3], "blockPos2": [3, 3, 3], "speed": 64.0 },
+        {
+          "type": "text", "duration": 105, "attachKeyFrame": true, "placeNearTarget": true,
+          "point": [3.5, 3.8, 3.5],
+          "text": {
+            "en_us": "Face the Millstone itself and power its bottom shaft. A processing pattern supplies its internal input inventory.",
+            "zh_cn": "供应器对准石磨本体，动力从底部传动杆接入；加工样板的原料直接进入石磨内部输入库存。"
+          }
+        },
+        { "type": "idle", "duration": 110 },
+        { "type": "show_line", "point": [2.5, 3.5, 3.5], "point2": [3.5, 3.5, 3.5], "color": "input", "duration": 70 },
+        { "type": "set_millstone_item", "blockPos": [3, 3, 3], "item": "minecraft:granite", "count": 1, "output": false },
+        {
+          "type": "text", "duration": 90, "placeNearTarget": true,
+          "point": [3.5, 3.8, 3.5],
+          "text": {
+            "en_us": "For example, mill Granite into Red Sand. The Millstone's own inventory holds both the input and the resulting output.",
+            "zh_cn": "例如将花岗岩磨成红沙。原料和成品分别保存在石磨自己的输入、输出库存中。"
+          }
+        },
+        { "type": "idle", "duration": 95 },
+        { "type": "set_millstone_item", "blockPos": [3, 3, 3], "item": "minecraft:air", "count": 0, "output": false },
+        { "type": "set_millstone_item", "blockPos": [3, 3, 3], "item": "minecraft:red_sand", "count": 1, "output": true },
+        { "type": "indicate_success", "blockPos": [3, 3, 3] },
+        { "type": "highlight_section", "color": "output", "blockPos": [3, 3, 3], "duration": 90 },
+        { "type": "show_line", "point": [3.5, 3.5, 3.5], "point2": [2.5, 3.5, 3.5], "color": "output", "duration": 90 },
+        {
+          "type": "text", "duration": 105, "attachKeyFrame": true, "placeNearTarget": true,
+          "point": [3.5, 3.8, 3.5],
+          "text": {
+            "en_us": "Recover the output directly from the Millstone and return it to ME. No separate output Depot is required.",
+            "zh_cn": "供应器直接从石磨内部收取成品并送回 ME，不需要在旁边另放输出料盘。"
+          }
+        },
+        { "type": "idle", "duration": 35 },
+        { "type": "set_millstone_item", "blockPos": [3, 3, 3], "item": "minecraft:air", "count": 0, "output": true },
+        { "type": "indicate_success", "blockPos": [2, 3, 3] },
+        { "type": "idle", "duration": 80 },
+        {
+          "type": "text", "duration": 120, "placeNearTarget": true,
+          "point": [3.5, 3.8, 3.5],
+          "text": {
+            "en_us": "Saws and crushing controllers differ: provide a recoverable belt or Depot at their computed output. A Saw must face up; its speed sign sets the exit side.",
+            "zh_cn": "动力锯和粉碎控制器不同：须在计算出的出口放可接收的传送带或料盘。锯需朝上，转速正负决定出口方向。"
+          }
+        },
+        { "type": "idle", "duration": 125 }
+      ]
+    },
+    {
+      "id": "extended_capacity",
+      "basePlateSize": 7,
+      "title": { "en_us": "More patterns, the same machine logic", "zh_cn": "扩展样板容量，沿用相同机器逻辑" },
+      "steps": [
+        { "type": "set_block", "block": "create:andesite_casing", "blockPos": [2, 1, 3] },
+        { "type": "set_block", "block": "create:andesite_casing", "blockPos": [4, 1, 3] },
+        { "type": "set_block", "block": "createpackage:kinetic_pattern_provider", "blockPos": [2, 2, 3] },
+        { "type": "set_block", "block": "createpackage:extended_kinetic_pattern_provider", "blockPos": [4, 2, 3] },
+        { "type": "show_section", "direction": "down", "blockPos": [2, 1, 3], "blockPos2": [4, 2, 3] },
+        { "type": "show_controls", "action": "right", "point": [2.5, 2.7, 3.5], "direction": "down", "duration": 55 },
+        { "type": "highlight_section", "color": "blue", "blockPos": [2, 2, 3], "duration": 95 },
+        {
+          "type": "text", "duration": 100, "attachKeyFrame": true, "placeNearTarget": true,
+          "point": [2.5, 2.7, 3.5],
+          "text": {
+            "en_us": "The regular Kinetic Pattern Provider stores 9 patterns. Right-click to open its pattern and upgrade slots.",
+            "zh_cn": "普通动力样板供应器有 9 个样板槽；普通右键打开界面，管理样板与升级卡。"
+          }
+        },
+        { "type": "idle", "duration": 105 },
+        { "type": "show_controls", "action": "right", "point": [4.5, 2.7, 3.5], "direction": "down", "duration": 55 },
+        { "type": "highlight_section", "color": "green", "blockPos": [4, 2, 3], "duration": 110 },
+        {
+          "type": "text", "duration": 115, "attachKeyFrame": true, "placeNearTarget": true,
+          "point": [4.5, 2.7, 3.5],
+          "text": {
+            "en_us": "The Extended version shows 36 patterns per page. It defaults to 1 page; server configuration can unlock up to 9 pages, or 324 slots.",
+            "zh_cn": "扩展型每页 36 槽，默认开放 1 页；服务端配置可开放到 9 页，共 324 槽，通过界面按钮翻页。"
+          }
+        },
+        { "type": "idle", "duration": 120 },
+        {
+          "type": "text", "duration": 110, "placeNearTarget": true,
+          "point": [4.5, 2.7, 3.5],
+          "text": {
+            "en_us": "Reducing the page setting keeps pages containing saved patterns accessible. Extra pattern storage does not increase machine concurrency.",
+            "zh_cn": "调低页数后，已有样板所在页面仍可访问。扩容增加的是样板数量，不会自行增加并行机器数。"
+          }
+        },
+        { "type": "idle", "duration": 115 },
+        { "type": "show_controls", "action": "right", "whileSneaking": true, "item": "createpackage:parallel_card", "point": [4.5, 2.7, 3.5], "direction": "down", "duration": 65 },
+        {
+          "type": "text", "duration": 115, "placeNearTarget": true,
+          "point": [4.5, 2.7, 3.5],
+          "text": {
+            "en_us": "Both versions accept up to 4 Parallel Cards: no card runs 1 machine; each card allows 16 total matching machines, up to 64, including the front machine.",
+            "zh_cn": "两型都最多装 4 张并行卡：无卡 1 台，每卡允许 16 台，最多 64 台，包含面前机器；额外机器仍须用链接器绑定。"
+          }
+        },
+        { "type": "idle", "duration": 125 }
+      ]
+    }
+  ]
+}
