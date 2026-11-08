@@ -533,6 +533,8 @@ public final class MachinePlanFactory {
 
     private static final ResourceLocation PRESSURIZING_RECIPE_TYPE = ResourceLocation.fromNamespaceAndPath(
             "vintageimprovements", "pressurizing");
+    private static final ResourceLocation VINTAGE_PRESSURIZING_RECIPE_TYPE = ResourceLocation.fromNamespaceAndPath(
+            "vintage", "pressurizing");
 
     private static Plan planCompressor(Context ctx, String role) {
         List<GenericStack> remaining = ctx.inputs();
@@ -648,14 +650,19 @@ public final class MachinePlanFactory {
     private static CompressorRecipeLayout findPressurizingRecipe(Context ctx) {
         CompressorRecipeLayout match = null;
         for (Recipe<?> recipe : ctx.level().getRecipeManager().getRecipes()) {
+            ResourceLocation type = net.minecraft.core.registries.BuiltInRegistries.RECIPE_TYPE.getKey(recipe.getType());
             if (!(recipe instanceof BasinRecipe basinRecipe)
-                    || !PRESSURIZING_RECIPE_TYPE.equals(net.minecraft.core.registries.BuiltInRegistries.RECIPE_TYPE
-                            .getKey(recipe.getType()))
-                    || !matchesCompressorPattern(ctx, basinRecipe)) {
+                    || !(PRESSURIZING_RECIPE_TYPE.equals(type) || VINTAGE_PRESSURIZING_RECIPE_TYPE.equals(type))) {
                 continue;
             }
             CompressorRecipeLayout layout = CompressorRecipeLayout.from(basinRecipe);
-            if (layout == null || (match != null && !match.equals(layout))) {
+            if (layout == null) {
+                return null;
+            }
+            if (!matchesCompressorPattern(ctx, basinRecipe, layout)) {
+                continue;
+            }
+            if (match != null && !match.equals(layout)) {
                 return null;
             }
             match = layout;
@@ -663,7 +670,7 @@ public final class MachinePlanFactory {
         return match;
     }
 
-    private static boolean matchesCompressorPattern(Context ctx, BasinRecipe recipe) {
+    private static boolean matchesCompressorPattern(Context ctx, BasinRecipe recipe, CompressorRecipeLayout layout) {
         long multiplier = compressorRecipeMultiplier(ctx, recipe);
         if (multiplier <= 0) {
             return false;
@@ -674,7 +681,9 @@ public final class MachinePlanFactory {
                 return false;
             }
         }
-        for (FluidIngredient ingredient : recipe.getFluidIngredients()) {
+        List<FluidIngredient> fluidInputs = new ArrayList<>(layout.basinFluidInputs());
+        fluidInputs.addAll(layout.secondaryFluidInputs());
+        for (FluidIngredient ingredient : fluidInputs) {
             long amount;
             try {
                 amount = Math.multiplyExact((long) ingredient.getRequiredAmount(), multiplier);
@@ -714,28 +723,46 @@ public final class MachinePlanFactory {
      * Fluid routing table for a Vintage Improvements pressurizing recipe.
      *
      * <p>A pressurizing recipe spans two tanks: the Basin below and the Vacuum Chamber itself. The
-     * recipe marks one fluid ingredient index and one fluid result index as "secondary", meaning those
-     * belong to the chamber instead of the basin. Both the supply side and the collection side must
+     * recipe exposes secondary inputs either as an ingredient index or a separate list, while one
+     * fluid result index selects the chamber output. Both supply and collection must
      * follow that split, otherwise a freshly inserted input fluid can be drained back out of the basin
      * as if it were a product.
      */
-    private record CompressorRecipeLayout(List<FluidIngredient> fluidInputs, int secondaryFluidInput,
-            List<FluidStack> fluidResults, int secondaryFluidResult, boolean hasItemResults) {
+    private record CompressorRecipeLayout(List<FluidIngredient> basinFluidInputs,
+            List<FluidIngredient> secondaryFluidInputs, List<FluidStack> fluidResults,
+            int secondaryFluidResult, boolean hasItemResults) {
         @Nullable
         static CompressorRecipeLayout from(BasinRecipe recipe) {
             try {
-                Method input = recipe.getClass().getMethod("getSecondaryFluidInputs");
+                List<FluidIngredient> basinInputs = new ArrayList<>(recipe.getFluidIngredients());
+                List<FluidIngredient> secondaryInputs = new ArrayList<>();
+                try {
+                    // Forge Create: Vintage stores chamber ingredients separately from Basin ingredients.
+                    Method input = recipe.getClass().getMethod("getSecondaryFluidInputIngredients");
+                    if (!(input.invoke(recipe) instanceof List<?> ingredients)) {
+                        return null;
+                    }
+                    for (Object ingredient : ingredients) {
+                        if (!(ingredient instanceof FluidIngredient fluidIngredient)) {
+                            return null;
+                        }
+                        secondaryInputs.add(fluidIngredient);
+                    }
+                } catch (NoSuchMethodException legacyApi) {
+                    // Older Vintage Improvements marks one member of the shared ingredient list instead.
+                    Method input = recipe.getClass().getMethod("getSecondaryFluidInputs");
+                    int index = (Integer) input.invoke(recipe);
+                    if (index >= 0 && index < basinInputs.size()) {
+                        secondaryInputs.add(basinInputs.remove(index));
+                    }
+                }
                 Method output = recipe.getClass().getMethod("getSecondaryFluidResults");
-                return new CompressorRecipeLayout(List.copyOf(recipe.getFluidIngredients()),
-                        (Integer) input.invoke(recipe), List.copyOf(recipe.getFluidResults()),
-                        (Integer) output.invoke(recipe), !recipe.getRollableResults().isEmpty());
+                return new CompressorRecipeLayout(List.copyOf(basinInputs), List.copyOf(secondaryInputs),
+                        List.copyOf(recipe.getFluidResults()), (Integer) output.invoke(recipe),
+                        !recipe.getRollableResults().isEmpty());
             } catch (ReflectiveOperationException | ClassCastException ignored) {
                 return null;
             }
-        }
-
-        private boolean isSecondaryIndex(int index) {
-            return index == secondaryFluidInput;
         }
 
         /**
@@ -747,15 +774,14 @@ public final class MachinePlanFactory {
         FluidRoute routeFluidInput(FluidStack input) {
             long secondaryRequired = 0;
             long basinRequired = 0;
-            for (int i = 0; i < fluidInputs.size(); i++) {
-                FluidIngredient ingredient = fluidInputs.get(i);
-                if (!ingredient.test(input)) {
-                    continue;
-                }
-                if (isSecondaryIndex(i)) {
-                    secondaryRequired = PatternStacks.safeAdd(secondaryRequired, ingredient.getRequiredAmount());
-                } else {
+            for (FluidIngredient ingredient : basinFluidInputs) {
+                if (ingredient.test(input)) {
                     basinRequired = PatternStacks.safeAdd(basinRequired, ingredient.getRequiredAmount());
+                }
+            }
+            for (FluidIngredient ingredient : secondaryFluidInputs) {
+                if (ingredient.test(input)) {
+                    secondaryRequired = PatternStacks.safeAdd(secondaryRequired, ingredient.getRequiredAmount());
                 }
             }
             long totalRequired = PatternStacks.safeAdd(basinRequired, secondaryRequired);
