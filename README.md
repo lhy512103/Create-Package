@@ -58,10 +58,16 @@ chmod +x ./gradlew
 
 构建产物位于 `build/libs/`。开发环境可使用 `runClient` 和 `runServer` 任务进行测试。
 
+## 自动构建与发布
+
+推送新 Forge tag 后会构建 JAR、提取该版本的中英文日志并创建 GitHub Release，再把同一份 JAR 和 Release 正文同步到 Modrinth 与 CurseForge；缺少有效 JAR 时禁止发布或更新平台正文。
+
+项目 ID 已配置，平台令牌需通过仓库 Actions Secrets 添加；版本命名、日志格式、发布及失败恢复步骤见 [RELEASING.md](RELEASING.md)。
+
 ## 分支与迁移资料
 
 - `main`：Minecraft 1.21.1 NeoForge 版本。
-- `1.20.1-forge`：Minecraft 1.20.1 Forge 版本。
+- `forge-1.20.1`：当前 Minecraft 1.20.1 Forge 分支；CI 同时兼容旧别名 `1.20.1-forge`。
 - [MIGRATION_PLAN_zh_CN.md](MIGRATION_PLAN_zh_CN.md)：迁移范围、API 对照、依赖树、验证结果和后续维护检查表。
 - [CHANGELOG.md](CHANGELOG.md)：版本变更记录。
 
