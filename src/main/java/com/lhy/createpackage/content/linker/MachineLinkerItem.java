@@ -55,6 +55,16 @@ public class MachineLinkerItem extends Item {
         super(properties);
     }
 
+    /**
+     * Runs before the clicked block gets to react. Other mods' machines (a Mechanical Crafter takes the held item
+     * into its slot, a depot or basin takes it too) would otherwise swallow the click and {@link #useOn} would
+     * never be reached, so the linker takes the click itself and never lets the block see it.
+     */
+    @Override
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+        return useOn(context);
+    }
+
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();

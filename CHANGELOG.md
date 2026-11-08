@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Forge 1.20.1 (2026-11-08)
+
+### 中文
+
+1. 修复：机器链接器优先响应右键，避免被动力合成器等机器收走。
+
+### English
+
+1. Fixed: The Machine Linker handles right-clicks before machines can take it as input.
+
 ## English
 
 ## [20.1.1] - 2026-08-08
