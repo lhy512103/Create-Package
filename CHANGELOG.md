@@ -13,6 +13,7 @@
 7. 修复：补刷重试按实际游戏时间计时并显示倒计时，缺料自动下单默认关闭。
 8. 修复：供应器转向或重新进入存档后刷新网络连接，并正确显示升级槽和网络工具槽。
 9. 优化：减少动力合成器重复规划开销，并在机器变化后重新校验布局。
+10. 修复：智能倍增在回收端点发生变化后不再向旧作业追加投料。
 
 ### English
 
@@ -25,6 +26,7 @@
 7. Fixed: Refill retries use elapsed game time with a countdown, while automatic crafting of missing inputs remains off by default.
 8. Fixed: Providers refresh ME connections after rotation or world reload and correctly display upgrade and network tool slots.
 9. Improved: Mechanical Crafter planning avoids repeated searches and revalidates layouts when machines change.
+10. Fixed: Smart batching no longer appends inputs to an existing job after its recovery endpoints change.
 
 ## English
 

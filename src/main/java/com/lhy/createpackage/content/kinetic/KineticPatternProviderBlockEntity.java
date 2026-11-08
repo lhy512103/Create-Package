@@ -1141,7 +1141,7 @@ public class KineticPatternProviderBlockEntity extends AENetworkBlockEntity
         }
         MachinePlanFactory.Plan plan = createPlanAt(job.machinePos, job.primaryOutput, outputAmount, patternOutputs, inputs);
         if (plan == null
-                || !Objects.equals(plan.outputPos(), job.outputPos)
+                || !Objects.equals(plan.outputEndpoints(), job.outputEndpoints)
                 || !Objects.equals(plan.machineRole(), job.machineRole)
                 || plan.collectUnexpectedOutputs() != job.collectUnexpectedOutputs) {
             return null;
