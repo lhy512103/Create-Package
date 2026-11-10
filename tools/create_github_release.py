@@ -24,7 +24,14 @@ def gh(*arguments: str, allow_missing: bool = False):
 
 def release(repo: str, tag: str):
     response = gh('api', f'repos/{repo}/releases/tags/{tag}', allow_missing=True)
-    return json.loads(response) if response is not None else None
+    if response is not None:
+        return json.loads(response)
+    # The tag endpoint can return 404 for drafts; the authenticated list includes them.
+    pages = json.loads(gh('api', '--paginate', '--slurp', f'repos/{repo}/releases?per_page=100'))
+    matches = [item for page in pages for item in page if item.get('tag_name') == tag]
+    if len(matches) > 1:
+        raise ValueError('Ambiguous releases for this tag')
+    return matches[0] if matches else None
 
 
 def publish(repo: str, tag: str, jar: Path, notes: Path, root: Path):
@@ -61,6 +68,8 @@ def publish(repo: str, tag: str, jar: Path, notes: Path, root: Path):
         else:
             gh('release', 'upload', tag, str(jar), '--repo', repo, '--clobber')
     attached = release(repo, tag)
+    if attached is None:
+        raise ValueError('Release is not visible after upload; refusing to publish without confirmation')
     assets = [asset for asset in attached['assets'] if asset['name'] == jar.name and asset['size'] == jar.stat().st_size]
     if len(assets) != 1:
         raise ValueError('Release JAR upload was not confirmed; refusing to publish')
