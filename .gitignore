@@ -9,6 +9,7 @@ eclipse/
 
 # Python release tooling
 __pycache__/
+/release-download/
 
 # IDE
 .idea/
