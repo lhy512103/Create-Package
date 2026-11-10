@@ -51,7 +51,8 @@ jobs:
       - name: Check out release tooling
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          # Use maintained publishing tools without rebuilding or moving the release tag.
+          ref: forge-1.20.1
           fetch-depth: 0
           persist-credentials: false
       - name: Set up Python
@@ -63,8 +64,8 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
         run: |
           python -c 'import sys; sys.path.insert(0,"tools"); from release_metadata import version_from_tag; import os; v=version_from_tag(os.environ["RELEASE_TAG"]); assert v.startswith("20.1."), "Not a Forge 1.20.1 release"'
-          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
-          git merge-base --is-ancestor HEAD origin/forge-1.20.1
+          git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}"
+          git merge-base --is-ancestor "refs/tags/$RELEASE_TAG^{commit}" origin/forge-1.20.1
       - name: Publish verified release JAR and current release text
         env:
           GH_TOKEN: ${{ github.token }}

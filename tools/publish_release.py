@@ -238,7 +238,8 @@ def publish(args, http=None, env=None):
         else:
             metadata.update(project_id=project, version_number=version, game_versions=["1.20.1"], loaders=["forge"],
                             dependencies=[dict(project_id=p, dependency_type="required") for p in ("LNytGWDc", "XxWD5pD3")],
-                            file_parts=["file"], primary_file="file")
+                            file_parts=["file"], primary_file="file", featured=False,
+                             status="listed", environment="client_and_server")
             payload, content_type = multipart("data", metadata, (name, raw))
             result = http.request("POST", f"{MR}/version", token, data=payload, content_type=content_type)
             remote_id = checked_id(result["id"])

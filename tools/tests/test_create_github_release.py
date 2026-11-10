@@ -83,8 +83,17 @@ class CreateGitHubReleaseTests(unittest.TestCase):
         with patch.object(module.subprocess, 'run', return_value=CompletedProcess([], 1, '', 'HTTP 403 Forbidden')):
             with self.assertRaises(ValueError):
                 module.release('owner/repo', 'v20.1.2')
-        with patch.object(module.subprocess, 'run', return_value=CompletedProcess([], 1, '', 'HTTP 404 Not Found')):
+        with patch.object(module.subprocess, 'run', side_effect=[
+            CompletedProcess([], 1, '', 'HTTP 404 Not Found'),
+            CompletedProcess([], 0, '[[]]', '')
+        ]):
             self.assertIsNone(module.release('owner/repo', 'v20.1.2'))
+
+    def test_draft_lookup_falls_back_to_paginated_authenticated_list(self):
+        import json
+        draft = {'tag_name': 'v20.1.2', 'draft': True, 'assets': [self.asset()]}
+        with patch.object(module, 'gh', side_effect=[None, json.dumps([[], [draft]])]):
+            self.assertEqual(module.release('owner/repo', 'v20.1.2'), draft)
 
 
 if __name__ == '__main__':
