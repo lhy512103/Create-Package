@@ -1,0 +1,83 @@
+name: Publish release assets
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    secrets:
+      MODRINTH_TOKEN:
+        required: false
+      CURSEFORGE_TOKEN:
+        required: false
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Published Forge release tag (must already contain its mod JAR)'
+        required: true
+        type: string
+      curseforge_file_id:
+        description: 'Recovery ONLY: verified CurseForge file ID after an interrupted upload; otherwise leave blank'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: >-
+      github.event_name != 'release' ||
+      (github.event.release.draft == false &&
+       (startsWith(github.event.release.tag_name, 'v20.1.') ||
+        startsWith(github.event.release.tag_name, '20.1.') ||
+        startsWith(github.event.release.tag_name, 'forge-1.20.1-v20.1.')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # Store per-platform publication receipts on this GitHub Release.
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [modrinth, curseforge]
+    # Serialize even aliases of a version; do not cancel an upload halfway through.
+    concurrency:
+      group: forge-platform-publish-${{ matrix.platform }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out release tooling
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Verify Forge tag lineage
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          python -c 'import sys; sys.path.insert(0,"tools"); from release_metadata import version_from_tag; import os; v=version_from_tag(os.environ["RELEASE_TAG"]); assert v.startswith("20.1."), "Not a Forge 1.20.1 release"'
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          git merge-base --is-ancestor HEAD origin/forge-1.20.1
+      - name: Publish verified release JAR and current release text
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID || '5vJMWJv6' }}
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID || '1596843' }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+          PLATFORM: ${{ matrix.platform }}
+          RECOVER_CF_FILE_ID: ${{ inputs.curseforge_file_id }}
+        run: |
+          args=(--repo "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --platform "$PLATFORM" --directory "$RUNNER_TEMP/forge-release")
+          if [ "$PLATFORM" = 'curseforge' ] && [ -n "$RECOVER_CF_FILE_ID" ]; then
+            args+=(--adopt-file-id "$RECOVER_CF_FILE_ID")
+          fi
+          python tools/publish_release.py "${args[@]}"
